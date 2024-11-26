@@ -12,6 +12,18 @@ def main():
         type=str,
         help="Path to the CSV file containing fund allocations and target asset class percentages."
     )
+    parser.add_argument(
+        "--sw", # sparsity weight
+        type=float,
+        default=0,
+        help="Weight for the sparsity penalty in the objective function (default: 0 - no sparsity penalty)."
+    )
+    parser.add_argument(
+        "--mf", # max funds
+        type=int,
+        default=None,
+        help="Optional maximum number of funds to use."
+    )
 
     # Parse command-line arguments
     args = parser.parse_args()
@@ -21,7 +33,7 @@ def main():
         load_data(args.file_path)
 
     # find the optimal fund allocations
-    fund_allocations, portfolio_allocations, obj_value = opt_port(fund_matrix, target_allocations)
+    fund_allocations, portfolio_allocations, obj_value = opt_port(fund_matrix, target_allocations, args.sw)
 
     # Output optimal fund allocations
     print("\nOPTIMAL FUND ALLOCATIONS:")
@@ -42,27 +54,37 @@ def main():
     print(f"\nObjective Value (total deviation): {obj_value}\n")
 
 
-def opt_port(fund_matrix, target_allocations):
+def opt_port(fund_matrix, target_allocations,
+             max_funds=None, sparsity_weight=0):
 
     # Define the optimization problem
     num_funds = fund_matrix.shape[0]
     x = cp.Variable(num_funds)  # Allocation to each fund
+    z = cp.Variable(num_funds, boolean=True)  # Binary selection variables
 
     # Resulting portfolio allocation
     portfolio_allocations = fund_matrix.T @ x
 
-    # Objective: Minimize the squared difference between actual and desired allocations
-    objective = cp.Minimize(cp.sum_squares(portfolio_allocations - target_allocations))
+    # Objective: Minimize squared difference + sparsity penalty
+    objective = cp.Minimize(
+        cp.sum_squares(portfolio_allocations - target_allocations)
+        + sparsity_weight * cp.sum(z) # Penalize the number of funds
+    )
 
     # Constraints
     constraints = [
         cp.sum(x) == 1,  # Allocations must sum to 100%
-        x >= 0           # No negative allocation
+        x >= 0,          # No negative allocation
+        x <= z,          # Link x and z (if z=0, x=0)
     ]
 
-    # Solve the problem
+    # Add maximum funds constraint if specified
+    if max_funds is not None:
+        constraints.append(cp.sum(z) <= max_funds)
+
+    # Solve the problem using CBC solver (supports MIP)
     problem = cp.Problem(objective, constraints)
-    problem.solve()
+    problem.solve(solver=cp.OSQP)
 
     return x, portfolio_allocations, problem.value
 
