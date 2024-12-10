@@ -4,9 +4,6 @@ import numpy as np
 import argparse
 from collections import defaultdict
 
-# TO DO:
-# - Add support for specifying subset of funds
-
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Optimize portfolio fund allocations based on a CSV file.")
@@ -16,19 +13,27 @@ def main():
         help="Path to the CSV file containing fund allocations and target asset class percentages."
     )
     parser.add_argument(
-        "--sw", # sparsity weight
+        "-sw", # sparsity weight
         type=float,
         default=0,
         help="Weight for the sparsity penalty in the objective function (default: 0 - no sparsity penalty)."
     )
     parser.add_argument(
-        "--mf", # max funds
+        "-mf", # max funds
         type=int,
         default=None,
-        help="Optional maximum number of funds to use."
+        help="Optional maximum number of funds to use (default: None - no maximum)."
     )
     parser.add_argument(
-        "--v", # verbose
+        "-f", # funds to consider
+        nargs='+',
+        type=str,
+        default=None,
+        help="Optional subset of funds to consider for inclusion in final portfolio " + \
+             "(default: None - consider all funds in fund matrix)."
+    )
+    parser.add_argument(
+        "-v", # verbose
         default=False,
         action='store_true',
         help="Optional generate verbose output."
@@ -37,13 +42,15 @@ def main():
     # Parse command-line arguments
     args = parser.parse_args()
 
+    print(args.f)
+
     # load the data
     fund_matrix, target_allocations, fund_tickers, asset_classes = \
-        load_data(args.file_path, args.v)
+        load_data(args.file_path, args.f, args.v)
 
     # find the optimal fund allocations
     fund_allocations, portfolio_allocations, problem = opt_port(fund_matrix, target_allocations,
-                                                                  args.sw, args.mf, args.v)
+                                                                args.sw, args.mf, args.v)
 
     # Output optimal fund allocations
     if (fund_allocations.value is not None):
@@ -101,7 +108,7 @@ def opt_port(fund_matrix, target_allocations,
 
     return x, portfolio_allocations, problem
 
-def load_data(file_path, verbose=False):
+def load_data(file_path, funds=None, verbose=False):
     """
     Load the fund and target asset allocations from a csv file.  The
     csv file has the following structure:
@@ -144,12 +151,16 @@ def load_data(file_path, verbose=False):
     data.set_index('Ticker', inplace=True)
 
     # extract the matrices and vectors
-    return extract_data(data, verbose)
+    return extract_data(data, funds, verbose)
 
-def extract_data(data, verbose=False):
+def extract_data(data, funds=None, verbose=False):
 
     # Extract fund_matrix (all rows except 'Targets')
-    fund_matrix = data.query("index != 'Targets'")
+    if (funds is None):
+        fund_matrix = data.query("index != 'Targets'")
+    else:
+        valid_funds = data.index.intersection(funds)
+        fund_matrix = data.loc[valid_funds]
     if (verbose):
         print(f"\nfund_matrix: \n{fund_matrix}")
 
