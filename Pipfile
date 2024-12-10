@@ -4,10 +4,11 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-cvxpy = "*"
 pandas = "*"
 argparse = "*"
-osqp = "*"
+cvxpy = "*"
+pyscipopt = "*"
+
 
 [dev-packages]
 ipykernel = "*"

@@ -24,6 +24,12 @@ def main():
         default=None,
         help="Optional maximum number of funds to use."
     )
+    parser.add_argument(
+        "--v", # verbose
+        default=False,
+        action='store_true',
+        help="Optional generate verbose output."
+    )
 
     # Parse command-line arguments
     args = parser.parse_args()
@@ -33,29 +39,34 @@ def main():
         load_data(args.file_path)
 
     # find the optimal fund allocations
-    fund_allocations, portfolio_allocations, obj_value = opt_port(fund_matrix, target_allocations, args.sw)
+    fund_allocations, portfolio_allocations, problem = opt_port(fund_matrix, target_allocations,
+                                                                  args.sw, args.mf, args.v)
 
     # Output optimal fund allocations
-    print("\nOPTIMAL FUND ALLOCATIONS:")
-    print("==========================\n")
-    print(f"{"Ticker":10}{"Allocation":>10}")
-    print(f"{"--------":<10}{"----------":>10}")
-    for ticker, allocation in zip(fund_tickers, fund_allocations.value):
-        print(f"{ticker:<10}{allocation:10.2%}")
+    if (fund_allocations.value is not None):
+        print("\nOPTIMAL FUND ALLOCATIONS:")
+        print("==========================\n")
+        print(f"{"Ticker":10}{"Allocation":>10}")
+        print(f"{"--------":<10}{"----------":>10}")
+        print(fund_allocations)
+        for ticker, allocation in zip(fund_tickers, fund_allocations.value):
+            print(f"{ticker:<10}{allocation:10.2%}")
 
-    print("\nPORTFOLIO ASSET CLASS ALLOCATIONS:")
-    print("===================================\n")
-    print(f"{"Asset Class":20}{"Actual":>10}{"Target":>10}{"Diff":>10}")
-    print(f"{"-------------------":<20}{"--------":>10}{"--------":>10}{"--------":>10}")
-    for asset_class, actual, target in zip(asset_classes, portfolio_allocations.value, target_allocations):
-        diff = target - actual
-        print(f"{asset_class:20}{actual:10.2%}{target:10.2%}{diff:10.2%}")
+    if (portfolio_allocations.value is not None):
+        print("\nPORTFOLIO ASSET CLASS ALLOCATIONS:")
+        print("===================================\n")
+        print(f"{"Asset Class":20}{"Actual":>10}{"Target":>10}{"Diff":>10}")
+        print(f"{"-------------------":<20}{"--------":>10}{"--------":>10}{"--------":>10}")
+        for asset_class, actual, target in zip(asset_classes, portfolio_allocations.value, target_allocations):
+            diff = target - actual
+            print(f"{asset_class:20}{actual:10.2%}{target:10.2%}{diff:10.2%}")
     
-    print(f"\nObjective Value (total deviation): {obj_value}\n")
+    print(f"\nSolver Status: {problem.status}")
+    print(f"Objective Value (total deviation): {problem.value}\n")
 
 
 def opt_port(fund_matrix, target_allocations,
-             max_funds=None, sparsity_weight=0):
+             sparsity_weight=0.0, max_funds=None, verbose=False):
 
     # Define the optimization problem
     num_funds = fund_matrix.shape[0]
@@ -82,11 +93,11 @@ def opt_port(fund_matrix, target_allocations,
     if max_funds is not None:
         constraints.append(cp.sum(z) <= max_funds)
 
-    # Solve the problem using CBC solver (supports MIP)
+    # Solve the problem using SCIP solver (supports MIQP)
     problem = cp.Problem(objective, constraints)
-    problem.solve(solver=cp.OSQP)
+    problem.solve(solver=cp.SCIP, verbose=verbose)
 
-    return x, portfolio_allocations, problem.value
+    return x, portfolio_allocations, problem
 
 def load_data(file_path):
     """
