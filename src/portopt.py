@@ -4,6 +4,9 @@ import numpy as np
 import argparse
 from collections import defaultdict
 
+# TO DO:
+# - Add support for specifying subset of funds
+
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Optimize portfolio fund allocations based on a CSV file.")
@@ -36,7 +39,7 @@ def main():
 
     # load the data
     fund_matrix, target_allocations, fund_tickers, asset_classes = \
-        load_data(args.file_path)
+        load_data(args.file_path, args.v)
 
     # find the optimal fund allocations
     fund_allocations, portfolio_allocations, problem = opt_port(fund_matrix, target_allocations,
@@ -98,7 +101,7 @@ def opt_port(fund_matrix, target_allocations,
 
     return x, portfolio_allocations, problem
 
-def load_data(file_path):
+def load_data(file_path, verbose=False):
     """
     Load the fund and target asset allocations from a csv file.  The
     csv file has the following structure:
@@ -124,26 +127,49 @@ def load_data(file_path):
     Raises:
         Error: ???
     """
-    default_types = defaultdict(lambda: float, Ticker="str")
-    data = pd.read_csv(file_path, dtype=default_types)
-    return extract_data(data)
+    # Read only the header row
+    headers = pd.read_csv(file_path, nrows=0).columns.tolist()
 
+    # Define the default dtype for all columns except 'Ticker'
+    dtype_dict = {col: float for col in headers if col != 'Ticker'}
 
-def extract_data(data):
+    # Read the full file with the dynamically created dtype and converter
+    data = pd.read_csv(
+        file_path,
+        dtype=dtype_dict,  # Set all columns to float except Ticker
+        converters={'Ticker': lambda x: x.strip()}  # Strip whitespace from Ticker column
+    )
 
-    # Extract fund_matrix (all rows except the footer and first column)
-    fund_matrix = data.iloc[:-1, 1:].values
+    # configure header column
+    data.set_index('Ticker', inplace=True)
 
-    # Extract target_allocations (footer row, excluding the first column)
-    target_allocations = data.iloc[-1, 1:].values
+    # extract the matrices and vectors
+    return extract_data(data, verbose)
 
-    # Extract fund tickers (first column, excluding the footer row)
-    fund_tickers = data.iloc[:-1, 0].values
+def extract_data(data, verbose=False):
 
-    # Extract asset classes (header row, excluding the first column)
-    asset_classes = data.columns[1:]
+    # Extract fund_matrix (all rows except 'Targets')
+    fund_matrix = data.query("index != 'Targets'")
+    if (verbose):
+        print(f"\nfund_matrix: \n{fund_matrix}")
 
-    return fund_matrix, target_allocations, fund_tickers, asset_classes
+    # Extract target_allocations ('Targets' row)
+    target_allocations = data.loc['Targets']
+    if (verbose):
+        print(f"\ntarget_allocations: \n{target_allocations}")
+
+    # Extract fund tickers (index column of the fund_matrix)
+    fund_tickers = fund_matrix.index
+    if (verbose):
+        print(f"\nfund_tickers: \n{fund_tickers}")
+
+    # Extract asset classes (column headers)
+    asset_classes = data.columns
+    if (verbose):
+        print(f"\nasset_classes: \n{asset_classes}")
+
+    return fund_matrix.values, target_allocations.values, \
+           fund_tickers.values, asset_classes.values
 
 if __name__ == "__main__":
     main()
