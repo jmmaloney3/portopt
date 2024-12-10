@@ -42,8 +42,6 @@ def main():
     # Parse command-line arguments
     args = parser.parse_args()
 
-    print(args.f)
-
     # load the data
     fund_matrix, target_allocations, fund_tickers, asset_classes = \
         load_data(args.file_path, args.f, args.v)
@@ -137,15 +135,22 @@ def load_data(file_path, funds=None, verbose=False):
     # Read only the header row
     headers = pd.read_csv(file_path, nrows=0).columns.tolist()
 
-    # Define the default dtype for all columns except 'Ticker'
-    dtype_dict = {col: float for col in headers if col != 'Ticker'}
+    # Define the default dtype for all columns except 'Ticker', 'Description, and 'Name'
+    dtype_dict = {col: float for col in headers if col not in ['Ticker', 'Description', 'Name']}
 
     # Read the full file with the dynamically created dtype and converter
     data = pd.read_csv(
         file_path,
         dtype=dtype_dict,  # Set all columns to float except Ticker
-        converters={'Ticker': lambda x: x.strip()}  # Strip whitespace from Ticker column
+        converters={'Ticker': lambda x: x.strip(),      # Strip whitespace from Ticker column
+                    'Description': lambda x: x.strip(), # Strip whitespace from Description column
+                    'Name': lambda x: x.strip()         # Strip whitespace from Name column
+                    }
     )
+
+    # drop Name and Description columns
+    drop_columns = data.columns.intersection(['Name', 'Description'])
+    data = data.drop(columns=drop_columns)
 
     # configure header column
     data.set_index('Ticker', inplace=True)
