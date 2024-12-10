@@ -48,7 +48,6 @@ def main():
         print("==========================\n")
         print(f"{"Ticker":10}{"Allocation":>10}")
         print(f"{"--------":<10}{"----------":>10}")
-        print(fund_allocations)
         for ticker, allocation in zip(fund_tickers, fund_allocations.value):
             print(f"{ticker:<10}{allocation:10.2%}")
 
