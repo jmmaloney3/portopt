@@ -37,7 +37,7 @@ The CSV file should have the following format.
   ignored by the optimizer)
 * Description (Optional) - column that contains a description of the fund (this
   column is ignored by the optimizer)
-* <Asset Class> - one column for each asset class
+* Asset Class Name (Required) - one column for each asset class
 
 ## Rows
 * Initial row contains the names of the columns
