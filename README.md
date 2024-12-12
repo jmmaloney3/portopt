@@ -18,10 +18,19 @@ Only the fund's asset class allocation is considered when generating an optimal
 portfolio. Other criteria such as fund performance, detailed fund composition or
 fees are not considered.
 
+## Installing the Optimizer
+First install Python: [Python Downloads](https://www.python.org/downloads/).
+
+Use [pipenv](https://pipenv.pypa.io/en/latest/) to install the required Python
+dependencies.
+```
+pipenv install
+```
+
 ## Running the Optimizer
 Enter a command similar to the following to run the optimizer:
 ```
-python portopt.py ../datra/example_fund_matrix.csv --mf 6
+python portopt.py ../data/example_fund_matrix.csv --mf 6
 ```
 To get help with additional program options, enter the following command:
 ```
