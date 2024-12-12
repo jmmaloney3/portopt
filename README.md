@@ -18,6 +18,16 @@ Only asset class allocation is considered when generating an optimal portfolio.
 Other criteria such as fund performance, detailed fund composition or fees are 
 not considered.
 
+## Running the Optimizer
+Enter a command similar to the following to run the optimizer:
+```
+python portopt.py my-fund-matrix.csv --mf 6
+```
+To get help with additional program options, enter the following command:
+```
+python portopt.py -h
+```
+
 # File Format
 The CSV file should have the following format.
 ## Columns
