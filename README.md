@@ -30,7 +30,7 @@ pipenv install
 ## Running the Optimizer
 Enter a command similar to the following to run the optimizer:
 ```
-python portopt.py ../data/example_fund_matrix.csv --mf 6
+python portopt.py ../data/example_fund_matrix.csv -mf 6
 ```
 To get help with additional program options, enter the following command:
 ```
