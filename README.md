@@ -1,22 +1,42 @@
 # Portfolio Optimizer
-The portfolio optimizer takes a CSV file with the following information:
-* Asset class allocations for each fund
-* Target asset class allocations
+The **Portfolio Optimizer** helps users generate an optimal investment portfolio
+by balancing fund allocations to match desired asset class targets. The tool
+takes a CSV file with fund asset class allocations and target asset class
+allocations and produces optimal allocation percentages for each fund. The
+optimization minimizes the difference between the target asset class allocations
+and the final portfolio’s asset class allocations.
 
-It produces allocation percentages for each fund that minimizes the difference
-between the target asset class allocations and the asset class allocations for
-the final portfolio.
+## Features
 
-Additional arguments can be provided to influence the fund allocation produced:
-* Sparsity weight - weight used to penalize portfolios with a larger number
-  of funds, this can help prevent very small allocations to funds
-* Max funds - the maximum number of funds to include in the final portfolio
-* Fund list - subset of funds that should be considered for inclusion in the
-  final portfolio
+The optimization process includes:
+- **Quadratic Objective Function**: Minimizes the sum of squared differences
+between the target and portfolio asset class allocations.
+- **Mixed-Integer Variables**: Minimizes the number of funds and optionally
+enforces a limit on the number of funds.
+- **Linear Constraints**: Ensures the overall portfolio allocation sums to 100%,
+with no single fund allocated more than 100%.
 
-Only the fund's asset class allocation is considered when generating an optimal
-portfolio. Other criteria such as fund performance, detailed fund composition or
-fees are not considered.
+Other factors, such as fund performance, fees, or detailed composition, are not
+included in the optimization process.
+
+## Additional Arguments
+The following additional arguments can be provided to tailor the output to meet
+your needs:
+
+* **Sparsity Weight** (`-sw`): This regularization parameter encourages a
+sparse, compact portfolio by penalizing allocations across numerous funds. It
+promotes selecting a smaller, well-curated subset of funds, reducing negligible
+or fragmented investments to create a portfolio that is both less complex and
+easier to manage.
+* **Maximum Funds** (`-mf`): This parameter sets a hard limit on the number of
+funds that can be included in the portfolio. Unlike the sparsity weight, which
+uses a penalty to encourage fewer allocations, this constraint enforces an
+explicit maximum, ensuring that the portfolio does not exceed the specified
+number of funds.
+* **Fund List** (`-f`): Specifies a subset of funds to be considered for
+portfolio construction. This allows the exclusion of certain funds without
+modifying the input data file, enabling the portfolio to be tailored to
+specific requirements or preferences.
 
 ## Installing the Optimizer
 First install Python: [Python Downloads](https://www.python.org/downloads/).
