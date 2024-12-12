@@ -47,10 +47,10 @@ The CSV file should have the following format.
   class allocations
 
 The asset class allocations are provide as percentages in decimal format.  For
-example, if the asset class allocation is 13.4% then the cvalue in the CSV file
+example, if the asset class allocation is 13.4% then the value in the CSV file
 will be 0.134.
 
-# Additioan Information
+# Additioal Information
 The portfolio optimization problem has the following features:
 * quadratic objective function to minimize the sum of the squared difference
 between the target asset class allocation and the actual asset class allocation
