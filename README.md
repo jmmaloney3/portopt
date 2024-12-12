@@ -1,3 +1,46 @@
+# Portfolio Optimizer
+The portfolio optimizer takes a CSV file with the following information:
+* Asset class allocations for each fund
+* Target asset class allocations
+
+It produces allocation percentages for each fund that minimizes the difference
+between the target asset class allocations and the asset class allocations for
+the portfolio.
+
+Additional arguments can be provided to influence the fund allocation produced:
+* Sparsity weight - weight used to penalize portfolios with a larger number
+  of funds, this can help prevent very small allocations to funds
+* Max funds - the maximum number of fund to include in the final portfolio
+* Fund list - specify a subset of funds that should be considered for
+  inclusion in the final portfolio
+
+Only asset class allocation is considered when generating an optimal portfolio.
+Other criteria such as fund performance, detailed fund composition or fees are 
+not considered.
+
+# File Format
+The CSV file should have the following format.
+## Columns
+* Ticker (Required) - column that contains the ticker for each fund or the word
+  "Targets" for the row that contains the target asset class allocation
+* Name (Optional) - column that contains the name of the fund (this column is
+  ignored by the optimizer)
+* Description (Optional) - column that contains a description of the fund (this
+  column is ignored by the optimizer)
+* <Asset Class> - one column for each asset class
+
+## Rows
+* Initial row contains the names of the columns
+* Each row with a fund ticker in the first column contains the asset class
+  allocations for that fund
+* A row with "Targets" in the first column that contains the target asset
+  class allocations
+
+The asset class allocations are provide as percentages in decimal format.  For
+example, if the asset class allocation is 13.4% then the cvalue in the CSV file
+will be 0.134.
+
+# Additioan Information
 The portfolio optimization problem has the following features:
 * quadratic objective function to minimize the sum of the squared difference
 between the target asset class allocation and the actual asset class allocation
