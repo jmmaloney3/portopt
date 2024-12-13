@@ -39,7 +39,7 @@ modifying the input data file, enabling the portfolio to be tailored to
 specific requirements or preferences.
 
 ## Installing the Optimizer
-1. Install Python: [Python Downloads](https://www.python.org/downloads/). Ensure Python is added to your PATH.
+1. Install Python: [Python Downloads](https://www.python.org/downloads/).
 2. Clone or download this repository.
 3. Navigate to the project directory in your terminal.
 4. Use [pipenv](https://pipenv.pypa.io/en/latest/) to install dependencies:
@@ -49,35 +49,26 @@ specific requirements or preferences.
 
 ## Running the Optimizer
 Enter a command similar to the following to run the optimizer:
-```
+```bash
 python portopt.py ../data/example_fund_matrix.csv -mf 6
 ```
-To get help with additional program options, enter the following command:
-```
+This example command uses the `-mf` option to limit the number of funds included
+in the final portfolio.  To get help with additional program options, enter the following command:
+```bash
 python portopt.py -h
 ```
 
 # File Format
 The CSV file should have the following format.
 ## Columns
-* Ticker (Required) - contains the ticker for each fund or the word
-  "Targets" for the row that contains the target asset class allocation
-* Name (Optional) - contains the name of the fund (this column is
-  ignored by the optimizer)
-* Description (Optional) - contains a description of the fund (this
-  column is ignored by the optimizer)
-* Asset Class Name (Required) - one column for each asset class
+* **Ticker** (Required): Fund ticker or “Targets” for target allocations.
+* **Name** (Optional): Fund name (ignored by the optimizer)
+* **Description** (Optional): Fund description(this ignored by the optimizer)
+* **Asset Class Name** (Required): One column per asset class
 
 ## Rows
-* Initial row contains the names of the columns
-* Each row with a fund ticker in the first column contains the asset class
-  allocations for that fund
-* A row with "Targets" in the first column that contains the target asset
-  class allocations
-
-The asset class allocations are provided as percentages in decimal format.  For
-example, if the asset class allocation is 13.4% then the value in the CSV file
-will be 0.134.
+* The first row contains column headers.
+* Each subsequent row provides fund allocations, where percentages are represented as decimals (e.g., 13.4% → 0.134).
 
 ## CSV Examples
 The following is an example of a properly formatted CSV file:
@@ -93,18 +84,11 @@ A more extensive example is provided by the
 [example_fund_matrix.csv](https://github.com/jmmaloney3/portopt/blob/main/data/example_fund_matrix.csv)
 file.
 
-# Additioal Information
+# Additional Information
 The portfolio optimization problem has the following features:
-* quadratic objective function to minimize the sum of the squared difference
-between the target asset class allocation and the asset class allocation of
-the final portfolio
-* mixed-integer variables to minimize the number of funds and optionally limit
-the number of funds to a specified maximum
-* linear constraints to enforce certain properties such as forcing the overall
-asset class allocation to sum to 100% and the allocation to any particular asset
-class or fund to be less than 100%
+* **Quadratic Objective Function**: Minimizes the sum of squared differences between portfolio and target allocations.
+* **Mixed-Integer Variables**: Reduces the number of funds used and enforces maximum fund limits.
+* **Linear Constraints**: Ensures total allocation sums to 100% and the
+individual fund allocations are between 0% and 100%.
 
-Since the portfolio optimizatin problem requires minimizing a quadratic
-objective function and has some variables that are restricted to being integers,
-the problem falls into the category of mixed-integer quadratic programming
-(MIQP) problems.
+This is a Mixed-Integer Quadratic Programming (MIQP) problem and [SCIP](https://scipopt.org) is used to solve the problem.
