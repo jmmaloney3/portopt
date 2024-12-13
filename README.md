@@ -39,13 +39,13 @@ modifying the input data file, enabling the portfolio to be tailored to
 specific requirements or preferences.
 
 ## Installing the Optimizer
-First install Python: [Python Downloads](https://www.python.org/downloads/).
-
-Use [pipenv](https://pipenv.pypa.io/en/latest/) to install the required Python
-dependencies.
-```
-pipenv install
-```
+1. Install Python: [Python Downloads](https://www.python.org/downloads/). Ensure Python is added to your PATH.
+2. Clone or download this repository.
+3. Navigate to the project directory in your terminal.
+4. Use [pipenv](https://pipenv.pypa.io/en/latest/) to install dependencies:
+   ```bash
+   pipenv install
+   ```
 
 ## Running the Optimizer
 Enter a command similar to the following to run the optimizer:
@@ -79,10 +79,10 @@ The asset class allocations are provided as percentages in decimal format.  For
 example, if the asset class allocation is 13.4% then the value in the CSV file
 will be 0.134.
 
-## Example CSV Files
+## CSV Examples
 The following is an example of a properly formatted CSV file:
 
-``` csv
+```csv
 Ticker,Name,Description,Equities,Bonds,Cash
 FundA,Fund A Name,Large-Cap Fund,0.7,0.2,0.1
 FundB,Fund B Name,Government Bonds,0.1,0.9,0.0
