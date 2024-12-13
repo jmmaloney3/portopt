@@ -79,8 +79,19 @@ The asset class allocations are provided as percentages in decimal format.  For
 example, if the asset class allocation is 13.4% then the value in the CSV file
 will be 0.134.
 
-The `data/example_fund_matrix.csv` file provides an example of a properly
-formatted CSV file.
+## Example CSV Files
+The following is an example of a properly formatted CSV file:
+
+``` csv
+Ticker,Name,Description,Equities,Bonds,Cash
+FundA,Fund A Name,Large-Cap Fund,0.7,0.2,0.1
+FundB,Fund B Name,Government Bonds,0.1,0.9,0.0
+Targets,,,,0.6,0.3,0.1
+```
+
+A more extensive example is provided by the
+[example_fund_matrix.csv](https://github.com/jmmaloney3/portopt/blob/main/data/example_fund_matrix.csv)
+file.
 
 # Additioal Information
 The portfolio optimization problem has the following features:
