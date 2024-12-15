@@ -5,6 +5,7 @@ import argparse
 from collections import defaultdict
 
 # constants
+ACCOUNT_NAME = "account_name"
 TICKERS = "tickers"
 ASSET_CLASSES = "asset_classes"
 FUND_MATRIX = "fund_matrix"
@@ -52,22 +53,42 @@ def main():
     args = parser.parse_args()
 
     # load the data
-    data = load_data(args.file_path, args.f, args.v)
+    data = load_data(args.file_path, args.v)
+
+    # get list of accounts
+    accounts = get_accounts(data, args.v)
+
+    # temporary code to select first account
+    if (accounts is not None):
+        account_name = accounts[0]
+    else:
+        account_name = None
+
+    # extract the matrices and vectors
+    account_data = extract_data(data, account_name, args.f, args.v)
 
     # find the optimal fund allocations
-    data = opt_port(data, args.sw, args.mf, args.v)
+    results = opt_port(account_data, args.sw, args.mf, args.v)
 
     # output the results
-    output_results(data)
+    output_results(results)
 
 def output_results(data):
 
+    account_name          = data[ACCOUNT_NAME]
     fund_allocations      = data[FUND_ALLOCATIONS]
     portfolio_allocations = data[ASSET_CLASS_ALLOCATIONS]
     target_allocations    = data[ASSET_CLASS_TARGETS]
     fund_tickers          = data[TICKERS]
     asset_classes         = data[ASSET_CLASSES]
     problem               = data[OPT_PROBLEM]
+
+    # Output account name
+    if (account_name is not None):
+        line = "=" * 80
+        print(f"\n{line}")
+        print(f"{account_name.upper()}")
+        print(f"{line}")
 
     # Output optimal fund allocations
     if (fund_allocations.value is not None):
@@ -86,9 +107,11 @@ def output_results(data):
         for asset_class, actual, target in zip(asset_classes, portfolio_allocations.value, target_allocations):
             diff = target - actual
             print(f"{asset_class:20}{actual:10.2%}{target:10.2%}{diff:10.2%}")
-    
-    print(f"\nSolver Status: {problem.status}")
-    print(f"Objective Value (total deviation): {problem.value}\n")
+
+    # output solver information
+    if (problem is not None):
+        print(f"\nSolver Status: {problem.status}")
+        print(f"Objective Value (total deviation): {problem.value}\n")
 
 def opt_port(data, sparsity_weight=0.0, max_funds=None, verbose=False):
 
@@ -130,7 +153,7 @@ def opt_port(data, sparsity_weight=0.0, max_funds=None, verbose=False):
 
     return data
 
-def load_data(file_path, funds=None, verbose=False):
+def load_data(file_path, verbose=False):
     """
     Load the fund and target asset allocations from a csv file.  The
     csv file has the following structure:
@@ -159,8 +182,8 @@ def load_data(file_path, funds=None, verbose=False):
     # Read only the header row
     headers = pd.read_csv(file_path, nrows=0).columns.tolist()
 
-    # Define the default dtype for all columns except 'Ticker', 'Description, and 'Name'
-    dtype_dict = {col: float for col in headers if col not in ['Ticker', 'Description', 'Name']}
+    # Define the default dtype for all columns except 'Ticker', 'Description, 'Name' and 'Account'
+    dtype_dict = {col: float for col in headers if col not in ['Ticker', 'Description', 'Name', 'Accounts']}
 
     # Read the full file with the dynamically created dtype and converter
     data = pd.read_csv(
@@ -168,21 +191,36 @@ def load_data(file_path, funds=None, verbose=False):
         dtype=dtype_dict,  # Set all columns to float except Ticker
         converters={'Ticker': lambda x: x.strip(),      # Strip whitespace from Ticker column
                     'Description': lambda x: x.strip(), # Strip whitespace from Description column
-                    'Name': lambda x: x.strip()         # Strip whitespace from Name column
-                    }
+                    'Name': lambda x: x.strip(),        # Strip whitespace from Name column
+                    'Accounts': lambda x: [item.strip() for item in x.split(",")]
+        }
     )
-
-    # drop Name and Description columns
-    drop_columns = data.columns.intersection(['Name', 'Description'])
-    data = data.drop(columns=drop_columns)
 
     # configure header column
     data.set_index('Ticker', inplace=True)
 
-    # extract the matrices and vectors
-    return extract_data(data, funds, verbose)
+    return data
 
-def extract_data(data, funds=None, verbose=False):
+def get_accounts(data, verbose=False):
+    # get a list of the account names
+    if 'Accounts' in data.columns:
+        return data['Accounts'].explode().unique().tolist()
+    else:
+        return None
+
+def drop_columns(data, drop_columns, verbose=False):
+    drop_columns = data.columns.intersection(drop_columns)
+    return data.drop(columns=drop_columns)
+
+def extract_data(data, account_name=None, funds=None, verbose=False):
+
+    # if account_name is provided then filter out data that is not for
+    # the specified account
+    if account_name is not None:
+        data = data[data['Accounts'].apply(lambda x: account_name in x)]
+
+    # drop unnecessary columns
+    data = drop_columns(data, ['Name', 'Description', 'Accounts'])
 
     # Extract fund_matrix (all rows except 'Targets')
     if (funds is None):
@@ -197,6 +235,11 @@ def extract_data(data, funds=None, verbose=False):
     target_allocations = data.loc['Targets']
     if (verbose):
         print(f"\ntarget_allocations: \n{target_allocations}")
+    if (isinstance(target_allocations, pd.DataFrame)):
+        # target_allocations is a DataFrame if multiple targets exist
+        # otherwise it is a Series
+        # giving CVXPY multiple target rows will cause a segmentation fault
+        raise ValueError("Expected exactly one target row, but found {}".format(target_allocations.shape[0]))
 
     # Extract fund tickers (index column of the fund_matrix)
     fund_tickers = fund_matrix.index
@@ -209,10 +252,11 @@ def extract_data(data, funds=None, verbose=False):
         print(f"\nasset_classes: \n{asset_classes}")
 
     return {
-        FUND_MATRIX: fund_matrix.values,
-        ASSET_CLASS_TARGETS: target_allocations.values,
-        TICKERS: fund_tickers.values,
-        ASSET_CLASSES: asset_classes.values
+        ACCOUNT_NAME: account_name,
+        FUND_MATRIX: fund_matrix.to_numpy(),
+        ASSET_CLASS_TARGETS: target_allocations.to_numpy(),
+        TICKERS: fund_tickers.to_numpy(),
+        ASSET_CLASSES: asset_classes.to_numpy()
     }
 
 if __name__ == "__main__":
