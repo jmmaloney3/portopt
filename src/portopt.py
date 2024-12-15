@@ -50,6 +50,12 @@ def main():
     fund_allocations, portfolio_allocations, problem = opt_port(fund_matrix, target_allocations,
                                                                 args.sw, args.mf, args.v)
 
+    # output the results
+    output_results(fund_allocations, portfolio_allocations, target_allocations,
+                   fund_tickers, asset_classes, problem)
+
+def output_results(fund_allocations, portfolio_allocations, target_allocations,
+                   fund_tickers, asset_classes, problem):
     # Output optimal fund allocations
     if (fund_allocations.value is not None):
         print("\nOPTIMAL FUND ALLOCATIONS:")
@@ -70,7 +76,6 @@ def main():
     
     print(f"\nSolver Status: {problem.status}")
     print(f"Objective Value (total deviation): {problem.value}\n")
-
 
 def opt_port(fund_matrix, target_allocations,
              sparsity_weight=0.0, max_funds=None, verbose=False):
