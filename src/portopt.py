@@ -58,20 +58,18 @@ def main():
     # get list of accounts
     accounts = get_accounts(data, args.v)
 
-    # temporary code to select first account
-    if (accounts is not None):
-        account_name = accounts[0]
-    else:
-        account_name = None
+    # iterate over accounts:
+    # - generate optimal portfolio
+    # - output the results
+    for account_name in accounts:
+        # extract the matrices and vectors
+        account_data = extract_data(data, account_name, args.f, args.v)
 
-    # extract the matrices and vectors
-    account_data = extract_data(data, account_name, args.f, args.v)
+        # find the optimal fund allocations
+        results = opt_port(account_data, args.sw, args.mf, args.v)
 
-    # find the optimal fund allocations
-    results = opt_port(account_data, args.sw, args.mf, args.v)
-
-    # output the results
-    output_results(results)
+        # output the results
+        output_results(results)
 
 def output_results(data):
 
@@ -206,7 +204,7 @@ def get_accounts(data, verbose=False):
     if 'Accounts' in data.columns:
         return data['Accounts'].explode().unique().tolist()
     else:
-        return None
+        return [ None ]
 
 def drop_columns(data, drop_columns, verbose=False):
     drop_columns = data.columns.intersection(drop_columns)
