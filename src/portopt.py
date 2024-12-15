@@ -94,6 +94,9 @@ def output_results(data):
         print("==========================\n")
         print(f"{"Ticker":10}{"Allocation":>10}")
         print(f"{"--------":<10}{"----------":>10}")
+        if (isinstance(fund_tickers, pd.DataFrame)):
+            # remove Name & Description temporarily
+            fund_tickers = fund_tickers.index
         for ticker, allocation in zip(fund_tickers, fund_allocations.value):
             print(f"{ticker:<10}{allocation:10.2%}")
 
@@ -217,7 +220,23 @@ def extract_data(data, account_name=None, funds=None, verbose=False):
     if account_name is not None:
         data = data[data['Accounts'].apply(lambda x: account_name in x)]
 
-    # drop unnecessary columns
+    # if fund list is provided then only keep funds in the list
+    if (funds is not None):
+        # keep targets
+        keep_funds = funds.append('Targets')
+        data = data.loc[data.index.intersection(keep_funds)]
+
+    # Extract fund tickers (with name & description if provided)
+    fund_matrix_columns = data.columns.intersection(['Name', 'Description'])
+    if (len(fund_matrix_columns) != 0): # list not empty
+        fund_tickers = data.query("index != 'Targets'")[fund_matrix_columns]
+    else:
+        fund_tickers = data.query("index != 'Targets'").index
+
+    if (verbose):
+        print(f"\nfund_tickers: \n{fund_tickers}")
+
+    # drop columns - not needed for other data sets
     data = drop_columns(data, ['Name', 'Description', 'Accounts'])
 
     # Extract fund_matrix (all rows except 'Targets')
@@ -239,11 +258,6 @@ def extract_data(data, account_name=None, funds=None, verbose=False):
         # giving CVXPY multiple target rows will cause a segmentation fault
         raise ValueError("Expected exactly one target row, but found {}".format(target_allocations.shape[0]))
 
-    # Extract fund tickers (index column of the fund_matrix)
-    fund_tickers = fund_matrix.index
-    if (verbose):
-        print(f"\nfund_tickers: \n{fund_tickers}")
-
     # Extract asset classes (column headers)
     asset_classes = data.columns
     if (verbose):
@@ -253,8 +267,8 @@ def extract_data(data, account_name=None, funds=None, verbose=False):
         ACCOUNT_NAME: account_name,
         FUND_MATRIX: fund_matrix.to_numpy(),
         ASSET_CLASS_TARGETS: target_allocations.to_numpy(),
-        TICKERS: fund_tickers.to_numpy(),
-        ASSET_CLASSES: asset_classes.to_numpy()
+        TICKERS: fund_tickers,
+        ASSET_CLASSES: asset_classes
     }
 
 if __name__ == "__main__":
