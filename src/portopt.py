@@ -4,6 +4,15 @@ import numpy as np
 import argparse
 from collections import defaultdict
 
+# constants
+TICKERS = "tickers"
+ASSET_CLASSES = "asset_classes"
+FUND_MATRIX = "fund_matrix"
+ASSET_CLASS_TARGETS = "asset_class_targets"
+FUND_ALLOCATIONS = "fund_allocations"
+ASSET_CLASS_ALLOCATIONS = "asset_class_allocations"
+OPT_PROBLEM = "opt_problem"
+
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Optimize portfolio fund allocations based on a CSV file.")
@@ -43,19 +52,23 @@ def main():
     args = parser.parse_args()
 
     # load the data
-    fund_matrix, target_allocations, fund_tickers, asset_classes = \
-        load_data(args.file_path, args.f, args.v)
+    data = load_data(args.file_path, args.f, args.v)
 
     # find the optimal fund allocations
-    fund_allocations, portfolio_allocations, problem = opt_port(fund_matrix, target_allocations,
-                                                                args.sw, args.mf, args.v)
+    data = opt_port(data, args.sw, args.mf, args.v)
 
     # output the results
-    output_results(fund_allocations, portfolio_allocations, target_allocations,
-                   fund_tickers, asset_classes, problem)
+    output_results(data)
 
-def output_results(fund_allocations, portfolio_allocations, target_allocations,
-                   fund_tickers, asset_classes, problem):
+def output_results(data):
+
+    fund_allocations      = data[FUND_ALLOCATIONS]
+    portfolio_allocations = data[ASSET_CLASS_ALLOCATIONS]
+    target_allocations    = data[ASSET_CLASS_TARGETS]
+    fund_tickers          = data[TICKERS]
+    asset_classes         = data[ASSET_CLASSES]
+    problem               = data[OPT_PROBLEM]
+
     # Output optimal fund allocations
     if (fund_allocations.value is not None):
         print("\nOPTIMAL FUND ALLOCATIONS:")
@@ -77,8 +90,10 @@ def output_results(fund_allocations, portfolio_allocations, target_allocations,
     print(f"\nSolver Status: {problem.status}")
     print(f"Objective Value (total deviation): {problem.value}\n")
 
-def opt_port(fund_matrix, target_allocations,
-             sparsity_weight=0.0, max_funds=None, verbose=False):
+def opt_port(data, sparsity_weight=0.0, max_funds=None, verbose=False):
+
+    fund_matrix = data[FUND_MATRIX]
+    target_allocations = data[ASSET_CLASS_TARGETS]
 
     # Define the optimization problem
     num_funds = fund_matrix.shape[0]
@@ -109,7 +124,11 @@ def opt_port(fund_matrix, target_allocations,
     problem = cp.Problem(objective, constraints)
     problem.solve(solver=cp.SCIP, verbose=verbose)
 
-    return x, portfolio_allocations, problem
+    data[FUND_ALLOCATIONS] = x
+    data[ASSET_CLASS_ALLOCATIONS] = portfolio_allocations
+    data[OPT_PROBLEM] = problem
+
+    return data
 
 def load_data(file_path, funds=None, verbose=False):
     """
@@ -189,8 +208,12 @@ def extract_data(data, funds=None, verbose=False):
     if (verbose):
         print(f"\nasset_classes: \n{asset_classes}")
 
-    return fund_matrix.values, target_allocations.values, \
-           fund_tickers.values, asset_classes.values
+    return {
+        FUND_MATRIX: fund_matrix.values,
+        ASSET_CLASS_TARGETS: target_allocations.values,
+        TICKERS: fund_tickers.values,
+        ASSET_CLASSES: asset_classes.values
+    }
 
 if __name__ == "__main__":
     main()
