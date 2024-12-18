@@ -35,6 +35,13 @@ def main():
         help="Optional maximum number of funds to use (default: None - no maximum)."
     )
     parser.add_argument(
+        "-ma", # minimum fund allocation
+        type=float,
+        default=0,
+        help="Optional minimum non-zero fund allocation - fund allocation is either greater than " + \
+             "this amount or zero (default: 0 - no minimum)."
+    )
+    parser.add_argument(
         "-f", # funds to consider
         nargs='+',
         type=str,
@@ -77,7 +84,7 @@ def main():
         account_data = extract_data(data, account_name, args.f, args.v)
 
         # find the optimal fund allocations
-        results = opt_port(account_data, args.sw, args.mf, args.v)
+        results = opt_port(account_data, args.sw, args.mf, args.ma, args.v)
 
         # output the results
         output_results(results)
@@ -126,7 +133,7 @@ def output_results(data):
         print(f"\nSolver Status: {problem.status}")
         print(f"Objective Value (total deviation): {problem.value}\n")
 
-def opt_port(data, sparsity_weight=0.0, max_funds=None, verbose=False):
+def opt_port(data, sparsity_weight=0.0, max_funds=None, min_alloc=0.0, verbose=False):
 
     fund_matrix = data[FUND_MATRIX]
     target_allocations = data[ASSET_CLASS_TARGETS]
@@ -149,6 +156,7 @@ def opt_port(data, sparsity_weight=0.0, max_funds=None, verbose=False):
     constraints = [
         cp.sum(x) == 1,  # Allocations must sum to 100%
         x >= 0,          # No negative allocation
+        x >= min_alloc *z, # Positive fund allocations must be greater than min_alloc
         x <= z,          # Link x and z (if z=0, x=0)
     ]
 
