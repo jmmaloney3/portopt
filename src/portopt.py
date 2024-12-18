@@ -43,6 +43,14 @@ def main():
              "(default: None - consider all funds in fund matrix)."
     )
     parser.add_argument(
+        "-a", # accounts to process
+        nargs='+',
+        type=str,
+        default=None,
+        help="Optional subset of accounts to process " + \
+             "(default: None - process all accounts)."
+    )
+    parser.add_argument(
         "-v", # verbose
         default=False,
         action='store_true',
@@ -57,6 +65,9 @@ def main():
 
     # get list of accounts
     accounts = get_accounts(data, args.v)
+    # filter accounts if necessary
+    if (args.a is not None):
+        accounts = accounts.intersection(args.a)
 
     # iterate over accounts:
     # - generate optimal portfolio
@@ -206,9 +217,9 @@ def load_data(file_path, verbose=False):
 def get_accounts(data, verbose=False):
     # get a list of the account names
     if 'Accounts' in data.columns:
-        return data['Accounts'].explode().unique().tolist()
+        return set(data['Accounts'].explode().unique())
     else:
-        return [ None ]
+        return { None }
 
 def drop_columns(data, drop_columns, verbose=False):
     drop_columns = data.columns.intersection(drop_columns)
