@@ -243,7 +243,7 @@ def extract_data(data, account_name=None, funds=None, verbose=False):
     # if fund list is provided then only keep funds in the list
     if (funds is not None):
         # keep targets
-        keep_funds = funds.append('Targets')
+        keep_funds = funds + ['Targets']
         data = data.loc[data.index.intersection(keep_funds)]
 
     # Extract fund tickers (with name)
