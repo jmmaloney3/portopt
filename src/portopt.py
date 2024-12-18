@@ -90,15 +90,16 @@ def output_results(data):
 
     # Output optimal fund allocations
     if (fund_allocations.value is not None):
+        # add Name column if not provided by inputs
+        if ('Name' not in fund_tickers.columns):
+            fund_tickers['Name'] = 'N/A'
+
         print("\nOPTIMAL FUND ALLOCATIONS:")
         print("==========================\n")
-        print(f"{"Ticker":10}{"Allocation":>10}")
-        print(f"{"--------":<10}{"----------":>10}")
-        if (isinstance(fund_tickers, pd.DataFrame)):
-            # remove Name & Description temporarily
-            fund_tickers = fund_tickers.index
-        for ticker, allocation in zip(fund_tickers, fund_allocations.value):
-            print(f"{ticker:<10}{allocation:10.2%}")
+        print(f"{"Ticker":10}{"Name":50}{"Allocation":>10}")
+        print(f"{"-"*8:<10}{"-"*48:<50}{"-"*10:>10}")
+        for (ticker, name), allocation in zip(fund_tickers.itertuples(name=None), fund_allocations.value):
+            print(f"{ticker:<10}{name[:48]:<50}{allocation:10.2%}")
 
     if (portfolio_allocations.value is not None):
         print("\nPORTFOLIO ASSET CLASS ALLOCATIONS:")
@@ -226,12 +227,9 @@ def extract_data(data, account_name=None, funds=None, verbose=False):
         keep_funds = funds.append('Targets')
         data = data.loc[data.index.intersection(keep_funds)]
 
-    # Extract fund tickers (with name & description if provided)
-    fund_matrix_columns = data.columns.intersection(['Name', 'Description'])
-    if (len(fund_matrix_columns) != 0): # list not empty
-        fund_tickers = data.query("index != 'Targets'")[fund_matrix_columns]
-    else:
-        fund_tickers = data.query("index != 'Targets'").index
+    # Extract fund tickers (with name)
+    fund_matrix_columns = data.columns.intersection(['Name'])
+    fund_tickers = data.query("index != 'Targets'")[fund_matrix_columns]
 
     if (verbose):
         print(f"\nfund_tickers: \n{fund_tickers}")
