@@ -8,7 +8,7 @@ pandas = "*"
 argparse = "*"
 cvxpy = "*"
 pyscipopt = "*"
-
+yfinance = "*"
 
 [dev-packages]
 ipykernel = "*"

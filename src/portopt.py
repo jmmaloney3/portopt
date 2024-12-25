@@ -3,6 +3,10 @@ import cvxpy as cp
 import numpy as np
 import argparse
 from collections import defaultdict
+import math
+import yfinance as yf
+import os
+from contextlib import redirect_stderr
 
 # constants
 ACCOUNT_NAME = "account_name"
@@ -108,16 +112,18 @@ def output_results(data):
 
     # Output optimal fund allocations
     if (fund_allocations.value is not None):
-        # add Name column if not provided by inputs
-        if ('Name' not in fund_tickers.columns):
-            fund_tickers['Name'] = 'N/A'
+        # fill in name and price for the funds
+        for ticker in fund_tickers.index:
+            name, price = get_fund_info(ticker)
+            fund_tickers.loc[ticker, "Name"] = name
+            fund_tickers.loc[ticker, "Price"] = price
 
         print("\nOPTIMAL FUND ALLOCATIONS:")
         print("==========================\n")
-        print(f"{"Ticker":10}{"Name":50}{"Allocation":>10}")
-        print(f"{"-"*8:<10}{"-"*48:<50}{"-"*10:>10}")
-        for (ticker, name), allocation in zip(fund_tickers.itertuples(name=None), fund_allocations.value):
-            print(f"{ticker:<10}{name[:48]:<50}{allocation:10.2%}")
+        print(f"{"Ticker":10}{"Name":50}{"Price":10}{"Allocation":>10}")
+        print(f"{"-"*8:<10}{"-"*48:<50}{"-"*8:<10}{"-"*10:>10}")
+        for (ticker, name, price), allocation in zip(fund_tickers.itertuples(name=None), fund_allocations.value):
+            print(f"{ticker:<10}{name[:48]:<50}{get_price_str(price):>10}{allocation:10.2%}")
 
     if (portfolio_allocations.value is not None):
         print("\nPORTFOLIO ASSET CLASS ALLOCATIONS:")
@@ -228,6 +234,44 @@ def get_accounts(data, verbose=False):
         return set(data['Accounts'].explode().unique())
     else:
         return { None }
+
+def get_price_str(price):
+    if (math.isnan(price)):
+        return "N/A".center(10)
+    else:
+        return f"${price:.3f}  ".rjust(10)
+
+def get_fund_info(ticker, verbose=False):
+    """
+    Retrieve the fund name and last price from Yahoo! Finance
+    """
+    price = None
+    name = None
+
+    with open(os.devnull, "w") as fnull, redirect_stderr(fnull):
+        # Get the ticker data from Yahoo Finance
+        fund = yf.Ticker(ticker)
+
+        # Retrieve the most recent price (current price or bid price if real-time data available)
+        price = fund.info.get("regularMarketPrice", None)
+
+        # Get previous close if real-time price is not available
+        if (price is None):
+            if (ticker.upper().endswith('X')): # mutual funds end with 'X'
+                history_period = "1mo"
+            else:
+                history_period = "1d"
+
+            history = fund.history(period=history_period, interval="1m")  # Minute-level data for the day
+            if not history.empty:
+                price = history["Close"].iloc[-1]  # Last "Close" price of the fetched data
+            else:
+                price = fund.info.get("regularMarketPreviousClose", None)
+
+        # get name
+        name = fund.info.get("longName", "N/A")
+
+    return name, price
 
 def drop_columns(data, drop_columns, verbose=False):
     drop_columns = data.columns.intersection(drop_columns)
