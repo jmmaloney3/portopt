@@ -22,8 +22,6 @@ def get_fund_info(tickers):
             # Get expense ratio
             exp_ratio = info.get('annualReportExpenseRatio', 
                                info.get('totalExpenseRatio', np.nan))
-            if exp_ratio:
-                exp_ratio = exp_ratio * 100  # Convert to percentage
             
             # Get historical performance and current price
             hist = fund.history(period="max")
@@ -50,7 +48,7 @@ def get_fund_info(tickers):
                     old_price = hist['Close'].iloc[-info['days']]
                     total_return = (current_price - old_price) / old_price
                     # Convert to annualized return
-                    annualized_return = (((1 + total_return) ** (1/info['years'])) - 1) * 100
+                    annualized_return = ((1 + total_return) ** (1/info['years'])) - 1
                     returns[period] = annualized_return
                 else:
                     returns[period] = np.nan
@@ -59,7 +57,7 @@ def get_fund_info(tickers):
             first_price = hist['Close'].iloc[0]
             total_return = (current_price - first_price) / first_price
             years_since_inception = (hist.index[-1] - hist.index[0]).days / 365.25
-            since_inception = (((1 + total_return) ** (1/years_since_inception)) - 1) * 100
+            since_inception = ((1 + total_return) ** (1/years_since_inception)) - 1
             
             # Compile data using simplified column names
             fund_data = {
@@ -67,14 +65,14 @@ def get_fund_info(tickers):
                 'Name': fund_name,
                 'Type': fund_type,
                 'Category': category,
-                'Price': current_price,  # Add price to the output
+                'Price': current_price,
                 'Inception': inception_date,
-                'Exp': round(exp_ratio, 2) if not np.isnan(exp_ratio) else np.nan,
-                '1Y': round(returns.get('1Y', np.nan), 2),
-                '3Y': round(returns.get('3Y', np.nan), 2),
-                '5Y': round(returns.get('5Y', np.nan), 2),
-                '10Y': round(returns.get('10Y', np.nan), 2),
-                'ALL': round(since_inception, 2)
+                'Exp': exp_ratio,
+                '1Y': returns.get('1Y', np.nan),
+                '3Y': returns.get('3Y', np.nan),
+                '5Y': returns.get('5Y', np.nan),
+                '10Y': returns.get('10Y', np.nan),
+                'ALL': since_inception
             }
             
             data.append(fund_data)
@@ -110,11 +108,11 @@ def main():
             'Name':      {'width': 25},
             'Category':  {'width': 20},
             'Price':     {'width': 8, 'decimal': 2, 'prefix': '$'},
-            '1Y':        {'width': 6, 'suffix': '%'},
-            '3Y':        {'width': 6, 'suffix': '%'},
-            '5Y':        {'width': 6, 'suffix': '%'},
-            '10Y':       {'width': 6, 'suffix': '%'},
-            'ALL':       {'width': 6, 'suffix': '%'}
+            '1Y':        {'width': 6, 'type': '%'},
+            '3Y':        {'width': 6, 'type': '%'},
+            '5Y':        {'width': 6, 'type': '%'},
+            '10Y':       {'width': 6, 'type': '%'},
+            'ALL':       {'width': 6, 'type': '%'}
         }
         
         write_table(df, columns=columns)
