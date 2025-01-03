@@ -80,11 +80,11 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
             # For strings, truncate or pad to exact width
             fmt_str += ':' + fmt['align'] + str(data_width) + '.' + str(data_width)
         else:
-            # For numbers, ensure exact width including potential sign
+            # For all numeric types (including %), ensure exact width
             fmt_str += ':' + fmt['align'] + str(data_width)
             if 'sign' in fmt:
                 fmt_str += fmt['sign']
-            if fmt['type'] in ['f', 'g', 'e'] and 'decimal' in fmt:
+            if 'decimal' in fmt:
                 fmt_str += '.' + str(fmt['decimal'])
             fmt_str += fmt['type']
         fmt_str += '}'
