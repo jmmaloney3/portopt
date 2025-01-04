@@ -38,13 +38,16 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
         'bool': 's'
     }
     
+    # If index is named, include it in the display
+    if df.index.name is not None:
+        df = df.reset_index()
+
     # If no columns specified, create default format for all DataFrame columns
     if columns is None:
         columns = {col: {} for col in df.columns}
     
-    # Get list of columns to display
-    display_cols = list(columns.keys())
-    display_df = df[display_cols]
+    # Select columns to display
+    display_df = df[list(columns.keys())]
     
     # Process format specifications
     formats = {}
@@ -106,17 +109,17 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
         }
     
     # Create header line
-    header_strs = [formats[col]['hdr_fmt'].format(col) for col in display_cols]
+    header_strs = [formats[col]['hdr_fmt'].format(col) for col in columns.keys()]
     print(' '.join(header_strs), file=stream)
     
     # Create separator line
-    sep_strs = [formats[col]['sep'] * formats[col]['width'] for col in display_cols]
+    sep_strs = [formats[col]['sep'] * formats[col]['width'] for col in columns.keys()]
     print(' '.join(sep_strs), file=stream)
     
     # Print data rows
     for _, row in display_df.iterrows():
         data_strs = []
-        for col in display_cols:
+        for col in columns.keys():
             try:
                 value = row[col]
                 if pd.isna(value):
