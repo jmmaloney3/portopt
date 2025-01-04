@@ -7,6 +7,7 @@ import math
 import yfinance as yf
 import os
 from contextlib import redirect_stderr
+from utils import write_table
 
 # constants
 ACCOUNT_NAME = "account_name"
@@ -94,7 +95,6 @@ def main():
         output_results(results)
 
 def output_results(data):
-
     account_name          = data[ACCOUNT_NAME]
     fund_allocations      = data[FUND_ALLOCATIONS]
     portfolio_allocations = data[ASSET_CLASS_ALLOCATIONS]
@@ -120,19 +120,43 @@ def output_results(data):
 
         print("\nOPTIMAL FUND ALLOCATIONS:")
         print("==========================\n")
-        print(f"{"Ticker":10}{"Name":50}{"Price":10}{"Allocation":>10}")
-        print(f"{"-"*8:<10}{"-"*48:<50}{"-"*8:<10}{"-"*10:>10}")
-        for (ticker, name, price), allocation in zip(fund_tickers.itertuples(name=None), fund_allocations.value):
-            print(f"{ticker:<10}{name[:48]:<50}{get_price_str(price):>10}{allocation:10.2%}")
 
+        # Create DataFrame for fund allocations
+        fund_df = fund_tickers.copy()
+        fund_df['Allocation'] = fund_allocations.value
+
+        # Define column formats
+        fund_columns = {
+            'Ticker': {'width': 10},
+            'Name': {'width': 50},
+            'Price': {'width': 10, 'decimal': 3, 'prefix': '$'},
+            'Allocation': {'width': 10, 'type': '%', 'decimal': 2}
+        }
+
+        write_table(fund_df, columns=fund_columns)
+
+    # Output portfolio allocations
     if (portfolio_allocations.value is not None):
         print("\nPORTFOLIO ASSET CLASS ALLOCATIONS:")
         print("===================================\n")
-        print(f"{"Asset Class":20}{"Actual":>10}{"Target":>10}{"Diff":>10}")
-        print(f"{"-------------------":<20}{"--------":>10}{"--------":>10}{"--------":>10}")
-        for asset_class, actual, target in zip(asset_classes, portfolio_allocations.value, target_allocations):
-            diff = target - actual
-            print(f"{asset_class:20}{actual:10.2%}{target:10.2%}{diff:10.2%}")
+
+        # Create DataFrame for asset allocations
+        alloc_df = pd.DataFrame({
+            'Asset Class': asset_classes,
+            'Actual': portfolio_allocations.value,
+            'Target': target_allocations,
+            'Diff': target_allocations - portfolio_allocations.value
+        })
+
+        # Define column formats
+        alloc_columns = {
+            'Asset Class': {'width': 20},
+            'Actual': {'width': 10, 'type': '%', 'decimal': 2},
+            'Target': {'width': 10, 'type': '%', 'decimal': 2},
+            'Diff': {'width': 10, 'type': '%', 'decimal': 2}
+        }
+
+        write_table(alloc_df, columns=alloc_columns)
 
     # output solver information
     if (problem is not None):
@@ -278,7 +302,6 @@ def drop_columns(data, drop_columns, verbose=False):
     return data.drop(columns=drop_columns)
 
 def extract_data(data, account_name=None, funds=None, verbose=False):
-
     # if account_name is provided then filter out data that is not for
     # the specified account
     if account_name is not None:
