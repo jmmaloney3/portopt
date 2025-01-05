@@ -77,6 +77,7 @@ def main():
 
     # get list of accounts
     accounts = get_accounts(data, args.v)
+
     # filter accounts if necessary
     if (args.a is not None):
         accounts = accounts.intersection(args.a)
@@ -240,10 +241,11 @@ def load_data(file_path, verbose=False):
     data = pd.read_csv(
         file_path,
         dtype=dtype_dict,  # Set all columns to float except Ticker
-        converters={'Ticker': lambda x: x.strip(),      # Strip whitespace from Ticker column
-                    'Description': lambda x: x.strip(), # Strip whitespace from Description column
-                    'Name': lambda x: x.strip(),        # Strip whitespace from Name column
-                    'Accounts': lambda x: [item.strip() for item in x.split(",")]
+        converters={
+            'Ticker': lambda x: x.strip(),      # Strip whitespace from Ticker column
+            'Description': lambda x: x.strip(), # Strip whitespace from Description column
+            'Name': lambda x: x.strip(),        # Strip whitespace from Name column
+            'Accounts': lambda x: [item.strip() for item in x.split(",") if item.strip()]
         }
     )
 
@@ -255,7 +257,13 @@ def load_data(file_path, verbose=False):
 def get_accounts(data, verbose=False):
     # get a list of the account names
     if 'Accounts' in data.columns:
-        return set(data['Accounts'].explode().unique())
+        if verbose:
+            print(f"get_accounts:\n {data['Accounts']}")
+        # explode() will convert lists in each cell to separate rows
+        # - empty lists are converted to NaN values
+        # dropna() will remove any NaN values
+        # unique() will get unique values across all rows
+        return set(data['Accounts'].explode().dropna().unique())
     else:
         return { None }
 
