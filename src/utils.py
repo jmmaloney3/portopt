@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import warnings
 from statsmodels.tsa.stattools import adfuller, kpss
+from sklearn.preprocessing import StandardScaler
 
 def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None, 
                 stream: TextIO = sys.stdout):
@@ -184,3 +185,39 @@ def test_stationarity(df):
             raise ValueError(f"Error processing ticker {ticker}: {str(e)}. Please ensure data is clean and properly formatted.") from e
 
     return results
+
+def standardize_data(df):
+    """
+    Standardize data to have mean 0 and standard deviation 1.
+
+    Args:
+        df: pandas DataFrame to standardize
+
+    Returns:
+        pandas DataFrame with standardized data, maintaining original index and columns
+
+    Raises:
+        ValueError: If DataFrame contains NaN values or has zero standard deviation
+    """
+    # Check for NaN values
+    if df.isna().any().any():
+        raise ValueError("DataFrame contains NaN values. Please clean data first.")
+
+    # Check for zero standard deviation
+    if (df.std() == 0).any():
+        raise ValueError("One or more columns have zero standard deviation.")
+
+    # Initialize scaler
+    scaler = StandardScaler()
+
+    # Fit and transform the data
+    standardized_data = scaler.fit_transform(df)
+
+    # Convert back to DataFrame with original index and columns
+    df_standardized = pd.DataFrame(
+        standardized_data,
+        columns=df.columns,
+        index=df.index
+    )
+
+    return df_standardized
