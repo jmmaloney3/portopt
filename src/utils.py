@@ -5,6 +5,9 @@ import pandas as pd
 import warnings
 from statsmodels.tsa.stattools import adfuller, kpss
 from sklearn.preprocessing import StandardScaler
+from statsmodels.stats.diagnostic import acorr_ljungbox
+from statsmodels.stats.stattools import durbin_watson
+from scipy import stats
 
 def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None, 
                 stream: TextIO = sys.stdout):
@@ -185,6 +188,52 @@ def test_stationarity(df):
             raise ValueError(f"Error processing ticker {ticker}: {str(e)}. Please ensure data is clean and properly formatted.") from e
 
     return results
+
+def test_autocorrelation(df, lags=10, significance_level=0.05):
+    """
+    Use Durbin-Watson and Ljung-Box tests to determine if each column in the
+    dataframehas autocorrelation.
+
+    Args:
+        df: pandas DataFrame with time series data, indexed by date with
+        one column per ticker
+        lags: int, number of lags to test
+        significance_level: float, threshold for statistical significance
+
+    Returns:
+        pandas DataFrame with test results (test statistic, p-value)
+        and autocorrelation assessment (True if autocorrelation, False otherwise)
+    """
+    results = pd.DataFrame(
+        index=df.columns,
+        columns=['Durbin-Watson', 'DW p-value', 'Ljung-Box p-value', 'Has Autocorrelation']
+    )
+
+    for ticker in df.columns:
+        # Durbin-Watson test
+        residuals = df[ticker].diff().dropna()
+        dw_stat = durbin_watson(residuals)
+        dw_pval = durbin_watson_pvalue(dw_stat, len(residuals))
+
+        # Ljung-Box test
+        lb_result = acorr_ljungbox(df[ticker], lags=[lags])
+        lb_pval = lb_result['lb_pvalue'].iloc[0]
+
+        # Determine if autocorrelation exists
+        # True if either test suggests autocorrelation
+        has_autocorr = (dw_pval < significance_level) or (lb_pval < significance_level)
+
+        results.loc[ticker] = [dw_stat, dw_pval, lb_pval, has_autocorr]
+
+    return results
+
+def durbin_watson_pvalue(dw_stat, n):
+    """
+    Calculate approximate p-value for Durbin-Watson test.
+    """
+    # Approximate p-value calculation
+    # DW stat of 2 indicates no autocorrelation
+    return 2 * (1 - stats.norm.cdf(abs(dw_stat - 2)))
 
 def standardize_data(df):
     """
