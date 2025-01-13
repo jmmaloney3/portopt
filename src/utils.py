@@ -2,6 +2,8 @@ import sys
 from typing import Dict, Optional, TextIO, Any
 import numpy as np
 import pandas as pd
+import warnings
+from statsmodels.tsa.stattools import adfuller, kpss
 
 def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None, 
                 stream: TextIO = sys.stdout):
@@ -132,3 +134,53 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
                 # If formatting fails, fall back to string representation
                 data_strs.append(formats[col]['data_fmt'].format(str(row[col])))
         print(' '.join(data_strs), file=stream)
+
+def test_stationarity(df):
+    """
+    Use ADF and KPSS tests to determine if each column in the dataframe
+    is stationary.
+
+    Args:
+        df: pandas DataFrame with time series data, indexed by date with
+        one column per ticker
+
+    Returns:
+        pandas DataFrame with test results (test statistic, p-value)
+        and stationarity assessment (True if stationary, False otherwise)
+
+    Raises:
+        ValueError: If input data contains NaN or infinite values
+    """
+
+    # Check for NaN or infinite values
+    if df.isna().any().any() or np.isinf(df).any().any():
+        raise ValueError("Input data contains NaN or infinite values. Please clean the data first using df.dropna() or similar method.")
+
+    # Create empty DataFrame for results
+    results = pd.DataFrame(
+        index=df.columns,
+        columns=['ADF Statistic', 'ADF p-value', 'KPSS Statistic', 'KPSS p-value', 'Is Stationary']
+    )
+    results.index.name = 'Ticker'
+
+    # Perform tests for each ticker
+    for ticker in df.columns:
+        try:
+            # ADF test
+            adf_stat, adf_pval, _, _, _, _ = adfuller(df[ticker])
+
+            # KPSS test (using 'c' for constant trend)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', 'The test statistic is outside')
+                kpss_stat, kpss_pval, _, _ = kpss(df[ticker], regression='c')
+
+            # Determine stationarity
+            is_stationary = (adf_pval < 0.05) and (kpss_pval > 0.05)
+
+            # Store all results
+            results.loc[ticker] = [adf_stat, adf_pval, kpss_stat, kpss_pval, is_stationary]
+
+        except Exception as e:
+            raise ValueError(f"Error processing ticker {ticker}: {str(e)}. Please ensure data is clean and properly formatted.") from e
+
+    return results

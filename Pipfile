@@ -9,9 +9,14 @@ argparse = "*"
 cvxpy = "*"
 pyscipopt = "*"
 yfinance = "*"
+matplotlib = "*"
+seaborn = "*"
+scikit-learn = "*"
+pyportfolioopt = "*"
+statsmodels = "*"
 
 [dev-packages]
 ipykernel = "*"
 
 [requires]
-python_version = "3.13"
+python_version = "3.12.7"
