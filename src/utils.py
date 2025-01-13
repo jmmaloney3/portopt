@@ -206,7 +206,8 @@ def test_autocorrelation(df, lags=10, significance_level=0.05):
     """
     results = pd.DataFrame(
         index=df.columns,
-        columns=['Durbin-Watson', 'DW p-value', 'Ljung-Box p-value', 'Has Autocorrelation']
+        columns=['Durbin-Watson', 'DW p-value', 'Ljung-Box p-value', 
+                'Has Autocorrelation', 'AC Strength', 'AC Direction']
     )
 
     for ticker in df.columns:
@@ -220,10 +221,30 @@ def test_autocorrelation(df, lags=10, significance_level=0.05):
         lb_pval = lb_result['lb_pvalue'].iloc[0]
 
         # Determine if autocorrelation exists
-        # True if either test suggests autocorrelation
         has_autocorr = (dw_pval < significance_level) or (lb_pval < significance_level)
 
-        results.loc[ticker] = [dw_stat, dw_pval, lb_pval, has_autocorr]
+        # Determine strength and direction based on DW statistic
+        if not has_autocorr:
+            strength = "None"
+            direction = "None"
+        else:
+            # Direction
+            if dw_stat < 2:
+                direction = "Positive"
+            else:
+                direction = "Negative"
+
+            # Strength
+            dw_deviation = abs(dw_stat - 2)
+            if dw_deviation < 0.5:
+                strength = "Weak"
+            elif dw_deviation < 1.0:
+                strength = "Moderate"
+            else:
+                strength = "Strong"
+
+        results.loc[ticker] = [dw_stat, dw_pval, lb_pval,
+                             has_autocorr, strength, direction]
 
     return results
 
