@@ -3,11 +3,12 @@ from typing import Dict, Optional, TextIO, Any
 import numpy as np
 import pandas as pd
 import warnings
-from statsmodels.tsa.stattools import adfuller, kpss
+from scipy import stats
 from sklearn.preprocessing import StandardScaler
 from statsmodels.stats.diagnostic import acorr_ljungbox
+from statsmodels.stats.diagnostic import het_arch
 from statsmodels.stats.stattools import durbin_watson
-from scipy import stats
+from statsmodels.tsa.stattools import adfuller, kpss
 
 def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None, 
                 stream: TextIO = sys.stdout):
@@ -255,6 +256,76 @@ def durbin_watson_pvalue(dw_stat, n):
     # Approximate p-value calculation
     # DW stat of 2 indicates no autocorrelation
     return 2 * (1 - stats.norm.cdf(abs(dw_stat - 2)))
+
+def test_volatility_clustering(df, lags=10):
+    """
+    Test for ARCH effects (volatility clustering) using Engle's ARCH test.
+
+    Args:
+        df: DataFrame with time series data
+        lags: int, number of lags to test (default: 10)
+
+    Returns:
+        DataFrame with test results including:
+        - LM Statistic: Lagrange multiplier test statistic
+        - LM p-value: p-value for the test
+        - Has ARCH Effect: boolean indicating presence of ARCH effects
+        - VC Strength: Strength of volatility clustering (None/Weak/Moderate/Strong)
+        - VC Persistence: Number of significant lags showing ARCH effects
+
+    Notes:
+        - Null hypothesis (H0): No ARCH effects
+        - Alternative hypothesis (H1): ARCH effects present
+        - Reject H0 if p-value < 0.05
+        - Presence of ARCH effects indicates volatility clustering
+    """
+    results = pd.DataFrame(
+        index=df.columns,
+        columns=['LM Statistic', 'LM p-value', 'Has ARCH Effect',
+                'VC Strength', 'VC Persistence']
+    )
+
+    for ticker in df.columns:
+        try:
+            # Perform ARCH-LM test
+            arch_test = het_arch(df[ticker], nlags=lags)
+            lm_stat = arch_test[0]  # First element is the statistic
+            lm_pval = arch_test[1]  # Second element is the p-value
+
+            # Determine if ARCH effects exist (at 5% significance)
+            has_arch = lm_pval < 0.05
+
+            # Determine strength based on p-value
+            if not has_arch:
+                strength = "None"
+            else:
+                if lm_pval > 0.01:
+                    strength = "Weak"
+                elif lm_pval > 0.001:
+                    strength = "Moderate"
+                else:
+                    strength = "Strong"
+
+            # Calculate persistence (using rolling variance)
+            returns = df[ticker]
+            rolling_var = returns.rolling(window=20).var()
+            autocorr_var = rolling_var.autocorr(lag=1)
+
+            if abs(autocorr_var) < 0.2:
+                persistence = "Low"
+            elif abs(autocorr_var) < 0.5:
+                persistence = "Medium"
+            else:
+                persistence = "High"
+
+            results.loc[ticker] = [lm_stat, lm_pval, has_arch,
+                                 strength, persistence]
+
+        except Exception as e:
+            print(f"Error testing {ticker}: {str(e)}")
+            results.loc[ticker] = [np.nan, np.nan, np.nan, np.nan, np.nan]
+
+    return results
 
 def standardize_data(df):
     """
