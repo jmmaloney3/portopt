@@ -362,3 +362,108 @@ def standardize_data(df):
     )
 
     return df_standardized
+
+def get_tickers_data(tickers: set[str] | list[str],
+                     start_date: str = "1990-01-01",
+                     end_date: str = None,
+                     price_type: str = "Adj Close") -> pd.DataFrame:
+    """
+    Retrieve price data for a set of tickers.
+
+    Args:
+        tickers: Set or list of ticker symbols
+        start_date: Start date for data retrieval (default: "1990-01-01")
+        end_date: End date for data retrieval (default: None, means today)
+        price_type: Type of price to retrieve (default: "Adj Close")
+                   Options: "Open", "High", "Low", "Close", "Adj Close", "Volume"
+
+    Returns:
+        DataFrame indexed by date with tickers as columns containing price data
+
+    Raises:
+        ValueError: If no tickers provided or if invalid price_type
+        ValueError: If data retrieval fails for any ticker
+    """
+    # Convert tickers to set if it's a list
+    tickers_set = set(tickers)
+
+    if not tickers_set:
+        raise ValueError("No tickers provided")
+
+    # Validate price type
+    valid_price_types = ["Open", "High", "Low", "Close", "Adj Close", "Volume"]
+    if price_type not in valid_price_types:
+        raise ValueError(f"Invalid price_type. Must be one of {valid_price_types}")
+
+    try:
+        # Download data for all tickers
+        import yfinance as yf
+        df = yf.download(
+            list(tickers_set),  # Convert back to list for yfinance
+            start=start_date,
+            end=end_date,
+            auto_adjust=False
+        )[price_type]
+
+        # Check if any tickers are missing
+        missing_tickers = tickers_set - set(df.columns)
+        if missing_tickers:
+            raise ValueError(f"Failed to retrieve data for tickers: {missing_tickers}")
+
+        # Drop any rows with NaN values
+        df_clean = df.dropna(axis=0, how='any')
+
+        # Warn if we dropped any dates
+        if len(df_clean) < len(df):
+            import warnings
+            warnings.warn(f"Dropped {len(df) - len(df_clean)} rows containing NaN values")
+
+        return df_clean
+
+    except Exception as e:
+        raise ValueError(f"Error retrieving data: {str(e)}")
+
+def get_portfolio_data(portfolio,
+                      start_date: str = "1990-01-01",
+                      end_date: str = None,
+                      price_type: str = "Adj Close") -> pd.DataFrame:
+    """
+    Retrieve price data for one or more portfolios.
+
+    Args:
+        portfolio: Either:
+                  - A dictionary mapping tickers to weights
+                  - A dictionary of such dictionaries, with portfolio names as keys
+        start_date: Start date for data retrieval (default: "1990-01-01")
+        end_date: End date for data retrieval (default: None, means today)
+        price_type: Type of price to retrieve (default: "Adj Close")
+                   Options: "Open", "High", "Low", "Close", "Adj Close", "Volume"
+
+    Returns:
+        DataFrame indexed by date with tickers as columns containing price data
+
+    Example:
+        # Single portfolio
+        portfolio = {'AAPL': 0.5, 'MSFT': 0.5}
+        prices = get_portfolio_data(portfolio)
+
+        # Multiple portfolios
+        portfolios = {
+            'Conservative': {'SPY': 0.6, 'BND': 0.4},
+            'Aggressive': {'QQQ': 0.7, 'SPY': 0.3}
+        }
+        prices = get_portfolio_data(portfolios)
+    """
+    # Determine if we have a single portfolio or multiple portfolios
+    if all(isinstance(v, (int, float)) for v in portfolio.values()):
+        # Single portfolio case
+        tickers = set(portfolio.keys())
+    else:
+        # Multiple portfolios case
+        tickers = set()
+        for p in portfolio.values():
+            if not isinstance(p, dict):
+                raise ValueError("Invalid portfolio format")
+            tickers.update(p.keys())
+
+    return get_tickers_data(tickers, start_date, end_date, price_type)
