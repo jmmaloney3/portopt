@@ -162,3 +162,56 @@ def evaluate_portfolio(
     )
     
     return stats
+
+def evaluate_portfolios(
+    portfolios: Dict[str, Dict[str, float]],
+    standardized_returns: pd.DataFrame,
+    original_returns: pd.DataFrame,
+    risk_free_rate: float = 0.02,
+    risk_model: str = 'sample_cov'
+) -> pd.DataFrame:
+    """
+    Evaluate multiple portfolios using both standardized and original returns.
+
+    Args:
+        portfolios: Dict mapping portfolio names to portfolio weights.
+                   Example: {
+                       'Conservative': {'SPY': 0.6, 'BND': 0.4},
+                       'Aggressive': {'QQQ': 0.7, 'SPY': 0.3}
+                   }
+        standardized_returns: DataFrame of standardized returns for risk calculations
+        original_returns: DataFrame of original returns for return calculations
+        risk_free_rate: Annual risk-free rate (default: 0.02)
+        risk_model: Type of risk model to use (default: 'sample_cov')
+
+    Returns:
+        DataFrame with portfolio statistics as index and portfolio names as columns
+    """
+    # Initialize results dictionary
+    results = {}
+
+    # Evaluate each portfolio
+    for name, portfolio in portfolios.items():
+        try:
+            stats = evaluate_portfolio(
+                portfolio,
+                standardized_returns,
+                original_returns,
+                risk_free_rate,
+                risk_model
+            )
+            # Convert stats to dictionary and store
+            results[name] = stats.to_dict()
+
+        except Exception as e:
+            print(f"Warning: Failed to evaluate portfolio '{name}': {str(e)}")
+            continue
+
+    if not results:
+        raise ValueError("No portfolios were successfully evaluated")
+
+    # Return results as a DataFrame with portfolio names as columns and
+    # statistics as index
+    df_results = pd.DataFrame(results)
+
+    return df_results
