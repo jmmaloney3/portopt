@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import warnings
 from scipy import stats
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.stats.diagnostic import het_arch
@@ -467,3 +468,62 @@ def get_portfolio_data(portfolio,
             tickers.update(p.keys())
 
     return get_tickers_data(tickers, start_date, end_date, price_type)
+
+def plot_time_series(data: pd.DataFrame | pd.Series,
+                    title: str = "Time Series Plot",
+                    ylabel: str = "Value",
+                    figsize: tuple = (12, 6),
+                    legend_loc: str = "best") -> None:
+    """
+    Plot one or more time series on a line chart.
+
+    Args:
+        data: DataFrame or Series containing time series data
+        title: Plot title (default: "Time Series Plot")
+        ylabel: Y-axis label (default: "Value")
+        figsize: Figure size as (width, height) tuple (default: (12, 6))
+        legend_loc: Location of legend (default: "best")
+                   Options: 'best', 'upper left', 'upper right',
+                           'lower left', 'lower right', 'center', etc.
+
+    Returns:
+        None (displays plot)
+
+    Example:
+        # Single series
+        plot_time_series(df['AAPL'], title='Apple Stock Price')
+
+        # Multiple series
+        plot_time_series(df[['AAPL', 'MSFT']],
+                        title='Tech Stock Comparison',
+                        ylabel='Price')
+    """
+
+    # Create figure and axis
+    plt.figure(figsize=figsize)
+
+    # Handle both Series and DataFrame
+    if isinstance(data, pd.Series):
+        plt.plot(data.index, data.values, label=data.name)
+    else:
+        for column in data.columns:
+            plt.plot(data.index, data[column], label=column)
+
+    # Customize plot
+    plt.title(title)
+    plt.xlabel('Date')
+    plt.ylabel(ylabel)
+    plt.grid(True, linestyle='--', alpha=0.7)
+
+    # Add legend if we have multiple series or if the series has a name
+    if isinstance(data, pd.DataFrame) or data.name is not None:
+        plt.legend(loc=legend_loc)
+
+    # Rotate x-axis labels for better readability
+    plt.xticks(rotation=45)
+
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout()
+
+    # Show plot
+    plt.show()
