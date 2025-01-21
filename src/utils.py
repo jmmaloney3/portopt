@@ -191,21 +191,35 @@ def test_stationarity(df):
 
     return results
 
-def test_autocorrelation(df, lags=10, significance_level=0.05):
+def test_autocorrelation(data: pd.DataFrame | pd.Series,
+                        lags: int = 10,
+                        significance_level: float = 0.05) -> pd.DataFrame:
     """
-    Use Durbin-Watson and Ljung-Box tests to determine if each column in the
-    dataframehas autocorrelation.
+    Use Durbin-Watson and Ljung-Box tests to determine if time series has
+    autocorrelation.
 
     Args:
-        df: pandas DataFrame with time series data, indexed by date with
-        one column per ticker
-        lags: int, number of lags to test
-        significance_level: float, threshold for statistical significance
+        data: DataFrame with multiple time series or Series with single time series
+        lags: int, number of lags to test (default: 10)
+        significance_level: float, threshold for statistical significance (default: 0.05)
 
     Returns:
-        pandas DataFrame with test results (test statistic, p-value)
+        DataFrame with test results (test statistic, p-value)
         and autocorrelation assessment (True if autocorrelation, False otherwise)
+
+    Example:
+        # For a single series
+        results = test_autocorrelation(df['AAPL'])
+
+        # For multiple series
+        results = test_autocorrelation(df[['AAPL', 'MSFT']])
     """
+    # Convert Series to DataFrame if necessary
+    if isinstance(data, pd.Series):
+        df = pd.DataFrame(data)
+    else:
+        df = data
+
     results = pd.DataFrame(
         index=df.columns,
         columns=['Durbin-Watson', 'DW p-value', 'Ljung-Box p-value', 
