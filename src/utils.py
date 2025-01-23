@@ -378,6 +378,79 @@ def standardize_data(df):
 
     return df_standardized
 
+def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
+    """
+    Load fund asset class allocations from a CSV file.
+
+    The CSV file should have:
+    * First column named 'Ticker' containing fund ticker symbols
+    * Additional columns for asset classes containing allocation weights
+    * Optional 'Name' column with fund names
+    * Optional 'Description' column with fund descriptions
+    * Optional 'Accounts' column (will be excluded from output)
+    * Optional 'Target' rows (will be excluded from output)
+
+    Args:
+        file_path: Path to the CSV file containing fund allocations
+
+    Returns:
+        DataFrame indexed by ticker symbols containing asset class allocations.
+        Asset class weights sum to 1 (may include negative weights for leveraged positions).
+
+    Raises:
+        ValueError: If file format is invalid or if weights don't sum to 1
+    """
+    # Read only the header row to determine column types
+    headers = pd.read_csv(file_path, nrows=0).columns.tolist()
+
+    # Define dtype for each column
+    # - String columns: Ticker, Description, Name, Accounts
+    # - Float columns: All others (asset class weights)
+    dtype_dict = {
+        col: float for col in headers
+        if col not in ['Ticker', 'Description', 'Name', 'Accounts']
+    }
+
+    # Define string handling for non-numeric columns
+    converters = {
+        'Ticker': lambda x: x.strip(),
+        'Description': lambda x: x.strip(),
+        'Name': lambda x: x.strip(),
+        'Accounts': lambda x: [item.strip() for item in x.split(",") if item.strip()]
+    }
+
+    # Read the full file
+    data = pd.read_csv(
+        file_path,
+        dtype=dtype_dict,
+        converters=converters
+    )
+
+    # Set Ticker as index
+    data.set_index('Ticker', inplace=True)
+
+    # Remove Target rows
+    data = data[~data.index.str.contains('Target', case=False, na=False)]
+
+    # Remove Accounts column if it exists
+    if 'Accounts' in data.columns:
+        data = data.drop(columns=['Accounts'])
+
+    # Get weight columns (excluding Name and Description)
+    weight_columns = [col for col in data.columns
+                     if col not in ['Name', 'Description']]
+
+    # Verify weights sum to approximately 1
+    row_sums = data[weight_columns].sum(axis=1)
+    if not np.allclose(row_sums, 1.0, rtol=1e-3):
+        problematic_funds = data.index[~np.isclose(row_sums, 1.0, rtol=1e-3)]
+        raise ValueError(
+            f"Fund weights do not sum to 1 for: {list(problematic_funds)}\n"
+            f"Sums: {row_sums[problematic_funds]}"
+        )
+
+    return data
+
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
                      end_date: str = None,
