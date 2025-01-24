@@ -20,6 +20,7 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
         df: pandas DataFrame to display
         columns: Dictionary of column formats. Keys are column names, values are format specs.
                 If None, all DataFrame columns are displayed with defaults.
+                Columns specified but not in DataFrame are ignored.
         stream: Output stream (defaults to sys.stdout)
     
     Format dictionary options:
@@ -53,6 +54,9 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
     # If no columns specified, create default format for all DataFrame columns
     if columns is None:
         columns = {col: {} for col in df.columns}
+    else:
+        # Filter out columns that don't exist in the DataFrame
+        columns = {col: specs for col, specs in columns.items() if col in df.columns}
     
     # Select columns to display
     display_df = df[list(columns.keys())]
@@ -519,6 +523,70 @@ def load_fidelity_portfolio(file_path: str) -> pd.DataFrame:
     # Select only the required columns
     required_columns = ['Account Number', 'Account Name', 'Quantity', 'Cost Basis Total']
     result = data[required_columns]
+
+    return result
+
+def load_vanguard_portfolio(file_path: str) -> pd.DataFrame:
+    """
+    Load portfolio data from a Vanguard CSV export file.
+
+    The CSV file should be a Vanguard portfolio export containing:
+    * Position details (Account Number, Symbol, Shares, Share Price, Total Value)
+    * Transaction list at the bottom (separated by empty line)
+
+    Args:
+        file_path: Path to the Vanguard portfolio CSV file
+
+    Returns:
+        DataFrame indexed by ticker symbols containing:
+        - Account Number (string)
+        - Quantity (decimal)
+
+    Raises:
+        ValueError: If file format is invalid or required columns are missing
+    """
+    def clean_numeric(x):
+        if not x or x == '--':
+            return None
+        return float(x.replace('$', '').replace(',', ''))
+
+    # Define converters for data cleaning
+    converters = {
+        'Account Number': lambda x: x.strip() if x else '',
+        'Symbol': lambda x: x.strip() if x else '',
+        'Shares': clean_numeric,  # Allow None for money market funds
+        'Total Value': clean_numeric
+    }
+
+    # First read just the positions (stop at first empty line)
+    with open(file_path, 'r') as f:
+        lines = []
+        for line in f:
+            if line.strip() == '':
+                break
+            lines.append(line)
+
+    # Read the positions data with converters
+    data = pd.read_csv(
+        pd.io.common.StringIO(''.join(lines)),
+        converters=converters,
+        engine='python'
+    )
+
+    # For money market funds (where Shares is None):
+    # - Use Total Value as Shares (since share price is always $1)
+    data['Shares'] = data.apply(
+        lambda row: row['Total Value'] if pd.isna(row['Shares']) else row['Shares'],
+        axis=1
+    )
+
+    # Set Symbol as index and rename it to 'Ticker'
+    data.set_index('Symbol', inplace=True)
+    data.index.name = 'Ticker'
+
+    # Select and rename required columns
+    result = data[['Account Number', 'Shares']].copy()
+    result.rename(columns={'Shares': 'Quantity'}, inplace=True)
 
     return result
 
