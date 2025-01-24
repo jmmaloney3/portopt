@@ -451,6 +451,72 @@ def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
 
     return data
 
+def load_fidelity_portfolio(file_path: str) -> pd.DataFrame:
+    """
+    Load portfolio data from a Fidelity CSV export file.
+
+    The CSV file should be a Fidelity portfolio export containing:
+    * Account information
+    * Position details
+    * Disclaimers at the bottom (separated by empty line)
+
+    Special handling for money market funds:
+    * When Quantity is empty, uses Current Value
+    * When Cost Basis is empty, uses Current Value
+
+    Args:
+        file_path: Path to the Fidelity portfolio CSV file
+
+    Returns:
+        DataFrame indexed by ticker symbols containing:
+        - Account Number (string)
+        - Account Name (string)
+        - Quantity (decimal)
+        - Cost Basis Total (decimal)
+
+    Raises:
+        ValueError: If file format is invalid or required columns are missing
+    """
+    # Define converters for data cleaning
+    converters = {
+        'Account Number': lambda x: x.strip() if x else '',
+        'Account Name': lambda x: x.strip() if x else '',
+        'Symbol': lambda x: x.strip() if x else '',
+        'Quantity': lambda x: float(x) if x else None,  # Allow None for money market funds
+        'Current Value': lambda x: float(x.replace('$', '').replace(',', '')) if x else 0.0,
+        'Cost Basis Total': lambda x: float(x.replace('$', '').replace(',', '')) if x else None  # Allow None for money market funds
+    }
+
+    # Read the data with converters, skipping the footer
+    data = pd.read_csv(
+        file_path,
+        converters=converters,
+        skipfooter=6,  # Skip 6 footer lines (3 disclaimers + 3 empty lines)
+        engine='python'  # Required when using skipfooter
+    )
+
+    # For money market funds (where Quantity and Cost Basis Total are None):
+    # - Use Current Value as Quantity
+    # - Use Current Value as Cost Basis Total
+    data['Quantity'] = data.apply(
+        lambda row: row['Current Value'] if pd.isna(row['Quantity']) else row['Quantity'],
+        axis=1
+    )
+    data['Cost Basis Total'] = data.apply(
+        lambda row: row['Current Value'] if pd.isna(row['Cost Basis Total']) else row['Cost Basis Total'],
+        axis=1
+    )
+
+    # Set Symbol as index and rename it to 'Ticker'
+    data.set_index('Symbol', inplace=True)
+    data.index.name = 'Ticker'
+
+    # Select only the required columns
+    required_columns = ['Account Number', 'Account Name', 'Quantity', 'Cost Basis Total']
+    result = data[required_columns]
+
+    return result
+
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
                      end_date: str = None,
