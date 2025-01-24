@@ -12,17 +12,22 @@ from statsmodels.stats.stattools import durbin_watson
 from statsmodels.tsa.stattools import adfuller, kpss
 
 def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None, 
-                stream: TextIO = sys.stdout):
+                stream: TextIO = sys.stdout,
+                sort_order: Optional[str] = 'asc'):
     """
     Write a formatted table to the specified output stream.
-    
+
     Args:
         df: pandas DataFrame to display
         columns: Dictionary of column formats. Keys are column names, values are format specs.
                 If None, all DataFrame columns are displayed with defaults.
                 Columns specified but not in DataFrame are ignored.
         stream: Output stream (defaults to sys.stdout)
-    
+        sort_order: Controls table sorting by index (default: 'asc')
+                   'asc' - sort ascending
+                   'desc' - sort descending
+                   None - leave order unchanged
+
     Format dictionary options:
         type: Data type ('s', 'd', 'f', etc). Default: based on column dtype
         align: Data alignment ('<', '>', '^', '='). Default: based on type
@@ -46,26 +51,37 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
         'string': 's',
         'bool': 's'
     }
-    
+
+    # Create a copy to avoid modifying the input DataFrame
+    display_df = df.copy()
+
+    # Sort by index first, before Index gets converted to a regular column below
+    if sort_order == 'asc':
+        display_df.sort_index(ascending=True, inplace=True)
+    elif sort_order == 'desc':
+        display_df.sort_index(ascending=False, inplace=True)
+    elif sort_order is not None:
+        raise ValueError("sort_order must be 'asc', 'desc', or None")
+
     # If index is named, include it in the display
-    if df.index.name is not None:
-        df = df.reset_index()
+    if display_df.index.name is not None:
+        display_df = display_df.reset_index()
 
     # If no columns specified, create default format for all DataFrame columns
     if columns is None:
-        columns = {col: {} for col in df.columns}
+        columns = {col: {} for col in display_df.columns}
     else:
         # Filter out columns that don't exist in the DataFrame
-        columns = {col: specs for col, specs in columns.items() if col in df.columns}
-    
+        columns = {col: specs for col, specs in columns.items() if col in display_df.columns}
+
     # Select columns to display
-    display_df = df[list(columns.keys())]
+    display_df = display_df[list(columns.keys())]
     
     # Process format specifications
     formats = {}
     for col, specs in columns.items():
         # Determine if column is numeric based on dtype
-        col_type = dtype_to_format.get(str(df[col].dtype), 's')
+        col_type = dtype_to_format.get(str(display_df[col].dtype), 's')
         is_numeric = col_type in ['f', 'd']
         
         # Start with defaults
