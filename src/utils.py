@@ -606,6 +606,57 @@ def load_vanguard_portfolio(file_path: str) -> pd.DataFrame:
 
     return result
 
+def load_troweprice_portfolio(file_path: str) -> pd.DataFrame:
+    """
+    Load portfolio data from a T. Rowe Price CSV export file.
+
+    The CSV file should be a T. Rowe Price portfolio export containing:
+    * Position details including Symbol, Shares, and Average Cost
+    * No footer section (unlike Fidelity/Vanguard exports)
+
+    Args:
+        file_path: Path to the T. Rowe Price portfolio CSV file
+
+    Returns:
+        DataFrame indexed by ticker symbols containing:
+        - Quantity (decimal)
+        - Cost Basis Total (decimal, calculated from Average Cost * Shares)
+
+    Raises:
+        ValueError: If file format is invalid or required columns are missing
+    """
+    def clean_numeric(x):
+        if not x or x == '--':
+            return None
+        # Remove quotes, dollar signs, and commas
+        return float(str(x).replace('"', '').replace('$', '').replace(',', ''))
+
+    # Define converters for data cleaning
+    converters = {
+        'Symbol': lambda x: x.strip() if x else '',
+        'Shares': clean_numeric,
+        'Average Cost': clean_numeric
+    }
+
+    # Read the data with converters
+    data = pd.read_csv(
+        file_path,
+        converters=converters
+    )
+
+    # Calculate Cost Basis Total from Shares and Average Cost
+    data['Cost Basis Total'] = data['Shares'] * data['Average Cost']
+
+    # Set Symbol as index and rename it to 'Ticker'
+    data.set_index('Symbol', inplace=True)
+    data.index.name = 'Ticker'
+
+    # Select and rename required columns
+    result = data[['Shares', 'Cost Basis Total']].copy()
+    result.rename(columns={'Shares': 'Quantity'}, inplace=True)
+
+    return result
+
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
                      end_date: str = None,
