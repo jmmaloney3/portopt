@@ -461,8 +461,8 @@ def load_fidelity_portfolio(file_path: str) -> pd.DataFrame:
     * Disclaimers at the bottom (separated by empty line)
 
     Special handling for money market funds:
-    * When Quantity is empty, uses Current Value
-    * When Cost Basis is empty, uses Current Value
+    * When Quantity is empty or '--', uses Current Value
+    * When Cost Basis is empty or '--', uses Current Value
 
     Args:
         file_path: Path to the Fidelity portfolio CSV file
@@ -477,14 +477,19 @@ def load_fidelity_portfolio(file_path: str) -> pd.DataFrame:
     Raises:
         ValueError: If file format is invalid or required columns are missing
     """
+    def clean_numeric(x):
+        if not x or x == '--':
+            return None
+        return float(x.replace('$', '').replace(',', ''))
+
     # Define converters for data cleaning
     converters = {
         'Account Number': lambda x: x.strip() if x else '',
         'Account Name': lambda x: x.strip() if x else '',
         'Symbol': lambda x: x.strip() if x else '',
-        'Quantity': lambda x: float(x) if x else None,  # Allow None for money market funds
-        'Current Value': lambda x: float(x.replace('$', '').replace(',', '')) if x else 0.0,
-        'Cost Basis Total': lambda x: float(x.replace('$', '').replace(',', '')) if x else None  # Allow None for money market funds
+        'Quantity': clean_numeric,  # Allow None for money market funds
+        'Current Value': clean_numeric,  # Allow None initially
+        'Cost Basis Total': clean_numeric  # Allow None for money market funds
     }
 
     # Read the data with converters, skipping the footer
