@@ -478,12 +478,16 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
     The CSV file should contain position details with some or all of:
     * Account information (Account Number, Account Name)
     * Position details (Symbol/Ticker, Quantity/Shares, Cost Basis/Average Cost)
+    * Optional non-CSV lines (will be detected and skipped)
     * Optional footer section (will be detected and skipped)
 
     Special handling:
     * Money market funds: When Quantity is empty, uses Current Value (assuming $1/share)
                          for both Quantity and Cost Basis (if Cost Basis is not provided)
-    * Cost Basis: Calculated from Average Cost * Quantity when not directly provided
+    * Cost Basis:
+        1. Uses 'Cost Basis' or 'Cost Basis Total' column if either exists
+        2. If neither exists, calculates from Average Cost * Quantity if both are available
+        3. Otherwise, sets to NaN
     * Missing columns: Populated with 'N/A' for strings, NaN for numeric values
     * Empty string values: Replaced with 'N/A'
 
@@ -495,7 +499,7 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
         - Account Number (if available, else 'N/A')
         - Account Name (if available, else 'N/A')
         - Quantity (from Quantity or Shares column)
-        - Cost Basis (from Cost Basis Total or calculated from Average Cost * Quantity, NaN if unavailable)
+        - Cost Basis (from Cost Basis/Cost Basis Total columns, or calculated from Average Cost * Quantity)
 
     Raises:
         ValueError: If file format is invalid, required Symbol column is missing,
@@ -510,6 +514,17 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
     def clean_string(x):
         return x.strip() if x and x.strip() else 'N/A'
 
+    def count_csv_commas(line):
+        """Count commas that separate CSV fields, ignoring commas inside quotes"""
+        in_quotes = False
+        comma_count = 0
+        for char in line:
+            if char == '"':
+                in_quotes = not in_quotes
+            elif char == ',' and not in_quotes:
+                comma_count += 1
+        return comma_count
+
     # Define converters for data cleaning
     converters = {
         'Account Number': clean_string,
@@ -518,27 +533,45 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
         'Quantity': clean_numeric,
         'Shares': clean_numeric,
         'Current Value': clean_numeric,
+        'Cost Basis': clean_numeric,
         'Cost Basis Total': clean_numeric,
         'Average Cost': clean_numeric
     }
 
-    # First read just the positions (stop at first empty line)
+    # Read file and collect CSV lines
     with open(file_path, 'r') as f:
         lines = []
+        header_commas = None
         for line in f:
-            if line.strip() == '':
+            stripped_line = line.strip()
+            if stripped_line == '':  # Stop at first empty line
                 break
-            lines.append(line)
+
+            # Count commas properly handling quoted strings
+            num_commas = count_csv_commas(stripped_line)
+
+            if header_commas is None:
+                # First line with commas becomes our header
+                if num_commas > 0:
+                    header_commas = num_commas
+                    lines.append(stripped_line)
+            else:
+                # Only append lines with the same number of commas as the header
+                if num_commas == header_commas:
+                    lines.append(stripped_line)
+
+    if not lines:
+        raise ValueError("No valid CSV data found in file")
 
     # Read the positions data with converters
     data = pd.read_csv(
-        pd.io.common.StringIO(''.join(lines)),
+        pd.io.common.StringIO('\n'.join(lines)),
         converters=converters
     )
 
-    # Verify we have a Symbol column
+    # Verify required columns
     if 'Symbol' not in data.columns:
-        raise ValueError("CSV must contain a 'Symbol' column")
+        raise ValueError("Required column 'Symbol' not found")
 
     # Handle quantity/shares
     if 'Quantity' in data.columns:
@@ -549,7 +582,9 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
         raise ValueError("CSV must contain either 'Quantity' or 'Shares' column")
 
     # Handle cost basis
-    if 'Cost Basis Total' in data.columns:
+    if 'Cost Basis' in data.columns:
+        pass  # Use the column directly
+    elif 'Cost Basis Total' in data.columns:
         data['Cost Basis'] = data['Cost Basis Total']
     elif 'Average Cost' in data.columns:
         data['Cost Basis'] = data[quantity_col] * data['Average Cost']
