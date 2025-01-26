@@ -477,7 +477,7 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
 
     The CSV file should contain position details with some or all of:
     * Account information (Account Number, Account Name)
-    * Position details (Symbol/Ticker, Quantity/Shares, Cost Basis/Average Cost)
+    * Position details (Symbol/SYMBOL/Ticker, Quantity/Shares/UNIT/SHARE OWNED, Cost Basis/Average Cost)
     * Optional non-CSV lines (will be detected and skipped)
     * Optional footer section (will be detected and skipped)
 
@@ -530,8 +530,10 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
         'Account Number': clean_string,
         'Account Name': clean_string,
         'Symbol': clean_string,
+        'SYMBOL': clean_string,  # Add uppercase variant
         'Quantity': clean_numeric,
         'Shares': clean_numeric,
+        'UNIT/SHARE OWNED': clean_numeric,
         'Current Value': clean_numeric,
         'Cost Basis': clean_numeric,
         'Cost Basis Total': clean_numeric,
@@ -569,17 +571,23 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
         converters=converters
     )
 
-    # Verify required columns
-    if 'Symbol' not in data.columns:
-        raise ValueError("Required column 'Symbol' not found")
+    # Verify required columns (case-insensitive check for Symbol)
+    symbol_col = None
+    for col in data.columns:
+        if col.upper() == 'SYMBOL':
+            symbol_col = col
+            break
+    if symbol_col is None:
+        raise ValueError("Required column 'Symbol' or 'SYMBOL' not found")
 
-    # Handle quantity/shares
-    if 'Quantity' in data.columns:
-        quantity_col = 'Quantity'
-    elif 'Shares' in data.columns:
-        quantity_col = 'Shares'
-    else:
-        raise ValueError("CSV must contain either 'Quantity' or 'Shares' column")
+    # Handle quantity column variations
+    quantity_col = None
+    for col in ['Quantity', 'Shares', 'UNIT/SHARE OWNED']:
+        if col in data.columns:
+            quantity_col = col
+            break
+    if quantity_col is None:
+        raise ValueError("CSV must contain either 'Quantity', 'Shares', or 'UNIT/SHARE OWNED' column")
 
     # Handle cost basis
     if 'Cost Basis' in data.columns:
@@ -607,7 +615,7 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
         )
 
     # Set Symbol as index and rename it to 'Ticker'
-    data.set_index('Symbol', inplace=True)
+    data.set_index(symbol_col, inplace=True)
     data.index.name = 'Ticker'
 
     # Prepare final DataFrame with required columns
