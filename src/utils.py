@@ -471,107 +471,55 @@ def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
 
     return data
 
-def load_fidelity_portfolio(file_path: str) -> pd.DataFrame:
+def load_portfolio(file_path: str) -> pd.DataFrame:
     """
-    Load portfolio data from a Fidelity CSV export file.
+    Load portfolio data from CSV export file
 
-    The CSV file should be a Fidelity portfolio export containing:
-    * Account information
-    * Position details
-    * Disclaimers at the bottom (separated by empty line)
+    The CSV file should contain position details with some or all of:
+    * Account information (Account Number, Account Name)
+    * Position details (Symbol/Ticker, Quantity/Shares, Cost Basis/Average Cost)
+    * Optional footer section (will be detected and skipped)
 
-    Special handling for money market funds:
-    * When Quantity is empty or '--', uses Current Value
-    * When Cost Basis is empty or '--', uses Current Value
+    Special handling:
+    * Money market funds: When Quantity is empty, uses Current Value (assuming $1/share)
+                         for both Quantity and Cost Basis (if Cost Basis is not provided)
+    * Cost Basis: Calculated from Average Cost * Quantity when not directly provided
+    * Missing columns: Populated with 'N/A' for strings, NaN for numeric values
+    * Empty string values: Replaced with 'N/A'
 
     Args:
-        file_path: Path to the Fidelity portfolio CSV file
+        file_path: Path to the portfolio CSV file
 
     Returns:
         DataFrame indexed by ticker symbols containing:
-        - Account Number (string)
-        - Account Name (string)
-        - Quantity (decimal)
-        - Cost Basis Total (decimal)
+        - Account Number (if available, else 'N/A')
+        - Account Name (if available, else 'N/A')
+        - Quantity (from Quantity or Shares column)
+        - Cost Basis (from Cost Basis Total or calculated from Average Cost * Quantity, NaN if unavailable)
 
     Raises:
-        ValueError: If file format is invalid or required columns are missing
+        ValueError: If file format is invalid, required Symbol column is missing,
+                   or neither Quantity nor Shares column is present
     """
     def clean_numeric(x):
         if not x or x == '--':
             return None
-        return float(x.replace('$', '').replace(',', ''))
+        # Remove quotes, dollar signs, and commas
+        return float(str(x).replace('"', '').replace('$', '').replace(',', ''))
+
+    def clean_string(x):
+        return x.strip() if x and x.strip() else 'N/A'
 
     # Define converters for data cleaning
     converters = {
-        'Account Number': lambda x: x.strip() if x else '',
-        'Account Name': lambda x: x.strip() if x else '',
-        'Symbol': lambda x: x.strip() if x else '',
-        'Quantity': clean_numeric,  # Allow None for money market funds
-        'Current Value': clean_numeric,  # Allow None initially
-        'Cost Basis Total': clean_numeric  # Allow None for money market funds
-    }
-
-    # Read the data with converters, skipping the footer
-    data = pd.read_csv(
-        file_path,
-        converters=converters,
-        skipfooter=6,  # Skip 6 footer lines (3 disclaimers + 3 empty lines)
-        engine='python'  # Required when using skipfooter
-    )
-
-    # For money market funds (where Quantity and Cost Basis Total are None):
-    # - Use Current Value as Quantity
-    # - Use Current Value as Cost Basis Total
-    data['Quantity'] = data.apply(
-        lambda row: row['Current Value'] if pd.isna(row['Quantity']) else row['Quantity'],
-        axis=1
-    )
-    data['Cost Basis Total'] = data.apply(
-        lambda row: row['Current Value'] if pd.isna(row['Cost Basis Total']) else row['Cost Basis Total'],
-        axis=1
-    )
-
-    # Set Symbol as index and rename it to 'Ticker'
-    data.set_index('Symbol', inplace=True)
-    data.index.name = 'Ticker'
-
-    # Select only the required columns
-    required_columns = ['Account Number', 'Account Name', 'Quantity', 'Cost Basis Total']
-    result = data[required_columns]
-
-    return result
-
-def load_vanguard_portfolio(file_path: str) -> pd.DataFrame:
-    """
-    Load portfolio data from a Vanguard CSV export file.
-
-    The CSV file should be a Vanguard portfolio export containing:
-    * Position details (Account Number, Symbol, Shares, Share Price, Total Value)
-    * Transaction list at the bottom (separated by empty line)
-
-    Args:
-        file_path: Path to the Vanguard portfolio CSV file
-
-    Returns:
-        DataFrame indexed by ticker symbols containing:
-        - Account Number (string)
-        - Quantity (decimal)
-
-    Raises:
-        ValueError: If file format is invalid or required columns are missing
-    """
-    def clean_numeric(x):
-        if not x or x == '--':
-            return None
-        return float(x.replace('$', '').replace(',', ''))
-
-    # Define converters for data cleaning
-    converters = {
-        'Account Number': lambda x: x.strip() if x else '',
-        'Symbol': lambda x: x.strip() if x else '',
-        'Shares': clean_numeric,  # Allow None for money market funds
-        'Total Value': clean_numeric
+        'Account Number': clean_string,
+        'Account Name': clean_string,
+        'Symbol': clean_string,
+        'Quantity': clean_numeric,
+        'Shares': clean_numeric,
+        'Current Value': clean_numeric,
+        'Cost Basis Total': clean_numeric,
+        'Average Cost': clean_numeric
     }
 
     # First read just the positions (stop at first empty line)
@@ -585,75 +533,54 @@ def load_vanguard_portfolio(file_path: str) -> pd.DataFrame:
     # Read the positions data with converters
     data = pd.read_csv(
         pd.io.common.StringIO(''.join(lines)),
-        converters=converters,
-        engine='python'
-    )
-
-    # For money market funds (where Shares is None):
-    # - Use Total Value as Shares (since share price is always $1)
-    data['Shares'] = data.apply(
-        lambda row: row['Total Value'] if pd.isna(row['Shares']) else row['Shares'],
-        axis=1
-    )
-
-    # Set Symbol as index and rename it to 'Ticker'
-    data.set_index('Symbol', inplace=True)
-    data.index.name = 'Ticker'
-
-    # Select and rename required columns
-    result = data[['Account Number', 'Shares']].copy()
-    result.rename(columns={'Shares': 'Quantity'}, inplace=True)
-
-    return result
-
-def load_troweprice_portfolio(file_path: str) -> pd.DataFrame:
-    """
-    Load portfolio data from a T. Rowe Price CSV export file.
-
-    The CSV file should be a T. Rowe Price portfolio export containing:
-    * Position details including Symbol, Shares, and Average Cost
-    * No footer section (unlike Fidelity/Vanguard exports)
-
-    Args:
-        file_path: Path to the T. Rowe Price portfolio CSV file
-
-    Returns:
-        DataFrame indexed by ticker symbols containing:
-        - Quantity (decimal)
-        - Cost Basis Total (decimal, calculated from Average Cost * Shares)
-
-    Raises:
-        ValueError: If file format is invalid or required columns are missing
-    """
-    def clean_numeric(x):
-        if not x or x == '--':
-            return None
-        # Remove quotes, dollar signs, and commas
-        return float(str(x).replace('"', '').replace('$', '').replace(',', ''))
-
-    # Define converters for data cleaning
-    converters = {
-        'Symbol': lambda x: x.strip() if x else '',
-        'Shares': clean_numeric,
-        'Average Cost': clean_numeric
-    }
-
-    # Read the data with converters
-    data = pd.read_csv(
-        file_path,
         converters=converters
     )
 
-    # Calculate Cost Basis Total from Shares and Average Cost
-    data['Cost Basis Total'] = data['Shares'] * data['Average Cost']
+    # Verify we have a Symbol column
+    if 'Symbol' not in data.columns:
+        raise ValueError("CSV must contain a 'Symbol' column")
+
+    # Handle quantity/shares
+    if 'Quantity' in data.columns:
+        quantity_col = 'Quantity'
+    elif 'Shares' in data.columns:
+        quantity_col = 'Shares'
+    else:
+        raise ValueError("CSV must contain either 'Quantity' or 'Shares' column")
+
+    # Handle cost basis
+    if 'Cost Basis Total' in data.columns:
+        data['Cost Basis'] = data['Cost Basis Total']
+    elif 'Average Cost' in data.columns:
+        data['Cost Basis'] = data[quantity_col] * data['Average Cost']
+    else:
+        data['Cost Basis'] = np.nan
+
+    # Handle money market funds (indicated by missing Quantity)
+    if pd.isna(data[quantity_col]).any():
+        if 'Current Value' not in data.columns:
+            raise ValueError("Current Value column required for money market funds")
+        # Use Current Value for Quantity where missing
+        data[quantity_col] = data.apply(
+            lambda row: row['Current Value'] if pd.isna(row[quantity_col]) else row[quantity_col],
+            axis=1
+        )
+        # Use Current Value for Cost Basis if Cost Basis is missing
+        data['Cost Basis'] = data.apply(
+            lambda row: row['Current Value'] if pd.isna(row['Cost Basis']) else row['Cost Basis'],
+            axis=1
+        )
 
     # Set Symbol as index and rename it to 'Ticker'
     data.set_index('Symbol', inplace=True)
     data.index.name = 'Ticker'
 
-    # Select and rename required columns
-    result = data[['Shares', 'Cost Basis Total']].copy()
-    result.rename(columns={'Shares': 'Quantity'}, inplace=True)
+    # Prepare final DataFrame with required columns
+    result = pd.DataFrame(index=data.index)
+    result['Account Number'] = data.get('Account Number', 'N/A')
+    result['Account Name'] = data.get('Account Name', 'N/A')
+    result['Quantity'] = data[quantity_col]
+    result['Cost Basis'] = data['Cost Basis']
 
     return result
 
