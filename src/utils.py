@@ -627,6 +627,50 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
 
     return result
 
+
+def consolidate_portfolios(*portfolios: pd.DataFrame) -> pd.DataFrame:
+    """
+    Combine multiple portfolio DataFrames into a single consolidated DataFrame.
+
+    Each input DataFrame should be in the format produced by load_portfolio():
+    - Indexed by ticker symbols
+    - Contains Quantity and Cost Basis columns
+    - May contain other columns (which will be ignored)
+
+    Args:
+        *portfolios: One or more portfolio DataFrames to consolidate
+
+    Returns:
+        DataFrame indexed by ticker symbols containing:
+        - Quantity (sum of quantities across all portfolios)
+        - Cost Basis (sum of total cost basis across all portfolios)
+
+    Example:
+        df1 = load_portfolio('portfolio1.csv')
+        df2 = load_portfolio('portfolio2.csv')
+        consolidated = consolidate_portfolios(df1, df2)
+    """
+    if not portfolios:
+        raise ValueError("At least one portfolio DataFrame is required")
+
+    # Get all unique tickers
+    all_tickers = set()
+    for df in portfolios:
+        all_tickers.update(df.index)
+
+    # Initialize result DataFrame with zeros
+    result = pd.DataFrame(0.0,
+                         index=sorted(all_tickers),
+                         columns=['Quantity', 'Cost Basis'])
+    result.index.name = 'Ticker'
+
+    # Accumulate quantities and costs across all portfolios
+    for df in portfolios:
+        result.loc[df.index, 'Quantity'] += df['Quantity']
+        result.loc[df.index, 'Cost Basis'] += df['Cost Basis']
+
+    return result
+
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
                      end_date: str = None,
