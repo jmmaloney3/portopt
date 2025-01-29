@@ -672,6 +672,56 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
 
     return result
 
+def get_holding_allocations(holdings: pd.DataFrame, verbose: bool = False) -> pd.DataFrame:
+    """
+    Calculate current allocations for a set of holdings.
+
+    Args:
+        holdings: DataFrame in format produced by load_holdings() or consolidate_holdings()
+                 Must be indexed by ticker symbols and contain a 'Quantity' column
+        verbose: If True, print status messages when retrieving prices (default: False)
+
+    Returns:
+        DataFrame indexed by ticker symbols containing:
+        - Quantity (number of shares held)
+        - Price (current price per share)
+        - Total Value (Quantity * Price)
+        - Allocation (percentage of total portfolio value)
+
+    Example:
+        holdings = load_holdings('portfolio.csv')
+        allocations = get_holding_allocations(holdings)
+    """
+    if not isinstance(holdings, pd.DataFrame):
+        raise ValueError("holdings must be a pandas DataFrame")
+
+    if 'Quantity' not in holdings.columns:
+        raise ValueError("holdings DataFrame must contain a 'Quantity' column")
+
+    # Get current prices for all tickers
+    prices = get_latest_fund_price(holdings.index, verbose=verbose)
+    if prices['Price'].isna().all():
+        raise ValueError("No price data retrieved for holdings")
+
+    # Create result DataFrame
+    result = pd.DataFrame(index=holdings.index)
+    result.index.name = 'Ticker'
+
+    # Add quantity from holdings
+    result['Quantity'] = holdings['Quantity']
+
+    # Add current prices
+    result['Price'] = prices['Price']
+
+    # Calculate total value for each holding
+    result['Total Value'] = result['Quantity'] * result['Price']
+
+    # Calculate allocation percentages
+    total_value = result['Total Value'].sum()
+    result['Allocation'] = result['Total Value'] / total_value
+
+    return result
+
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
                      end_date: str = None,
