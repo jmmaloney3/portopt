@@ -10,6 +10,8 @@ from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.stats.diagnostic import het_arch
 from statsmodels.stats.stattools import durbin_watson
 from statsmodels.tsa.stattools import adfuller, kpss
+import yfinance as yf
+import re
 
 def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None, 
                 stream: TextIO = sys.stdout,
@@ -704,7 +706,6 @@ def get_tickers_data(tickers: set[str] | list[str],
 
     try:
         # Download data for all tickers
-        import yfinance as yf
         df = yf.download(
             list(tickers_set),  # Convert back to list for yfinance
             start=start_date,
@@ -729,6 +730,90 @@ def get_tickers_data(tickers: set[str] | list[str],
 
     except Exception as e:
         raise ValueError(f"Error retrieving data: {str(e)}")
+
+def get_latest_fund_price(tickers: pd.Index | set[str] | list[str], verbose: bool = False) -> pd.DataFrame:
+    """
+    Retrieve the most recent price for each ticker.
+
+    Args:
+        tickers: Index, set, or list of ticker symbols
+        verbose: If True, print status messages for each ticker (default: False)
+
+    Returns:
+        DataFrame indexed by ticker symbols containing:
+        - Price (most recent price available)
+        Note: Money market funds are assumed to have a stable $1.00 NAV
+              Invalid tickers will have NaN prices
+
+    Example:
+        # Using list of tickers
+        prices = get_latest_fund_price(['VTSAX', 'VFIAX', 'SPAXX'])
+
+        # Using DataFrame index with verbose output
+        holdings = load_holdings('portfolio.csv')
+        prices = get_latest_fund_price(holdings.index, verbose=True)
+
+        # Using set of tickers
+        prices = get_latest_fund_price({'VTSAX', 'VFIAX'})
+    """
+    # Convert input to set of tickers if it isn't already
+    if isinstance(tickers, set):
+        tickers_set = tickers
+    elif isinstance(tickers, (pd.Index, list)):
+        tickers_set = set(tickers)
+    else:
+        raise TypeError("tickers must be a set, list, or pandas Index")
+
+    if not tickers_set:
+        raise ValueError("No tickers provided")
+
+    # Known money market funds
+    money_market_funds = {
+        'SPAXX',  # Fidelity Government Money Market Fund
+        'FDRXX',  # Fidelity Government Cash Reserves
+        'SPRXX',  # Fidelity Money Market Fund
+        'FZFXX',  # Fidelity Treasury Money Market Fund
+        'VMFXX',  # Vanguard Federal Money Market Fund
+        'VMMXX',  # Vanguard Prime Money Market Fund
+    }
+
+    # Initialize result DataFrame
+    result = pd.DataFrame(index=sorted(tickers_set))
+    result.index.name = 'Ticker'
+
+    # Valid ticker pattern: 1-5 letters, optionally followed by additional characters
+    valid_ticker_pattern = re.compile(r'^[A-Z]{1,5}([A-Z0-9.-]*)?$')
+
+    # Process each ticker
+    for ticker in tickers_set:
+        try:
+            # Skip invalid ticker symbols
+            if not valid_ticker_pattern.match(str(ticker).upper()):
+                print(f"Invalid ticker symbol: {ticker}")
+                result.loc[ticker, 'Price'] = np.nan
+                continue
+
+            if ticker in money_market_funds:
+                price = 1.0  # Money market funds maintain $1.00 NAV
+            else:
+                # Get basic info (doesn't download historical data)
+                fund = yf.Ticker(ticker)
+                info = fund.info
+
+                # Try to get price in order of preference
+                price = info.get('regularMarketPrice')  # Current price if market open
+                if pd.isna(price):
+                    price = info.get('previousClose')  # Previous close if market closed
+
+            if verbose:
+                print(f"Successfully retrieved price for {ticker}: ${price:.2f}")
+            result.loc[ticker, 'Price'] = price
+
+        except Exception as e:
+            print(f"Error retrieving price for {ticker}: {str(e)}")
+            result.loc[ticker, 'Price'] = np.nan
+
+    return result
 
 def get_portfolio_data(portfolio,
                       start_date: str = "1990-01-01",
