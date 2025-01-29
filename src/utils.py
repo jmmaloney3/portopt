@@ -471,9 +471,9 @@ def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
 
     return data
 
-def load_portfolio(file_path: str) -> pd.DataFrame:
+def load_holdings(file_path: str) -> pd.DataFrame:
     """
-    Load portfolio data from CSV export file
+    Load holdings from CSV export file
 
     The CSV file should contain position details with some or all of:
     * Account information (Account Number, Account Name)
@@ -627,35 +627,34 @@ def load_portfolio(file_path: str) -> pd.DataFrame:
 
     return result
 
-
-def consolidate_portfolios(*portfolios: pd.DataFrame) -> pd.DataFrame:
+def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
     """
-    Combine multiple portfolio DataFrames into a single consolidated DataFrame.
+    Combine multiple holdings DataFrames into a single consolidated DataFrame.
 
-    Each input DataFrame should be in the format produced by load_portfolio():
+    Each input DataFrame should be in the format produced by load_holdings():
     - Indexed by ticker symbols
     - Contains Quantity and Cost Basis columns
     - May contain other columns (which will be ignored)
 
     Args:
-        *portfolios: One or more portfolio DataFrames to consolidate
+        *holdings: One or more holdings DataFrames to consolidate
 
     Returns:
         DataFrame indexed by ticker symbols containing:
-        - Quantity (sum of quantities across all portfolios)
-        - Cost Basis (sum of total cost basis across all portfolios)
+        - Quantity (sum of quantities across all holdings)
+        - Cost Basis (sum of total cost basis across all holdings)
 
     Example:
-        df1 = load_portfolio('portfolio1.csv')
-        df2 = load_portfolio('portfolio2.csv')
-        consolidated = consolidate_portfolios(df1, df2)
+        df1 = load_holdings('holdings1.csv')
+        df2 = load_holdings('holdings2.csv')
+        consolidated = consolidate_holdings(df1, df2)
     """
-    if not portfolios:
-        raise ValueError("At least one portfolio DataFrame is required")
+    if not holdings:
+        raise ValueError("At least one holdings DataFrame is required")
 
     # Get all unique tickers
     all_tickers = set()
-    for df in portfolios:
+    for df in holdings:
         all_tickers.update(df.index)
 
     # Initialize result DataFrame with zeros
@@ -664,8 +663,8 @@ def consolidate_portfolios(*portfolios: pd.DataFrame) -> pd.DataFrame:
                          columns=['Quantity', 'Cost Basis'])
     result.index.name = 'Ticker'
 
-    # Accumulate quantities and costs across all portfolios
-    for df in portfolios:
+    # Accumulate quantities and costs across all holdings
+    for df in holdings:
         result.loc[df.index, 'Quantity'] += df['Quantity']
         result.loc[df.index, 'Cost Basis'] += df['Cost Basis']
 
