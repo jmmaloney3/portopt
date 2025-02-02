@@ -692,13 +692,18 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
 
     return result
 
-def get_holding_allocations(holdings: pd.DataFrame, verbose: bool = False) -> pd.DataFrame:
+def get_holding_allocations(holdings: pd.DataFrame,
+                          prices: Optional[pd.DataFrame] = None,
+                          verbose: bool = False) -> pd.DataFrame:
     """
     Calculate current allocations for a set of holdings.
 
     Args:
         holdings: DataFrame in format produced by load_holdings() or consolidate_holdings()
                  Must be indexed by ticker symbols and contain a 'Quantity' column
+        prices: Optional DataFrame with price data (default: None)
+                If provided, must be indexed by ticker symbols and contain a 'Price' column
+                If None, prices will be retrieved using get_latest_fund_price()
         verbose: If True, print status messages when retrieving prices (default: False)
 
     Returns:
@@ -709,8 +714,13 @@ def get_holding_allocations(holdings: pd.DataFrame, verbose: bool = False) -> pd
         - Allocation (percentage of total portfolio value)
 
     Example:
+        # Using retrieved prices
         holdings = load_holdings('portfolio.csv')
         allocations = get_holding_allocations(holdings)
+
+        # Using provided prices
+        prices = get_latest_fund_price(holdings.index)
+        allocations = get_holding_allocations(holdings, prices=prices)
     """
     if not isinstance(holdings, pd.DataFrame):
         raise ValueError("holdings must be a pandas DataFrame")
@@ -718,8 +728,20 @@ def get_holding_allocations(holdings: pd.DataFrame, verbose: bool = False) -> pd
     if 'Quantity' not in holdings.columns:
         raise ValueError("holdings DataFrame must contain a 'Quantity' column")
 
-    # Get current prices for all tickers
-    prices = get_latest_fund_price(holdings.index, verbose=verbose)
+    # Get or validate prices
+    if prices is None:
+        # Get current prices for all tickers
+        prices = get_latest_fund_price(holdings.index, verbose=verbose)
+    else:
+        # Validate provided prices DataFrame
+        if not isinstance(prices, pd.DataFrame):
+            raise ValueError("prices must be a pandas DataFrame")
+        if 'Price' not in prices.columns:
+            raise ValueError("prices DataFrame must contain a 'Price' column")
+        if not all(ticker in prices.index for ticker in holdings.index):
+            missing_tickers = [ticker for ticker in holdings.index if ticker not in prices.index]
+            raise ValueError(f"Missing prices for tickers: {missing_tickers}")
+
     if prices['Price'].isna().all():
         raise ValueError("No price data retrieved for holdings")
 
