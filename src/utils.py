@@ -907,6 +907,74 @@ def get_latest_fund_price(tickers: pd.Index | set[str] | list[str], verbose: boo
 
     return result
 
+def get_latest_option_price(option_symbol: str, verbose: bool = False) -> float:
+    """
+    Retrieve the latest price for an option contract.
+
+    Args:
+        option_symbol: Option symbol in OCC format (e.g., 'SPY250321P580')
+                      Format: {SYMBOL}{YY}{MM}{DD}{C/P}{STRIKE}
+        verbose: If True, print status messages (default: False)
+
+    Returns:
+        Latest price of the option contract, or NaN if retrieval fails
+
+    Example:
+        # Get price for SPY put option (strike: $580, expiry: March 21, 2025)
+        price = get_latest_option_price('SPY250321P580')
+    """
+    try:
+        # Parse OCC symbol components
+        match = re.match(r'^([A-Z]{1,5})(\d{2})(\d{2})(\d{2})([CP])(\d+)$', option_symbol)
+        if not match:
+            raise ValueError(f"Invalid option symbol format: {option_symbol}")
+
+        symbol, yy, mm, dd, opt_type, strike = match.groups()
+
+        # Convert to full year (assuming 20xx)
+        year = f"20{yy}"
+
+        # Create date object to format properly for Yahoo
+        expiry_date = pd.Timestamp(f"20{yy}-{mm}-{dd}")
+
+        # Convert strike price to proper format (multiply by 1000 for Yahoo's format)
+        yahoo_strike = float(strike) * 1000
+
+        # Get option chain for the underlying stock
+        ticker = yf.Ticker(symbol)
+
+        # Get all options for the expiration date
+        try:
+            options = ticker.option_chain(expiry_date.strftime('%Y-%m-%d'))
+        except ValueError as e:
+            if verbose:
+                print(f"No options chain found for {symbol} on {expiry_date.date()}")
+            return np.nan
+
+        # Select puts or calls based on option type
+        chain = options.puts if opt_type == 'P' else options.calls
+
+        # Find the specific contract
+        contract = chain[chain['strike'] == float(strike)]
+
+        if len(contract) == 0:
+            if verbose:
+                print(f"No contract found for strike ${strike} in {symbol} {opt_type} options")
+            return np.nan
+
+        # Get the last price
+        price = contract.iloc[0]['lastPrice']
+
+        if verbose:
+            print(f"Successfully retrieved price for {option_symbol}: ${price:.2f}")
+
+        return price
+
+    except Exception as e:
+        if verbose:
+            print(f"Error retrieving price for {option_symbol}: {str(e)}")
+        return np.nan
+
 def get_portfolio_data(portfolio,
                       start_date: str = "1990-01-01",
                       end_date: str = None,
