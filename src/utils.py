@@ -492,6 +492,9 @@ def load_holdings(file_path: str) -> pd.DataFrame:
         3. Otherwise, sets to NaN
     * Missing columns: Populated with 'N/A' for strings, NaN for numeric values
     * Empty string values: Replaced with 'N/A'
+    * Ticker symbols:
+        - Extra characters (like '*') are removed from regular symbols
+        - Option contracts (e.g., SPY250321P580) are preserved (leading hyphen removed)
 
     Args:
         file_path: Path to the portfolio CSV file
@@ -516,6 +519,23 @@ def load_holdings(file_path: str) -> pd.DataFrame:
     def clean_string(x):
         return x.strip() if x and x.strip() else 'N/A'
 
+    def clean_ticker(x):
+        if not x or not x.strip():
+            return 'N/A'
+
+        # Convert to uppercase and strip whitespace
+        ticker = str(x).strip().upper()
+
+        # Check if it's an option contract (e.g., -SPY250321P580)
+        option_pattern = r'^-?([A-Z]{1,5}\d{6}[CP]\d+)$'
+        option_match = re.match(option_pattern, ticker)
+        if option_match:
+            # Return the option ticker without the leading hyphen
+            return option_match.group(1)
+
+        # For regular symbols, remove any non-alphanumeric characters except dots and hyphens
+        return re.sub(r'[^A-Z0-9.-]', '', ticker)
+
     def count_csv_commas(line):
         """Count commas that separate CSV fields, ignoring commas inside quotes"""
         in_quotes = False
@@ -531,8 +551,8 @@ def load_holdings(file_path: str) -> pd.DataFrame:
     converters = {
         'Account Number': clean_string,
         'Account Name': clean_string,
-        'Symbol': clean_string,
-        'SYMBOL': clean_string,  # Add uppercase variant
+        'Symbol': clean_ticker,
+        'SYMBOL': clean_ticker,
         'Quantity': clean_numeric,
         'Shares': clean_numeric,
         'UNIT/SHARE OWNED': clean_numeric,
