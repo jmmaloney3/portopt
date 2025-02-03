@@ -703,7 +703,7 @@ def get_holding_allocations(holdings: pd.DataFrame,
                  Must be indexed by ticker symbols and contain a 'Quantity' column
         prices: Optional DataFrame with price data (default: None)
                 If provided, must be indexed by ticker symbols and contain a 'Price' column
-                If None, prices will be retrieved using get_latest_fund_price()
+                If None, prices will be retrieved using get_latest_ticker_prices()
         verbose: If True, print status messages when retrieving prices (default: False)
 
     Returns:
@@ -719,7 +719,7 @@ def get_holding_allocations(holdings: pd.DataFrame,
         allocations = get_holding_allocations(holdings)
 
         # Using provided prices
-        prices = get_latest_fund_price(holdings.index)
+        prices = get_latest_ticker_prices(holdings.index)
         allocations = get_holding_allocations(holdings, prices=prices)
     """
     if not isinstance(holdings, pd.DataFrame):
@@ -731,7 +731,7 @@ def get_holding_allocations(holdings: pd.DataFrame,
     # Get or validate prices
     if prices is None:
         # Get current prices for all tickers
-        prices = get_latest_fund_price(holdings.index, verbose=verbose)
+        prices = get_latest_ticker_prices(holdings.index, verbose=verbose)
     else:
         # Validate provided prices DataFrame
         if not isinstance(prices, pd.DataFrame):
