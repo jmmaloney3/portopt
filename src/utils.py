@@ -692,9 +692,9 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
 
     return result
 
-def get_holding_allocations(holdings: pd.DataFrame,
+def get_holding_allocations(holdings: pd.DataFrame, 
                           prices: Optional[pd.DataFrame] = None,
-                          verbose: bool = False) -> pd.DataFrame:
+                          verbose: bool = False) -> tuple[pd.DataFrame, float]:
     """
     Calculate current allocations for a set of holdings.
 
@@ -707,20 +707,22 @@ def get_holding_allocations(holdings: pd.DataFrame,
         verbose: If True, print status messages when retrieving prices (default: False)
 
     Returns:
-        DataFrame indexed by ticker symbols containing:
-        - Quantity (number of shares held)
-        - Price (current price per share)
-        - Total Value (Quantity * Price)
-        - Allocation (percentage of total portfolio value)
+        Tuple containing:
+        - DataFrame indexed by ticker symbols containing:
+          * Quantity (number of shares held)
+          * Price (current price per share)
+          * Total Value (Quantity * Price)
+          * Allocation (percentage of total portfolio value)
+        - Float representing total portfolio value in dollars
 
     Example:
         # Using retrieved prices
         holdings = load_holdings('portfolio.csv')
-        allocations = get_holding_allocations(holdings)
+        allocations, total_value = get_holding_allocations(holdings)
 
         # Using provided prices
         prices = get_latest_ticker_prices(holdings.index)
-        allocations = get_holding_allocations(holdings, prices=prices)
+        allocations, total_value = get_holding_allocations(holdings, prices=prices)
     """
     if not isinstance(holdings, pd.DataFrame):
         raise ValueError("holdings must be a pandas DataFrame")
@@ -762,7 +764,7 @@ def get_holding_allocations(holdings: pd.DataFrame,
     total_value = result['Total Value'].sum()
     result['Allocation'] = result['Total Value'] / total_value
 
-    return result
+    return result, total_value
 
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
