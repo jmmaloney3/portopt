@@ -927,6 +927,7 @@ def get_latest_security_price(ticker: str, verbose: bool = False) -> float:
             'FZFXX',  # Fidelity Treasury Money Market Fund
             'VMFXX',  # Vanguard Federal Money Market Fund
             'VMMXX',  # Vanguard Prime Money Market Fund
+            'TIMXX',  # RBC BlueBay US Govt Mny Mkt Instl 2
         }
 
         if ticker in money_market_funds:
