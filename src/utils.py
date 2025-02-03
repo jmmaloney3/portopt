@@ -823,12 +823,12 @@ def get_tickers_data(tickers: set[str] | list[str],
     except Exception as e:
         raise ValueError(f"Error retrieving data: {str(e)}")
 
-def get_latest_fund_price(tickers: pd.Index | set[str] | list[str], verbose: bool = False) -> pd.DataFrame:
+def get_latest_ticker_prices(tickers: pd.Index | set[str] | list[str], verbose: bool = False) -> pd.DataFrame:
     """
-    Retrieve the most recent price for each ticker.
+    Retrieve the most recent prices for multiple tickers.
 
     Args:
-        tickers: Index, set, or list of ticker symbols
+        tickers: Index, set, or list of ticker symbols (securities and/or options)
         verbose: If True, print status messages for each ticker (default: False)
 
     Returns:
@@ -838,15 +838,8 @@ def get_latest_fund_price(tickers: pd.Index | set[str] | list[str], verbose: boo
               Invalid tickers will have NaN prices
 
     Example:
-        # Using list of tickers
-        prices = get_latest_fund_price(['VTSAX', 'VFIAX', 'SPAXX'])
-
-        # Using DataFrame index with verbose output
-        holdings = load_holdings('portfolio.csv')
-        prices = get_latest_fund_price(holdings.index, verbose=True)
-
-        # Using set of tickers
-        prices = get_latest_fund_price({'VTSAX', 'VFIAX'})
+        # Get prices for a mix of securities and options
+        prices = get_latest_ticker_prices(['VTSAX', 'SPY', 'SPY250321P580'])
     """
     # Convert input to set of tickers if it isn't already
     if isinstance(tickers, set):
@@ -863,33 +856,49 @@ def get_latest_fund_price(tickers: pd.Index | set[str] | list[str], verbose: boo
     result = pd.DataFrame(index=sorted(tickers_set))
     result.index.name = 'Ticker'
 
-    # Option contract pattern
-    option_pattern = re.compile(r'^[A-Z]{1,5}\d{6}[CP]\d+$')
-    # Valid security pattern: 1-5 letters, optionally followed by additional characters
-    security_pattern = re.compile(r'^[A-Z]{1,5}([A-Z0-9.-]*)?$')
-
     # Process each ticker
     for ticker in tickers_set:
-        try:
-            ticker_str = str(ticker).upper()
-            if option_pattern.match(ticker_str):
-                # Handle option contract
-                price = get_latest_option_price(ticker, verbose=verbose)
-            elif security_pattern.match(ticker_str):
-                # Handle regular security
-                price = get_latest_security_price(ticker, verbose=verbose)
-            else:
-                # Invalid ticker format
-                print(f"Invalid ticker symbol format: {ticker}")
-                price = np.nan
-
-            result.loc[ticker, 'Price'] = price
-
-        except Exception as e:
-            print(f"Error retrieving price for {ticker}: {str(e)}")
-            result.loc[ticker, 'Price'] = np.nan
+        result.loc[ticker, 'Price'] = get_latest_ticker_price(ticker, verbose=verbose)
 
     return result
+
+def get_latest_ticker_price(ticker: str, verbose: bool = False) -> float:
+    """
+    Retrieve the latest price for a single ticker (security or option).
+
+    Args:
+        ticker: Ticker symbol (e.g., 'VTSAX', 'SPY250321P580')
+        verbose: If True, print status messages (default: False)
+
+    Returns:
+        Latest price for the ticker, or NaN if retrieval fails
+
+    Example:
+        # Get price for a security
+        price = get_latest_ticker_price('VTSAX')
+
+        # Get price for an option
+        price = get_latest_ticker_price('SPY250321P580')
+    """
+    try:
+        # Check if it's an option contract
+        option_pattern = re.compile(r'^[A-Z]{1,5}\d{6}[CP]\d+$')
+        security_pattern = re.compile(r'^[A-Z]{1,5}([A-Z0-9.-]*)?$')
+
+        ticker_str = str(ticker).upper()
+        if option_pattern.match(ticker_str):
+            return get_latest_option_price(ticker, verbose=verbose)
+        elif security_pattern.match(ticker_str):
+            return get_latest_security_price(ticker, verbose=verbose)
+        else:
+            if verbose:
+                print(f"Invalid ticker format: {ticker}")
+            return np.nan
+
+    except Exception as e:
+        if verbose:
+            print(f"Error retrieving price for {ticker}: {str(e)}")
+        return np.nan
 
 def get_latest_security_price(ticker: str, verbose: bool = False) -> float:
     """
@@ -927,8 +936,12 @@ def get_latest_security_price(ticker: str, verbose: bool = False) -> float:
 
             # Try to get price in order of preference
             price = info.get('regularMarketPrice')  # Current price if market open
-            if pd.isna(price):
-                price = info.get('previousClose')  # Previous close if market closed
+            if price is None:
+                price = info.get('previousClose')   # Previous close if market closed
+            if price is None:
+                if verbose:
+                    print(f"No price data available for {ticker}")
+                return np.nan
 
         if verbose:
             print(f"Successfully retrieved price for {ticker}: ${price:.2f}")
