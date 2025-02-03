@@ -875,18 +875,23 @@ def get_latest_fund_price(tickers: pd.Index | set[str] | list[str], verbose: boo
 
     # Valid ticker pattern: 1-5 letters, optionally followed by additional characters
     valid_ticker_pattern = re.compile(r'^[A-Z]{1,5}([A-Z0-9.-]*)?$')
+    # Option contract pattern
+    option_pattern = re.compile(r'^[A-Z]{1,5}\d{6}[CP]\d+$')
 
     # Process each ticker
     for ticker in tickers_set:
         try:
             # Skip invalid ticker symbols
-            if not valid_ticker_pattern.match(str(ticker).upper()):
+            if not valid_ticker_pattern.match(str(ticker).upper()) and not option_pattern.match(str(ticker).upper()):
                 print(f"Invalid ticker symbol: {ticker}")
                 result.loc[ticker, 'Price'] = np.nan
                 continue
 
             if ticker in money_market_funds:
                 price = 1.0  # Money market funds maintain $1.00 NAV
+            elif option_pattern.match(str(ticker).upper()):
+                # Handle option contract
+                price = get_latest_option_price(ticker, verbose=verbose)
             else:
                 # Get basic info (doesn't download historical data)
                 fund = yf.Ticker(ticker)
