@@ -859,51 +859,30 @@ def get_latest_fund_price(tickers: pd.Index | set[str] | list[str], verbose: boo
     if not tickers_set:
         raise ValueError("No tickers provided")
 
-    # Known money market funds
-    money_market_funds = {
-        'SPAXX',  # Fidelity Government Money Market Fund
-        'FDRXX',  # Fidelity Government Cash Reserves
-        'SPRXX',  # Fidelity Money Market Fund
-        'FZFXX',  # Fidelity Treasury Money Market Fund
-        'VMFXX',  # Vanguard Federal Money Market Fund
-        'VMMXX',  # Vanguard Prime Money Market Fund
-    }
-
     # Initialize result DataFrame
     result = pd.DataFrame(index=sorted(tickers_set))
     result.index.name = 'Ticker'
 
-    # Valid ticker pattern: 1-5 letters, optionally followed by additional characters
-    valid_ticker_pattern = re.compile(r'^[A-Z]{1,5}([A-Z0-9.-]*)?$')
     # Option contract pattern
     option_pattern = re.compile(r'^[A-Z]{1,5}\d{6}[CP]\d+$')
+    # Valid security pattern: 1-5 letters, optionally followed by additional characters
+    security_pattern = re.compile(r'^[A-Z]{1,5}([A-Z0-9.-]*)?$')
 
     # Process each ticker
     for ticker in tickers_set:
         try:
-            # Skip invalid ticker symbols
-            if not valid_ticker_pattern.match(str(ticker).upper()) and not option_pattern.match(str(ticker).upper()):
-                print(f"Invalid ticker symbol: {ticker}")
-                result.loc[ticker, 'Price'] = np.nan
-                continue
-
-            if ticker in money_market_funds:
-                price = 1.0  # Money market funds maintain $1.00 NAV
-            elif option_pattern.match(str(ticker).upper()):
+            ticker_str = str(ticker).upper()
+            if option_pattern.match(ticker_str):
                 # Handle option contract
                 price = get_latest_option_price(ticker, verbose=verbose)
+            elif security_pattern.match(ticker_str):
+                # Handle regular security
+                price = get_latest_security_price(ticker, verbose=verbose)
             else:
-                # Get basic info (doesn't download historical data)
-                fund = yf.Ticker(ticker)
-                info = fund.info
+                # Invalid ticker format
+                print(f"Invalid ticker symbol format: {ticker}")
+                price = np.nan
 
-                # Try to get price in order of preference
-                price = info.get('regularMarketPrice')  # Current price if market open
-                if pd.isna(price):
-                    price = info.get('previousClose')  # Previous close if market closed
-
-            if verbose:
-                print(f"Successfully retrieved price for {ticker}: ${price:.2f}")
             result.loc[ticker, 'Price'] = price
 
         except Exception as e:
@@ -911,6 +890,54 @@ def get_latest_fund_price(tickers: pd.Index | set[str] | list[str], verbose: boo
             result.loc[ticker, 'Price'] = np.nan
 
     return result
+
+def get_latest_security_price(ticker: str, verbose: bool = False) -> float:
+    """
+    Retrieve the latest price for a security (stock, bond, ETF, mutual fund).
+
+    Args:
+        ticker: Security symbol (e.g., 'VTSAX', 'SPY', 'AAPL')
+        verbose: If True, print status messages (default: False)
+
+    Returns:
+        Latest price of the security, or NaN if retrieval fails
+        Note: Money market funds return $1.00 NAV
+
+    Example:
+        # Get price for a mutual fund
+        price = get_latest_security_price('VTSAX')
+    """
+    try:
+        # Known money market funds
+        money_market_funds = {
+            'SPAXX',  # Fidelity Government Money Market Fund
+            'FDRXX',  # Fidelity Government Cash Reserves
+            'SPRXX',  # Fidelity Money Market Fund
+            'FZFXX',  # Fidelity Treasury Money Market Fund
+            'VMFXX',  # Vanguard Federal Money Market Fund
+            'VMMXX',  # Vanguard Prime Money Market Fund
+        }
+
+        if ticker in money_market_funds:
+            price = 1.0  # Money market funds maintain $1.00 NAV
+        else:
+            # Get basic info (doesn't download historical data)
+            fund = yf.Ticker(ticker)
+            info = fund.info
+
+            # Try to get price in order of preference
+            price = info.get('regularMarketPrice')  # Current price if market open
+            if pd.isna(price):
+                price = info.get('previousClose')  # Previous close if market closed
+
+        if verbose:
+            print(f"Successfully retrieved price for {ticker}: ${price:.2f}")
+        return price
+
+    except Exception as e:
+        if verbose:
+            print(f"Error retrieving price for {ticker}: {str(e)}")
+        return np.nan
 
 def get_latest_option_price(option_symbol: str, verbose: bool = False) -> float:
     """
