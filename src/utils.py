@@ -713,9 +713,8 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
 
 def get_holding_allocations(holdings: pd.DataFrame, 
                           prices: Optional[pd.DataFrame] = None,
-                          verbose: bool = False) -> tuple[pd.DataFrame, float]:
-    """
-    Calculate current allocations for a set of holdings.
+                          verbose: bool = False) -> tuple[pd.DataFrame, float, float]:
+    """Calculate current allocations for a set of holdings.
 
     Args:
         holdings: DataFrame in format produced by load_holdings() or consolidate_holdings()
@@ -733,15 +732,16 @@ def get_holding_allocations(holdings: pd.DataFrame,
           * Total Value (Quantity * Price)
           * Allocation (percentage of total portfolio value)
         - Float representing total portfolio value in dollars
+        - Float representing sum of allocation percentages
 
     Example:
         # Using retrieved prices
         holdings = load_holdings('portfolio.csv')
-        allocations, total_value = get_holding_allocations(holdings)
+        allocations, total_value, total_alloc = get_holding_allocations(holdings)
 
         # Using provided prices
         prices = get_latest_ticker_prices(holdings.index)
-        allocations, total_value = get_holding_allocations(holdings, prices=prices)
+        allocations, total_value, total_alloc = get_holding_allocations(holdings, prices=prices)
     """
     if not isinstance(holdings, pd.DataFrame):
         raise ValueError("holdings must be a pandas DataFrame")
@@ -783,7 +783,7 @@ def get_holding_allocations(holdings: pd.DataFrame,
     total_value = result['Total Value'].sum()
     result['Allocation'] = result['Total Value'] / total_value
 
-    return result, total_value
+    return result, total_value, result['Allocation'].sum()
 
 def get_asset_class_allocations(holdings: pd.DataFrame,
                               asset_class_weights: pd.DataFrame,
@@ -1075,8 +1075,8 @@ def get_latest_option_price(option_symbol: str, verbose: bool = False) -> float:
                 print(f"No contract found for strike ${strike} in {symbol} {opt_type} options")
             return np.nan
 
-        # Get the last price
-        price = contract.iloc[0]['lastPrice']
+        # Get the last price & multiply by 100 since contracts are for 100 shares
+        price = contract.iloc[0]['lastPrice'] * 100
 
         if verbose:
             print(f"Successfully retrieved price for {option_symbol}: ${price:.2f}")
