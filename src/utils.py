@@ -785,6 +785,52 @@ def get_holding_allocations(holdings: pd.DataFrame,
 
     return result, total_value
 
+def get_asset_class_allocations(holdings: pd.DataFrame,
+                              asset_class_weights: pd.DataFrame,
+                              verbose: bool = False) -> tuple[pd.DataFrame, float, float]:
+    """Calculate asset class allocations for a portfolio.
+
+    Args:
+        holdings: DataFrame indexed by ticker symbols containing:
+            - Total Value (current dollar value of holding)
+        asset_class_weights: DataFrame indexed by ticker symbols containing
+            weight columns for each asset class (weights sum to 1)
+        verbose: If True, print status messages (default: False)
+
+    Returns:
+        Tuple containing:
+        - DataFrame indexed by asset class names containing:
+          * Total Value (dollar amount allocated to asset class)
+          * Allocation (percentage of total portfolio value)
+        - Float representing total allocated value in dollars
+        - Float representing sum of allocation percentages
+
+    Example:
+        holdings = get_holding_allocations(portfolio_df)[0]  # Get holdings with values
+        weights = load_fund_asset_class_weights('asset_classes.csv')
+        allocations, total_value, total_alloc = get_asset_class_allocations(holdings, weights)
+    """
+    # Get total portfolio value
+    total_portfolio_value = holdings['Total Value'].sum()
+
+    # Calculate dollar amount allocated to each asset class by each fund
+    dollar_allocations = pd.DataFrame(columns=asset_class_weights.columns)
+    for ticker in holdings.index:
+        if ticker in asset_class_weights.index:
+            # Multiply fund value by its asset class weights
+            fund_value = holdings.loc[ticker, 'Total Value']
+            dollar_allocations.loc[ticker] = asset_class_weights.loc[ticker] * fund_value
+        elif verbose:
+            print(f"Warning: No asset class weights found for {ticker}")
+
+    # Sum up allocations across all funds for each asset class
+    result = pd.DataFrame(index=asset_class_weights.columns)
+    result.index.name = 'Asset Class'
+    result['Total Value'] = dollar_allocations.sum()
+    result['Allocation'] = result['Total Value'] / total_portfolio_value
+
+    return result, result['Total Value'].sum(), result['Allocation'].sum()
+
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
                      end_date: str = None,
