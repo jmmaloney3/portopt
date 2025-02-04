@@ -12,6 +12,7 @@ from statsmodels.stats.stattools import durbin_watson
 from statsmodels.tsa.stattools import adfuller, kpss
 import yfinance as yf
 import re
+import csv
 
 def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None, 
                 stream: TextIO = sys.stdout,
@@ -520,11 +521,15 @@ def load_holdings(file_path: str) -> pd.DataFrame:
         return x.strip() if x and x.strip() else 'N/A'
 
     def clean_ticker(x):
+        """Clean ticker symbols, handling various formats"""
         if not x or not x.strip():
             return 'N/A'
 
         # Convert to uppercase and strip whitespace
         ticker = str(x).strip().upper()
+
+        # Take only the first word (handles "VTSAX Some Fund Name" format)
+        ticker = ticker.split()[0]
 
         # Check if it's an option contract (e.g., -SPY250321P580)
         option_pattern = r'^-?([A-Z]{1,5}\d{6}[CP]\d+)$'
@@ -536,16 +541,27 @@ def load_holdings(file_path: str) -> pd.DataFrame:
         # For regular symbols, remove any non-alphanumeric characters except dots and hyphens
         return re.sub(r'[^A-Z0-9.-]', '', ticker)
 
-    def count_csv_commas(line):
-        """Count commas that separate CSV fields, ignoring commas inside quotes"""
-        in_quotes = False
-        comma_count = 0
-        for char in line:
-            if char == '"':
-                in_quotes = not in_quotes
-            elif char == ',' and not in_quotes:
-                comma_count += 1
-        return comma_count
+    def is_header_row(row):
+        """Check if row contains required column headers.
+
+        Args:
+            row: A list of column headers to check
+
+        Returns:
+            bool: True if row contains required Symbol and Quantity columns
+                 (with variations in column names supported)
+        """
+        # Convert all column names to uppercase for case-insensitive matching
+        cols_upper = [col.upper() for col in row]
+
+        # Check for Symbol column (may be called SYMBOL or INVESTMENT)
+        has_symbol = any(col in cols_upper for col in ['SYMBOL', 'INVESTMENT'])
+
+        # Check for Quantity column (may be called Shares or UNIT/SHARE OWNED)
+        has_quantity = any(col in row for col in ['Quantity', 'Shares', 'UNIT/SHARE OWNED'])
+
+        # Row is a header if it contains both required columns
+        return has_symbol and has_quantity
 
     # Define converters for data cleaning
     converters = {
@@ -553,6 +569,7 @@ def load_holdings(file_path: str) -> pd.DataFrame:
         'Account Name': clean_string,
         'Symbol': clean_ticker,
         'SYMBOL': clean_ticker,
+        'Investment': clean_ticker,
         'Quantity': clean_numeric,
         'Shares': clean_numeric,
         'UNIT/SHARE OWNED': clean_numeric,
@@ -562,45 +579,47 @@ def load_holdings(file_path: str) -> pd.DataFrame:
         'Average Cost': clean_numeric
     }
 
-    # Read file and collect CSV lines
-    with open(file_path, 'r') as f:
-        lines = []
-        header_commas = None
-        for line in f:
-            stripped_line = line.strip()
-            if stripped_line == '':  # Stop at first empty line
+    # Read CSV rows and find header
+    header = None
+    data_rows = []
+
+    with open(file_path, 'r', newline='') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if not row:  # Skip empty rows
+                continue
+
+            if header is None:
+                # Look for header row with required columns
+                if is_header_row(row):
+                    header = row
+                    header_field_count = len(row)
+                continue
+
+            # Only include rows that match header field count
+            if len(row) == header_field_count:
+                data_rows.append(row)
+            else:
+                # Stop at first row with different field count (footer)
                 break
 
-            # Count commas properly handling quoted strings
-            num_commas = count_csv_commas(stripped_line)
+    if header is None:
+        raise ValueError("Could not find header row with required columns")
 
-            if header_commas is None:
-                # First line with commas becomes our header
-                if num_commas > 0:
-                    header_commas = num_commas
-                    lines.append(stripped_line)
-            else:
-                # Only append lines with the same number of commas as the header
-                if num_commas == header_commas:
-                    lines.append(stripped_line)
-
-    if not lines:
-        raise ValueError("No valid CSV data found in file")
-
-    # Read the positions data with converters
-    data = pd.read_csv(
-        pd.io.common.StringIO('\n'.join(lines)),
-        converters=converters
-    )
+    # Create DataFrame and apply converters
+    data = pd.DataFrame(data_rows, columns=header)
+    for col, converter in converters.items():
+        if col in data.columns:
+            data[col] = data[col].apply(converter)
 
     # Verify required columns (case-insensitive check for Symbol)
     symbol_col = None
     for col in data.columns:
-        if col.upper() == 'SYMBOL':
+        if col.upper() in ['SYMBOL', 'INVESTMENT']:
             symbol_col = col
             break
     if symbol_col is None:
-        raise ValueError("Required column 'Symbol' or 'SYMBOL' not found")
+        raise ValueError("Required column 'Symbol' or 'Investment' not found")
 
     # Handle quantity column variations
     quantity_col = None
