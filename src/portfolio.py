@@ -1,6 +1,24 @@
 """
-Portfolio loading and analysis functions
+Portfolio loading and analysis functions.
+
+This module provides functions for loading and analyzing investment portfolio data,
+including fund allocations, holdings, and asset class weights. It supports various
+input formats and handles special cases like money market funds and options.
+
+Functions:
+    load_fund_asset_class_weights: Load fund asset class allocations from CSV
+    load_holdings: Load portfolio holdings from CSV export
+    consolidate_holdings: Combine holdings across accounts
+    get_holding_allocations: Calculate portfolio allocations by security
+    get_asset_class_allocations: Calculate portfolio allocations by asset class
+
+Dependencies:
+    - pandas: Data manipulation and analysis
+    - numpy: Numerical computing
+    - re: Regular expressions for parsing symbols
+    - market_data: Local module for retrieving security prices
 """
+
 import re
 import csv
 import numpy as np
