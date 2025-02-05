@@ -6,7 +6,7 @@ import csv
 import numpy as np
 import pandas as pd
 from typing import Optional
-from utils import get_latest_ticker_prices
+from market_data import get_latest_ticker_prices
 
 def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
     """
