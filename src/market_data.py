@@ -201,9 +201,16 @@ def get_latest_security_price(ticker: str, verbose: bool = False) -> float:
             if price is None:
                 price = info.get('previousClose')   # Previous close if market closed
             if price is None:
-                if verbose:
-                    print(f"No price data available for {ticker}")
-                return np.nan
+                # Fallback: Retrieve historical data and use the last available close price
+                hist = fund.history(period="1d")
+                if not hist.empty and "Close" in hist.columns:
+                    price = hist["Close"].iloc[-1]
+                    if verbose:
+                        print(f"Using historical data for {ticker}: Close price = ${price:.2f}")
+                else:
+                    if verbose:
+                        print(f"No price data available for {ticker}")
+                    return np.nan
 
         if verbose:
             print(f"Successfully retrieved price for {ticker}: ${price:.2f}")
