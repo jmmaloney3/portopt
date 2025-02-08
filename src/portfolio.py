@@ -11,6 +11,7 @@ Functions:
     consolidate_holdings: Combine holdings across accounts
     get_holding_allocations: Calculate portfolio allocations by security
     get_asset_class_allocations: Calculate portfolio allocations by asset class
+    load_and_consolidate_holdings: Load and consolidate holdings from multiple CSV files
 
 Dependencies:
     - pandas: Data manipulation and analysis
@@ -25,6 +26,7 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 from market_data import get_latest_ticker_prices
+import os
 
 def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
     """
@@ -99,7 +101,7 @@ def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
 
     return data
 
-def load_holdings(file_path: str) -> pd.DataFrame:
+def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
     """
     Load holdings from CSV export file
 
@@ -124,6 +126,8 @@ def load_holdings(file_path: str) -> pd.DataFrame:
 
     Args:
         file_path: Path to the portfolio CSV file
+        verbose: Optional; if True, prints a message with the number rows loaded.
+                 Defaults to False.
 
     Returns:
         DataFrame indexed by ticker symbols containing:
@@ -133,9 +137,19 @@ def load_holdings(file_path: str) -> pd.DataFrame:
         - Cost Basis (from Cost Basis/Cost Basis Total columns, or calculated from Average Cost * Quantity)
 
     Raises:
-        ValueError: If file format is invalid, required Symbol column is missing,
-                   or neither Quantity nor Shares column is present
+        ValueError:
+        - If file_path does not exist or is not a file
+        - If file format is invalid, required Symbol column is missing, or neither Quantity
+          nor Shares column is present
+        TypeError: If file_path is not a string.
     """
+    if not isinstance(file_path, str):
+        raise TypeError("file_path must be a string.")
+    if not os.path.exists(file_path):
+        raise ValueError(f"File does not exist: {file_path}")
+    if not os.path.isfile(file_path):
+        raise ValueError(f"Path is not a file: {file_path}")
+
     def clean_numeric(x):
         if not x or x == '--':
             return None
@@ -291,6 +305,9 @@ def load_holdings(file_path: str) -> pd.DataFrame:
     result['Quantity'] = data[quantity_col]
     result['Cost Basis'] = data['Cost Basis']
 
+    if verbose:
+        print(f"Loaded {result.shape[0]} holdings from file {file_path}")
+
     return result
 
 def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
@@ -335,6 +352,59 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
         result.loc[df.index, 'Cost Basis'] += df['Cost Basis']
 
     return result
+
+def load_and_consolidate_holdings(*args, verbose: bool = False) -> pd.DataFrame:
+    """
+    Load and consolidate holdings from multiple CSV files.
+
+    This function accepts inputs in any of the following forms:
+      - A single argument that is a list of file paths (assumed to be string file paths).
+      - A single argument that is a directory path; in this case, all '.csv'
+        files in the directory will be used.
+      - Multiple arguments, with each argument being a file path.
+
+    The function first builds a candidate list of file paths by processing each argument:
+      - If an argument is a list, its items are directly assumed to be valid file paths.
+      - If an argument is a string representing a directory, all CSV files in that
+        directory are added.
+      - Otherwise, if the argument is a string representing a file, it is added.
+
+    Then, it calls `load_holdings` for each candidate file (with the provided verbose flag),
+    which performs the necessary file validations.
+
+    Args:
+        *args: A list of file paths, a directory path, or multiple file path arguments.
+        verbose: Optional; if True, prints verbose messages during loading. Defaults to False.
+
+    Returns:
+        pd.DataFrame: A consolidated DataFrame of holdings loaded from all valid CSV files.
+
+    Raises:
+        ValueError: If no candidate files are found from the provided arguments.
+        TypeError: If an argument is not a string or a list of strings representing file paths.
+    """
+    candidate_files = []
+    for arg in args:
+        if isinstance(arg, list):
+            candidate_files.extend(arg)
+        elif isinstance(arg, str):
+            if os.path.isdir(arg):
+                candidate_files.extend(
+                    [os.path.join(arg, f) for f in os.listdir(arg) if f.lower().endswith('.csv')]
+                )
+            else:
+                candidate_files.append(arg)
+        else:
+            raise TypeError("Arguments must be a string or a list of strings representing file paths.")
+
+    if not candidate_files:
+        raise ValueError("No candidate files found from the provided arguments.")
+
+    # Load holdings for each candidate; file-level validation is handled in load_holdings.
+    holdings_list = [load_holdings(file, verbose=verbose) for file in candidate_files]
+    # Consolidate all holdings using the existing consolidate_holdings function.
+    consolidated = consolidate_holdings(*holdings_list)
+    return consolidated
 
 def get_holding_allocations(holdings: pd.DataFrame, 
                           prices: Optional[pd.DataFrame] = None,
