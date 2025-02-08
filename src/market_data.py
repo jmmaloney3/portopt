@@ -25,6 +25,76 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
+def is_security_ticker(ticker: str, verbose: bool = False) -> bool:
+    """
+    Check if the given ticker symbol is a valid security ticker.
+
+    A valid security ticker is composed of 1 to 5 uppercase letters,
+    optionally followed by additional alphanumeric characters, dots, or hyphens.
+
+    Args:
+        ticker: Ticker symbol as a string.
+        verbose: If True, prints a diagnostic message when the ticker does not match.
+
+    Returns:
+        True if the ticker matches the security pattern, False otherwise.
+    """
+    ticker_str = str(ticker).upper()
+    security_pattern = re.compile(r'^[A-Z]{1,5}([A-Z0-9.-]*)?$')
+    result = bool(security_pattern.match(ticker_str))
+    if verbose and not result:
+        print(f"Ticker {ticker} does not match the security ticker pattern.")
+    return result
+
+def is_option_ticker(ticker: str, verbose: bool = False) -> bool:
+    """
+    Check if the given ticker symbol is a valid option ticker.
+
+    A valid option ticker should match the OCC format:
+    1 to 5 letters, 6 digits for the expiration date, a 'C' or 'P' for call/put,
+    followed by one or more digits for the strike price.
+
+    Args:
+        ticker: Option ticker symbol as a string.
+        verbose: If True, prints a diagnostic message when the ticker does not match.
+
+    Returns:
+        True if the ticker matches the option pattern, False otherwise.
+    """
+    ticker_str = str(ticker).upper()
+    option_pattern = re.compile(r'^[A-Z]{1,5}\d{6}[CP]\d+$')
+    result = bool(option_pattern.match(ticker_str))
+    if verbose and not result:
+        print(f"Ticker {ticker} does not match the option ticker pattern.")
+    return result
+
+def is_money_market_ticker(ticker: str, verbose: bool = False) -> bool:
+    """
+    Check if the given ticker corresponds to a known money market fund.
+
+    Args:
+        ticker: Security ticker symbol.
+        verbose: If True, prints a diagnostic message when the ticker is recognized as a money market fund.
+
+    Returns:
+        True if the ticker is recognized as a money market fund, otherwise False.
+    """
+    money_market_funds = {
+        'SPAXX',  # Fidelity Government Money Market Fund
+        'FDRXX',  # Fidelity Government Cash Reserves
+        'SPRXX',  # Fidelity Money Market Fund
+        'FZFXX',  # Fidelity Treasury Money Market Fund
+        'VMFXX',  # Vanguard Federal Money Market Fund
+        'VMMXX',  # Vanguard Prime Money Market Fund
+        'TIMXX',  # RBC BlueBay US Govt Mny Mkt Instl 2
+    }
+    ticker_str = str(ticker).upper()
+    if ticker_str in money_market_funds:
+        if verbose:
+            print(f"{ticker_str} identified as a money market fund.")
+        return True
+    return False
+
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
                      end_date: str = None,
@@ -127,6 +197,10 @@ def get_latest_ticker_price(ticker: str, verbose: bool = False) -> float:
     """
     Retrieve the latest price for a single ticker (security or option).
 
+    This function determines whether the ticker corresponds to an option contract or
+    a security (stock, bond, ETF, mutual fund) and calls the appropriate function
+    to retrieve the latest price.
+
     Args:
         ticker: Ticker symbol (e.g., 'VTSAX', 'SPY250321P580')
         verbose: If True, print status messages (default: False)
@@ -142,20 +216,15 @@ def get_latest_ticker_price(ticker: str, verbose: bool = False) -> float:
         price = get_latest_ticker_price('SPY250321P580')
     """
     try:
-        # Check if it's an option contract
-        option_pattern = re.compile(r'^[A-Z]{1,5}\d{6}[CP]\d+$')
-        security_pattern = re.compile(r'^[A-Z]{1,5}([A-Z0-9.-]*)?$')
-
         ticker_str = str(ticker).upper()
-        if option_pattern.match(ticker_str):
+        if is_option_ticker(ticker_str, verbose=verbose):
             return get_latest_option_price(ticker, verbose=verbose)
-        elif security_pattern.match(ticker_str):
+        elif is_security_ticker(ticker_str, verbose=verbose):
             return get_latest_security_price(ticker, verbose=verbose)
         else:
             if verbose:
                 print(f"Invalid ticker format: {ticker}")
             return np.nan
-
     except Exception as e:
         if verbose:
             print(f"Error retrieving price for {ticker}: {str(e)}")
@@ -178,18 +247,8 @@ def get_latest_security_price(ticker: str, verbose: bool = False) -> float:
         price = get_latest_security_price('VTSAX')
     """
     try:
-        # Known money market funds
-        money_market_funds = {
-            'SPAXX',  # Fidelity Government Money Market Fund
-            'FDRXX',  # Fidelity Government Cash Reserves
-            'SPRXX',  # Fidelity Money Market Fund
-            'FZFXX',  # Fidelity Treasury Money Market Fund
-            'VMFXX',  # Vanguard Federal Money Market Fund
-            'VMMXX',  # Vanguard Prime Money Market Fund
-            'TIMXX',  # RBC BlueBay US Govt Mny Mkt Instl 2
-        }
-
-        if ticker in money_market_funds:
+        # Check if this ticker is a money market fund
+        if is_money_market_ticker(ticker, verbose=verbose):
             price = 1.0  # Money market funds maintain $1.00 NAV
         else:
             # Get basic info (doesn't download historical data)
