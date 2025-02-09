@@ -97,10 +97,11 @@ def is_money_market_ticker(ticker: str, verbose: bool = False) -> bool:
 
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
-                     end_date: str = None,
-                     price_type: str = "Adj Close") -> pd.DataFrame:
+                     end_date: str | None = None,
+                     price_type: str = "Adj Close") -> tuple[pd.DataFrame, dict]:
     """
-    Retrieve price data for a set of tickers.
+    Retrieve price data for a set of tickers and return cleaned data along with
+    cleaning statistics.
 
     Args:
         tickers: Set or list of ticker symbols
@@ -110,11 +111,27 @@ def get_tickers_data(tickers: set[str] | list[str],
                    Options: "Open", "High", "Low", "Close", "Adj Close", "Volume"
 
     Returns:
-        DataFrame indexed by date with tickers as columns containing price data
+        A tuple containing:
+          - A pandas DataFrame indexed by date with tickers as columns containing
+            the price data after dropping any rows with N/A values.
+          - A dictionary with cleaning statistics structured as follows:
+            {
+              "pre-clean stats": {
+                     "row count": <number>,
+                     "min date": <min date>,
+                     "max date": <max date>
+              },
+              "post-clean stats": {
+                     "row count": <number>,
+                     "min date": <min date>,
+                     "max date": <max date>
+              },
+              "data retention": <percentage of rows retained>
+            }
 
     Raises:
-        ValueError: If no tickers provided or if invalid price_type
-        ValueError: If data retrieval fails for any ticker
+        ValueError: If no tickers provided, an invalid price type is specified,
+                    or data retrieval fails
     """
     # Convert tickers to set if it's a list
     tickers_set = set(tickers)
@@ -144,12 +161,27 @@ def get_tickers_data(tickers: set[str] | list[str],
         # Drop any rows with NaN values
         df_clean = df.dropna(axis=0, how='any')
 
-        # Warn if we dropped any dates
-        if len(df_clean) < len(df):
-            import warnings
-            warnings.warn(f"Dropped {len(df) - len(df_clean)} rows containing NaN values")
+        # Create the statistics dictionary
+        stats = {
+            "pre-clean stats": {
+                "row count": df.shape[0],
+                "min date": df.index.min(),
+                "max date": df.index.max()
+            },
+            "post-clean stats": {
+                "row count": df_clean.shape[0],
+                "min date": df_clean.index.min() if not df_clean.empty else None,
+                "max date": df_clean.index.max() if not df_clean.empty else None
+            },
+            "data retention": (df_clean.shape[0] / df.shape[0]) if df.shape[0] > 0 else 0
+        }
 
-        return df_clean
+        # Warn the user if rows were dropped during cleaning
+        if df_clean.shape[0] < df.shape[0]:
+            import warnings
+            warnings.warn(f"Dropped {df.shape[0] - df_clean.shape[0]} rows containing N/A values")
+
+        return df_clean, stats
 
     except Exception as e:
         raise ValueError(f"Error retrieving data: {str(e)}")
