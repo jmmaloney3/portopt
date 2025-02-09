@@ -133,7 +133,7 @@ def get_tickers_data(tickers: set[str] | list[str],
         ValueError: If no tickers provided, an invalid price type is specified,
                     or data retrieval fails
     """
-    # Convert tickers to set if it's a list
+    # Convert tickers to set if it's a list - eliminates duplicates
     tickers_set = set(tickers)
 
     if not tickers_set:
@@ -249,10 +249,10 @@ def get_latest_ticker_price(ticker: str, verbose: bool = False) -> float:
     """
     try:
         ticker_str = str(ticker).upper()
-        if is_option_ticker(ticker_str, verbose=verbose):
-            return get_latest_option_price(ticker, verbose=verbose)
-        elif is_security_ticker(ticker_str, verbose=verbose):
+        if is_security_ticker(ticker_str, verbose=verbose):
             return get_latest_security_price(ticker, verbose=verbose)
+        elif is_option_ticker(ticker_str, verbose=verbose):
+            return get_latest_option_price(ticker, verbose=verbose)
         else:
             if verbose:
                 print(f"Invalid ticker format: {ticker}")
