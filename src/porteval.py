@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 import numpy as np
 import pandas as pd
+from market_data import get_tickers_data
 from utils import test_stationarity
 
 @dataclass
@@ -215,3 +216,293 @@ def evaluate_portfolios(
     df_results = pd.DataFrame(results)
 
     return df_results
+
+def backtest_model_portfolio(model_portfolio: dict[str, float],
+                             start_date: str,
+                             end_date: str | None = None,
+                             rebalance_freq: str = "quarterly",
+                             price_data: pd.DataFrame | None = None,
+                             verbose: bool = False) -> dict:
+    """
+    Perform a backtest on a model portfolio defined by a dictionary mapping
+    ticker symbols to allocation percentages with a specified rebalancing
+    frequency.
+
+    Historical adjusted close prices for these tickers are retrieved using the
+    get_tickers_data function (unless price_data is provided), and those
+    prices are used to compute daily returns. The portfolio is rebalanced
+    according to the specified frequency (supported: "daily", "weekly",
+    "monthly", "quarterly", "annually") to match the target allocations. This
+    function then calculates:
+      - Daily sample variance and daily average return.
+      - Annualized variance and annualized return (assuming 252 trading days per year).
+      - Sharpe ratio computed as: sharpe_ratio = annualized_return / sqrt(annualized_variance)
+                                  (Assuming a risk-free rate of 0)
+      - Minimum and maximum dates for the data used.
+      - Number of data points used.
+      - Percentage of the original dataset retained after dropping NA rows.
+      - Maximum drawdown based on the cumulative portfolio returns.
+      - Average pairwise correlation among portfolio constituents' daily returns.
+
+    When the optional price_data argument is provided, it should be a DataFrame structured
+    similar to the DataFrame returned by get_tickers_data. In this case, price data
+    statistics will not be printed.
+
+    Args:
+        model_portfolio: Dict mapping ticker symbols to allocation percentages.
+        start_date: Start date for historical price data retrieval (e.g., "2020-01-01").
+        end_date: End date for historical price data retrieval (default: None, meaning today).
+        rebalance_freq: Rebalancing frequency. Options include "daily",
+                       "weekly", "monthly", "quarterly", "annually"
+                       (default is "quarterly").
+        verbose: If True, prints detailed status messages (default: False).
+        price_data: Optional DataFrame containing price data. If provided, it
+                    is used directly and price data statistics are not printed.
+
+    Returns:
+        A dictionary containing:
+            - "daily_sample_variance": Daily sample variance of portfolio returns.
+            - "daily_average_return": Daily average return.
+            - "annualized_variance": Annualized variance.
+            - "annualized_return": Annualized average return.
+            - "sharpe_ratio": Sharpe ratio of the portfolio.
+            - "min_date": Earliest date in the cleaned data.
+            - "max_date": Latest date in the cleaned data.
+            - "num_data_points": Number of data points (days) used in the backtest.
+            - "data_retention_pct": Percentage of original data retained (after cleaning),
+                                    or None if price_data is provided.
+            - "max_drawdown": Maximum portfolio drawdown (as a positive fraction).
+            - "average_correlation": Average pairwise correlation among portfolio constituents.
+    """
+
+    # ensure that allocations sum to 1; if not, normalize them
+    total_alloc = sum(model_portfolio.values())
+    if not np.isclose(total_alloc, 1.0):
+        if verbose:
+            print(f"Allocations sum to {total_alloc}, normalizing to 1.")
+        model_portfolio = {ticker: alloc / total_alloc for ticker, alloc in model_portfolio.items()}
+
+    # get the tickers included in the model portfolio
+    tickers = list(model_portfolio.keys())
+
+    # use provided price_data if available; otherwise, retrieve it (and its stats)
+    if price_data is None:
+        if verbose:
+            print(f"Retrieving historical price data for tickers: {', '.join(tickers)}")
+        price_data, price_data_stats = get_tickers_data(tickers,
+                                                        start_date=start_date,
+                                                        end_date=end_date,
+                                                        price_type="Adj Close")
+    else:
+        price_data_stats = None  # Statistics unavailable when providing price_data directly.
+
+    # only show price data statistics if available.
+    if verbose and price_data_stats is not None:
+        print("Price data statistics:")
+        print("-" * 21)
+        print("Pre-clean stats:")
+        print("  row count: ", price_data_stats["pre-clean stats"]["row count"])
+        print("  min date: ", price_data_stats["pre-clean stats"]["min date"])
+        print("  max date: ", price_data_stats["pre-clean stats"]["max date"])
+        print("Post-clean stats:")
+        print("  row count: ", price_data_stats["post-clean stats"]["row count"])
+        print("  min date: ", price_data_stats["post-clean stats"]["min date"])
+        print("  max date: ", price_data_stats["post-clean stats"]["max date"])
+        print(f"Data retention: {price_data_stats['data retention']:.3f}%")
+
+    # sort by date for proper time series order.
+    price_data.sort_index(inplace=True)
+
+    # identify rebalancing dates
+    # if rebalancing is daily then simulate daily rebalancing, otherwise use resampling
+    if rebalance_freq == "daily":
+        rebalance_dates = price_data.index
+    else:
+        freq_aliases = {
+            "weekly": "W-MON",
+            "monthly": "MS",
+            "quarterly": "QS",
+            "annually": "AS"
+        }
+        rule = freq_aliases.get(rebalance_freq)
+        if rule is None:
+            raise ValueError(f"Unsupported rebalance frequency: {rebalance_freq}")
+        # get the first day of each period as a rebalancing date
+        rebalance_dates = price_data.resample(rule).first().dropna().index
+
+    # simulation setup
+    dates = price_data.index
+    weights = np.array([model_portfolio[ticker] for ticker in tickers])
+    # simulate using an initial total portfolio value of $1.0
+    portfolio_value = 1.0
+    # get initial prices for all tickers
+    initial_prices = price_data.loc[dates[0], tickers].values
+    # calculate initial holdings (shares) according to target weights
+    holdings = (portfolio_value * weights) / initial_prices
+    # initialize a list to store the simulated daily returns
+    simulated_returns = []
+
+    # simulate model portfolio returns - starting on second day
+    for current_date in dates[1:]:
+        # get the current prices for all tickers
+        current_prices = price_data.loc[current_date, tickers].values
+
+        # on rebalance days, adjust holdings to re-establish target allocations.
+        if current_date in rebalance_dates:
+            holdings = (portfolio_value * weights) / current_prices
+
+        # calculate the new portfolio value based on current prices.
+        new_portfolio_value = (holdings * current_prices).sum()
+
+        # compute the daily return for the portfolio.
+        daily_ret = (new_portfolio_value / portfolio_value) - 1
+        simulated_returns.append(daily_ret)
+
+        # update the portfolio value for the next iteration.
+        portfolio_value = new_portfolio_value
+
+    # convert the simulated daily returns to a pandas Series for convenience.
+    portfolio_daily_returns = pd.Series(simulated_returns, index=dates[1:])
+
+    # compute daily summary statistics.
+    daily_avg_return = portfolio_daily_returns.mean()
+    daily_sample_variance = portfolio_daily_returns.var(ddof=1)
+
+    # annualize the statistics (assuming 252 trading days per year).
+    annualized_return = daily_avg_return * 252
+    annualized_variance = daily_sample_variance * 252
+    annualized_volatility = np.sqrt(annualized_variance)
+
+    # compute the Sharpe ratio (assume risk-free rate is 0).
+    sharpe_ratio = annualized_return / annualized_volatility if annualized_volatility > 0 else np.nan
+
+    # calculate maximum drawdown.
+    cumulative_returns = (1 + portfolio_daily_returns).cumprod()
+    rolling_max = cumulative_returns.cummax()
+    drawdown = (cumulative_returns - rolling_max) / rolling_max
+    max_drawdown = abs(drawdown.min())  # Represented as a positive fraction
+
+    # measure correlation among portfolio constituents using asset daily returns
+    asset_daily_returns = price_data[tickers].pct_change().dropna()
+    corr_matrix = asset_daily_returns.corr()
+    # extract the upper triangle (excluding the diagonal) and compute the mean
+    mask = np.triu(np.ones_like(corr_matrix, dtype=bool), k=1)
+    average_correlation = corr_matrix.where(mask).stack().mean()
+
+    if verbose:
+        print("Backtest results:")
+        print(f"Daily Average Return: {daily_avg_return:.3%}")
+        print(f"Daily Sample Variance: {daily_sample_variance:.6f}")
+        print(f"Annualized Return: {annualized_return:.3%}")
+        print(f"Annualized Variance: {annualized_variance:.6f}")
+        print(f"Sharpe Ratio: {sharpe_ratio:.6f}")
+        print(f"Date Range: {price_data.index.min().date()} to {price_data.index.max().date()}")
+        print(f"Number of Data Points: {price_data.shape[0]}")
+        if price_data_stats is not None:
+            print(f"Data Retention: {price_data_stats['data retention']:.3f}%")
+        print(f"Maximum Drawdown: {max_drawdown:.3%}")
+        print(f"Average Pairwise Correlation: {average_correlation:.4f}")
+        print(f"Rebalancing Frequency: {rebalance_freq}")
+
+    return {
+        "daily_sample_variance": daily_sample_variance,
+        "daily_average_return": daily_avg_return,
+        "annualized_variance": annualized_variance,
+        "annualized_return": annualized_return,
+        "sharpe_ratio": sharpe_ratio,
+        "min_date": price_data.index.min(),
+        "max_date": price_data.index.max(),
+        "num_data_points": price_data.shape[0],
+        "data_retention_pct": price_data_stats["data retention"] if price_data_stats is not None else None,
+        "max_drawdown": max_drawdown,
+        "average_correlation": average_correlation
+    }
+
+def simulate_model_portfolio(model_portfolio: dict[str, float],
+                             start_date: str,
+                             end_date: str | None = None,
+                             rebalance_freq: str = "quarterly",
+                             price_data: pd.DataFrame | None = None,
+                             verbose: bool = False) -> pd.DataFrame:
+    """
+    Simulate a model portfolio to generate a synthetic asset's daily value
+    time series.
+
+    This function returns a DataFrame indexed by date with a single column
+    "Synthetic Value" representing the daily portfolio value.
+
+    Args:
+        model_portfolio: Dict mapping ticker symbols to allocation percentages.
+        start_date: Start date for historical price data retrieval.
+        end_date: End date for historical price data retrieval (default: None, meaning today).
+        rebalance_freq: Frequency for rebalancing the portfolio. Supported options are "daily",
+                        "weekly", "monthly", "quarterly", "annually" (default is "quarterly").
+        price_data: Optional DataFrame with historical price data. If provided, it should be in a
+                    format similar to that returned by get_tickers_data.
+        verbose: If True, prints additional status messages.
+
+    Returns:
+        DataFrame indexed by date with a single column "Synthetic Value" that contains the daily portfolio value.
+
+    Example:
+        portfolio = {'AAPL': 0.5, 'MSFT': 0.5}
+        synthetic_df = simulate_model_portfolio(portfolio, start_date="2000-01-01", end_date="2020-01-01")
+    """
+    import numpy as np
+    import pandas as pd
+    from market_data import get_tickers_data  # Ensure correct import
+
+    # Normalize allocations if they do not sum exactly to 1.
+    total_alloc = sum(model_portfolio.values())
+    if not np.isclose(total_alloc, 1.0):
+        if verbose:
+            print(f"Allocations sum to {total_alloc}, normalizing to 1.")
+        model_portfolio = {ticker: alloc / total_alloc for ticker, alloc in model_portfolio.items()}
+
+    tickers = list(model_portfolio.keys())
+
+    # Retrieve historical price data if not provided.
+    if price_data is None:
+        if verbose:
+            print(f"Retrieving historical price data for tickers: {', '.join(tickers)}")
+        price_data, _ = get_tickers_data(tickers, start_date=start_date, end_date=end_date, price_type="Adj Close")
+    if price_data.empty:
+        raise ValueError("No historical price data retrieved.")
+
+    # Ensure the price data is sorted by date.
+    price_data.sort_index(inplace=True)
+
+    # Determine rebalancing dates.
+    if rebalance_freq == "daily":
+        rebalance_dates = set(price_data.index)
+    else:
+        freq_aliases = {
+            "weekly": "W-MON",
+            "monthly": "MS",
+            "quarterly": "QS",
+            "annually": "AS"
+        }
+        rule = freq_aliases.get(rebalance_freq)
+        if rule is None:
+            raise ValueError(f"Unsupported rebalance frequency: {rebalance_freq}")
+        rebalance_dates = set(price_data.resample(rule).first().dropna().index)
+
+    # Simulation setup: get the weights and initialize the portfolio value.
+    weights = np.array([model_portfolio[ticker] for ticker in tickers])
+    portfolio_value = 1.0  # starting portfolio value (e.g., $1 or 100%)
+    holdings = None  # Will be initialized on first iteration
+
+    # Create an empty DataFrame for synthetic portfolio values.
+    synthetic_df = pd.DataFrame(index=price_data.index, columns=["Synthetic Value"], dtype=float)
+
+    # Iterate over each row (date) in price_data.
+    for current_date, row in price_data.iterrows():
+        current_prices = row[tickers].values
+        # If current_date is a rebalance day or holdings have not been initialized, re-calc holdings.
+        if (current_date in rebalance_dates) or (holdings is None):
+            holdings = (portfolio_value * weights) / current_prices
+        # Calculate the new portfolio value.
+        portfolio_value = (holdings * current_prices).sum()
+        synthetic_df.loc[current_date, "Synthetic Value"] = portfolio_value
+
+    return synthetic_df
