@@ -249,10 +249,10 @@ def get_latest_ticker_price(ticker: str, verbose: bool = False) -> float:
     """
     try:
         ticker_str = str(ticker).upper()
-        if is_security_ticker(ticker_str, verbose=verbose):
-            return get_latest_security_price(ticker, verbose=verbose)
-        elif is_option_ticker(ticker_str, verbose=verbose):
+        if is_option_ticker(ticker_str, verbose=verbose):
             return get_latest_option_price(ticker, verbose=verbose)
+        elif is_security_ticker(ticker_str, verbose=verbose):
+            return get_latest_security_price(ticker, verbose=verbose)
         else:
             if verbose:
                 print(f"Invalid ticker format: {ticker}")
