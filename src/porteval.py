@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 import numpy as np
 import pandas as pd
+import bt
 from market_data import get_tickers_data
 from utils import test_stationarity
 
@@ -506,3 +507,84 @@ def simulate_model_portfolio(model_portfolio: dict[str, float],
         synthetic_df.loc[current_date, "Synthetic Value"] = portfolio_value
 
     return synthetic_df
+
+def simulate_model_portfolio_bt(model_portfolio: dict[str, float],
+                                start_date: str,
+                                end_date: str | None = None,
+                                rebalance_freq: str = "quarterly",
+                                price_data: pd.DataFrame | None = None,
+                                verbose: bool = False):
+    """
+    Simulate a model portfolio using the bt package.
+
+    This function leverages bt to perform a backtest for a portfolio that holds fixed
+    target weights defined by `model_portfolio`. bt's built-in algorithms handle data
+    alignment, rebalancing, and performance aggregation.
+
+    Args:
+        model_portfolio: Dict mapping ticker symbols to allocation percentages.
+                         If they do not sum to 1, they will be normalized.
+        start_date: The start date for the backtest (e.g., "2000-01-01").
+        end_date: The end date for the backtest; if None, bt.get() will fetch data until today.
+        rebalance_freq: The rebalancing frequency. Options include "daily", "weekly", "monthly",
+                        "quarterly", "annually".
+        price_data: Optional DataFrame of historical price data; if not provided, it will be fetched using bt.get.
+        verbose: If True, prints additional status messages.
+
+    Returns:
+        A bt.Backtest result that contains the simulated portfolio's equity curve and performance metrics.
+    """
+
+    # Normalize allocations if they do not sum close to 1.
+    total_alloc = sum(model_portfolio.values())
+    if not np.isclose(total_alloc, 1.0):
+        if verbose:
+            print(f"Allocations sum to {total_alloc}, normalizing to 1.")
+        model_portfolio = {ticker: alloc / total_alloc for ticker, alloc in model_portfolio.items()}
+
+    # Retrieve historical price data if not provided.
+    if price_data is None:
+        tickers = list(model_portfolio.keys())
+        if verbose:
+            print(f"Retrieving historical price data for tickers: {', '.join(tickers)}")
+        price_data, _ = get_tickers_data(tickers, start_date=start_date, end_date=end_date, price_type="Adj Close")
+    if price_data.empty:
+        raise ValueError("No historical price data retrieved.")
+
+    # Ensure the price data is sorted by date.
+    price_data.sort_index(inplace=True)
+
+    # Map the rebalancing frequency string to a bt algorithm.
+    frequency_map = {
+        "daily": bt.algos.RunDaily(),
+        "weekly": bt.algos.RunWeekly(),
+        "monthly": bt.algos.RunMonthly(),
+        "quarterly": bt.algos.RunQuarterly(),
+        "annually": bt.algos.RunYearly(),
+    }
+    if rebalance_freq not in frequency_map:
+        raise ValueError(f"Unsupported rebalance frequency: {rebalance_freq}")
+
+    # Define the strategy:
+    # - run on the specified rebalancing frequency,
+    # - select all securities in the universe,
+    # - allocate weights as in the model portfolio,
+    # - and rebalance accordingly.
+    strategy = bt.Strategy("ModelPortfolio",
+                           [
+                               frequency_map[rebalance_freq],
+                               bt.algos.SelectAll(),
+                               bt.algos.WeighSpecified(**model_portfolio),
+                               bt.algos.Rebalance()
+                           ])
+
+    # Create the backtest using the strategy and price data.
+    portfolio = bt.Backtest(strategy, price_data)
+
+    # Run the backtest.
+    result = bt.run(portfolio)
+
+    if verbose:
+        result.display()
+
+    return result
