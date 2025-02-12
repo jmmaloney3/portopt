@@ -98,7 +98,8 @@ def is_money_market_ticker(ticker: str, verbose: bool = False) -> bool:
 def get_tickers_data(tickers: set[str] | list[str],
                      start_date: str = "1990-01-01",
                      end_date: str | None = None,
-                     price_type: str = "Adj Close") -> tuple[pd.DataFrame, dict]:
+                     price_type: str = "Adj Close",
+                     verbose: bool = False) -> tuple[pd.DataFrame, dict]:
     """
     Retrieve price data for a set of tickers and return cleaned data along with
     cleaning statistics.
@@ -175,6 +176,18 @@ def get_tickers_data(tickers: set[str] | list[str],
             },
             "data retention": (df_clean.shape[0] / df.shape[0]) if df.shape[0] > 0 else 0
         }
+
+        if verbose:
+            print("Data retrieval statistics:")
+            print("pre-clean stats:")
+            print(f"  row count: {stats['pre-clean stats']['row count']}")
+            print(f"  min date: {stats['pre-clean stats']['min date']}")
+            print(f"  max date: {stats['pre-clean stats']['max date']}")
+            print("post-clean stats:")
+            print(f"  row count: {stats['post-clean stats']['row count']}")
+            print(f"  min date: {stats['post-clean stats']['min date']}")
+            print(f"  max date: {stats['post-clean stats']['max date']}")
+            print(f"data retention: {stats['data retention'] * 100:.2f}%")
 
         # Warn the user if rows were dropped during cleaning
         if df_clean.shape[0] < df.shape[0]:
