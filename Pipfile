@@ -14,6 +14,7 @@ seaborn = "*"
 scikit-learn = "*"
 pyportfolioopt = "*"
 statsmodels = "*"
+bt = "*"
 
 [dev-packages]
 ipykernel = "*"
