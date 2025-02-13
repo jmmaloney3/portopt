@@ -6,6 +6,7 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 import bt
+import ffn
 from market_data import get_tickers_data
 from utils import test_stationarity
 
@@ -424,36 +425,35 @@ def simulate_model_portfolio(model_portfolio: dict[str, float],
                              end_date: str | None = None,
                              rebalance_freq: str = "quarterly",
                              price_data: pd.DataFrame | None = None,
-                             verbose: bool = False) -> pd.DataFrame:
+                             engine: str = "custom",
+                             verbose: bool = False,) -> "ffn.GroupStats":
     """
-    Simulate a model portfolio to generate a synthetic asset's daily value
-    time series.
+    Simulate a model portfolio and return performance statistics.
 
-    This function returns a DataFrame indexed by date with a single column
-    "Synthetic Value" representing the daily portfolio value.
+    When engine is "custom", the function uses an internal simulation loop;
+    when engine is "bt", the bt backtesting framework is used.
 
     Args:
-        model_portfolio: Dict mapping ticker symbols to allocation percentages.
+        model_portfolio: Dictionary mapping ticker symbols to allocation percentages.
+                         Allocations are normalized if they do not sum to 1.
         start_date: Start date for historical price data retrieval.
-        end_date: End date for historical price data retrieval (default: None, meaning today).
-        rebalance_freq: Frequency for rebalancing the portfolio. Supported options are "daily",
-                        "weekly", "monthly", "quarterly", "annually" (default is "quarterly").
-        price_data: Optional DataFrame with historical price data. If provided, it should be in a
-                    format similar to that returned by get_tickers_data.
-        verbose: If True, prints additional status messages.
+        end_date: End date for historical price data retrieval (if None, data is fetched until today).
+        rebalance_freq: Rebalancing frequency. Options: "daily", "weekly", "monthly",
+                        "quarterly", "annually" (default is "quarterly").
+        price_data: Optional pre-fetched historical price data (a DataFrame). If None, data is retrieved.
+        engine: Either "custom" to use the custom simulation engine or "bt" to use the bt package.
+        verbose: If True, print additional status messages.
 
     Returns:
-        DataFrame indexed by date with a single column "Synthetic Value" that contains the daily portfolio value.
+        ffn.GroupStats: A GroupStats object (or bt.Result) representing the simulated equity curve,
+                        along with performance statistics.
 
     Example:
         portfolio = {'AAPL': 0.5, 'MSFT': 0.5}
-        synthetic_df = simulate_model_portfolio(portfolio, start_date="2000-01-01", end_date="2020-01-01")
+        result = simulate_model_portfolio(portfolio, start_date="2000-01-01", end_date="2020-01-01")
     """
-    import numpy as np
-    import pandas as pd
-    from market_data import get_tickers_data  # Ensure correct import
 
-    # Normalize allocations if they do not sum exactly to 1.
+    # Normalize allocations if necessary.
     total_alloc = sum(model_portfolio.values())
     if not np.isclose(total_alloc, 1.0):
         if verbose:
@@ -473,118 +473,68 @@ def simulate_model_portfolio(model_portfolio: dict[str, float],
     # Ensure the price data is sorted by date.
     price_data.sort_index(inplace=True)
 
-    # Determine rebalancing dates.
-    if rebalance_freq == "daily":
-        rebalance_dates = set(price_data.index)
-    else:
-        freq_aliases = {
-            "weekly": "W-MON",
-            "monthly": "MS",
-            "quarterly": "QS",
-            "annually": "AS"
+    if engine.lower() == "bt":
+        import bt  # bt is only required when using the bt engine.
+        frequency_map = {
+            "daily": bt.algos.RunDaily(),
+            "weekly": bt.algos.RunWeekly(),
+            "monthly": bt.algos.RunMonthly(),
+            "quarterly": bt.algos.RunQuarterly(),
+            "annually": bt.algos.RunYearly(),
         }
-        rule = freq_aliases.get(rebalance_freq)
-        if rule is None:
+        algo = frequency_map.get(rebalance_freq)
+        if algo is None:
             raise ValueError(f"Unsupported rebalance frequency: {rebalance_freq}")
-        rebalance_dates = set(price_data.resample(rule).first().dropna().index)
 
-    # Simulation setup: get the weights and initialize the portfolio value.
-    weights = np.array([model_portfolio[ticker] for ticker in tickers])
-    portfolio_value = 1.0  # starting portfolio value (e.g., $1 or 100%)
-    holdings = None  # Will be initialized on first iteration
-
-    # Create an empty DataFrame for synthetic portfolio values.
-    synthetic_df = pd.DataFrame(index=price_data.index, columns=["Synthetic Value"], dtype=float)
-
-    # Iterate over each row (date) in price_data.
-    for current_date, row in price_data.iterrows():
-        current_prices = row[tickers].values
-        # If current_date is a rebalance day or holdings have not been initialized, re-calc holdings.
-        if (current_date in rebalance_dates) or (holdings is None):
-            holdings = (portfolio_value * weights) / current_prices
-        # Calculate the new portfolio value.
-        portfolio_value = (holdings * current_prices).sum()
-        synthetic_df.loc[current_date, "Synthetic Value"] = portfolio_value
-
-    return synthetic_df
-
-def simulate_model_portfolio_bt(model_portfolio: dict[str, float],
-                                start_date: str,
-                                end_date: str | None = None,
-                                rebalance_freq: str = "quarterly",
-                                price_data: pd.DataFrame | None = None,
-                                verbose: bool = False):
-    """
-    Simulate a model portfolio using the bt package.
-
-    This function leverages bt to perform a backtest for a portfolio that holds fixed
-    target weights defined by `model_portfolio`. bt's built-in algorithms handle data
-    alignment, rebalancing, and performance aggregation.
-
-    Args:
-        model_portfolio: Dict mapping ticker symbols to allocation percentages.
-                         If they do not sum to 1, they will be normalized.
-        start_date: The start date for the backtest (e.g., "2000-01-01").
-        end_date: The end date for the backtest; if None, bt.get() will fetch data until today.
-        rebalance_freq: The rebalancing frequency. Options include "daily", "weekly", "monthly",
-                        "quarterly", "annually".
-        price_data: Optional DataFrame of historical price data; if not provided, it will be fetched using bt.get.
-        verbose: If True, prints additional status messages.
-
-    Returns:
-        A bt.Backtest result that contains the simulated portfolio's equity curve and performance metrics.
-    """
-
-    # Normalize allocations if they do not sum close to 1.
-    total_alloc = sum(model_portfolio.values())
-    if not np.isclose(total_alloc, 1.0):
+        # Define the bt strategy.
+        strategy = bt.Strategy("ModelPortfolio",
+                               [
+                                   algo,
+                                   bt.algos.SelectAll(),
+                                   bt.algos.WeighSpecified(**model_portfolio),
+                                   bt.algos.Rebalance()
+                               ])
+        # Create and run the backtest.
+        portfolio = bt.Backtest(strategy, price_data)
+        result = bt.run(portfolio)
         if verbose:
-            print(f"Allocations sum to {total_alloc}, normalizing to 1.")
-        model_portfolio = {ticker: alloc / total_alloc for ticker, alloc in model_portfolio.items()}
+            result.display()
+        # Return the bt.Result object directly.
+        return result
+    else:
+        # Use the custom simulation engine.
+        if rebalance_freq == "daily":
+            rebalance_dates = set(price_data.index)
+        else:
+            freq_aliases = {
+                "weekly": "W-MON",
+                "monthly": "MS",
+                "quarterly": "QS",
+                "annually": "AS"
+            }
+            rule = freq_aliases.get(rebalance_freq)
+            if rule is None:
+                raise ValueError(f"Unsupported rebalance frequency: {rebalance_freq}")
+            rebalance_dates = set(price_data.resample(rule).first().dropna().index)
 
-    # Retrieve historical price data if not provided.
-    if price_data is None:
-        tickers = list(model_portfolio.keys())
+        # Simulation setup: get the weights and initialize the portfolio value.
+        weights = np.array([model_portfolio[ticker] for ticker in tickers])
+        portfolio_value = 100.0  # Starting portfolio value set to 100
+        holdings = None  # Will be initialized on the first iteration
+
+        # Create an empty DataFrame for synthetic portfolio values.
+        synthetic_df = pd.DataFrame(index=price_data.index, columns=["Synthetic Value"], dtype=float)
+
+        # Simulate the portfolio values day-by-day.
+        for current_date, row in price_data.iterrows():
+            current_prices = row[tickers].values
+            # Rebalance if it's a rebalancing day or if holdings haven't been initialized.
+            if (current_date in rebalance_dates) or (holdings is None):
+                holdings = (portfolio_value * weights) / current_prices
+            portfolio_value = (holdings * current_prices).sum()
+            synthetic_df.loc[current_date, "Synthetic Value"] = portfolio_value
+
+        gs = ffn.GroupStats(synthetic_df)
         if verbose:
-            print(f"Retrieving historical price data for tickers: {', '.join(tickers)}")
-        price_data, _ = get_tickers_data(tickers, start_date=start_date, end_date=end_date, price_type="Adj Close")
-    if price_data.empty:
-        raise ValueError("No historical price data retrieved.")
-
-    # Ensure the price data is sorted by date.
-    price_data.sort_index(inplace=True)
-
-    # Map the rebalancing frequency string to a bt algorithm.
-    frequency_map = {
-        "daily": bt.algos.RunDaily(),
-        "weekly": bt.algos.RunWeekly(),
-        "monthly": bt.algos.RunMonthly(),
-        "quarterly": bt.algos.RunQuarterly(),
-        "annually": bt.algos.RunYearly(),
-    }
-    if rebalance_freq not in frequency_map:
-        raise ValueError(f"Unsupported rebalance frequency: {rebalance_freq}")
-
-    # Define the strategy:
-    # - run on the specified rebalancing frequency,
-    # - select all securities in the universe,
-    # - allocate weights as in the model portfolio,
-    # - and rebalance accordingly.
-    strategy = bt.Strategy("ModelPortfolio",
-                           [
-                               frequency_map[rebalance_freq],
-                               bt.algos.SelectAll(),
-                               bt.algos.WeighSpecified(**model_portfolio),
-                               bt.algos.Rebalance()
-                           ])
-
-    # Create the backtest using the strategy and price data.
-    portfolio = bt.Backtest(strategy, price_data)
-
-    # Run the backtest.
-    result = bt.run(portfolio)
-
-    if verbose:
-        result.display()
-
-    return result
+            gs.display()
+        return gs
