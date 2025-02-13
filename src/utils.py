@@ -404,7 +404,8 @@ def standardize_data(df):
 def get_portfolio_data(portfolio,
                       start_date: str = "1990-01-01",
                       end_date: str = None,
-                      price_type: str = "Adj Close") -> pd.DataFrame:
+                      price_type: str = "Adj Close",
+                      verbose: bool = False) -> pd.DataFrame:
     """
     Retrieve price data for one or more portfolios.
 
@@ -444,7 +445,7 @@ def get_portfolio_data(portfolio,
                 raise ValueError("Invalid portfolio format")
             tickers.update(p.keys())
 
-    return get_tickers_data(tickers, start_date, end_date, price_type)
+    return get_tickers_data(tickers, start_date, end_date, price_type, verbose)
 
 def plot_time_series(data: pd.DataFrame | pd.Series,
                     title: str = "Time Series Plot",
