@@ -401,52 +401,6 @@ def standardize_data(df):
 
     return df_standardized
 
-def get_portfolio_data(portfolio,
-                      start_date: str = "1990-01-01",
-                      end_date: str = None,
-                      price_type: str = "Adj Close",
-                      verbose: bool = False) -> pd.DataFrame:
-    """
-    Retrieve price data for one or more portfolios.
-
-    Args:
-        portfolio: Either:
-                  - A dictionary mapping tickers to weights
-                  - A dictionary of such dictionaries, with portfolio names as keys
-        start_date: Start date for data retrieval (default: "1990-01-01")
-        end_date: End date for data retrieval (default: None, means today)
-        price_type: Type of price to retrieve (default: "Adj Close")
-                   Options: "Open", "High", "Low", "Close", "Adj Close", "Volume"
-
-    Returns:
-        DataFrame indexed by date with tickers as columns containing price data
-
-    Example:
-        # Single portfolio
-        portfolio = {'AAPL': 0.5, 'MSFT': 0.5}
-        prices = get_portfolio_data(portfolio)
-
-        # Multiple portfolios
-        portfolios = {
-            'Conservative': {'SPY': 0.6, 'BND': 0.4},
-            'Aggressive': {'QQQ': 0.7, 'SPY': 0.3}
-        }
-        prices = get_portfolio_data(portfolios)
-    """
-    # Determine if we have a single portfolio or multiple portfolios
-    if all(isinstance(v, (int, float)) for v in portfolio.values()):
-        # Single portfolio case
-        tickers = set(portfolio.keys())
-    else:
-        # Multiple portfolios case
-        tickers = set()
-        for p in portfolio.values():
-            if not isinstance(p, dict):
-                raise ValueError("Invalid portfolio format")
-            tickers.update(p.keys())
-
-    return get_tickers_data(tickers, start_date, end_date, price_type, verbose)
-
 def plot_time_series(data: pd.DataFrame | pd.Series,
                     title: str = "Time Series Plot",
                     ylabel: str = "Value",
