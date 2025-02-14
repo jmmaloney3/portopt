@@ -423,7 +423,7 @@ def backtest_model_portfolio(model_portfolio: dict[str, float],
 def _sim_model_port(model_portfolio: dict[str, float],
                     price_data: pd.DataFrame,
                     rebalance_freq: str,
-                    verbose: bool = False) -> "ffn.GroupStats":
+                    verbose: bool = False) -> pd.DataFrame:
     """
     Run the custom simulation engine for a single model portfolio.
 
@@ -431,16 +431,14 @@ def _sim_model_port(model_portfolio: dict[str, float],
         model_portfolio: Dictionary mapping ticker symbols to allocation percentages.
         price_data: DataFrame containing historical price data; must be sorted by date.
         rebalance_freq: Rebalancing frequency. Options: "daily", "weekly", "monthly", "quarterly", "annually".
-        verbose: If True, display the resulting ffn.GroupStats object.
+        verbose: If True, display simulation results.
 
     Returns:
-        ffn.GroupStats: A GroupStats object representing the simulated equity curve.
+        DataFrame containing the simulated price time series.
     """
-    import numpy as np
-    import pandas as pd
-    import ffn
-
     tickers = list(model_portfolio.keys())
+    if not tickers:
+        raise ValueError("Model portfolio must contain at least one ticker.")
 
     # Determine rebalancing dates.
     if rebalance_freq == "daily":
@@ -471,10 +469,9 @@ def _sim_model_port(model_portfolio: dict[str, float],
         portfolio_value = (holdings * current_prices).sum()
         synthetic_df.loc[current_date, "Synthetic Value"] = portfolio_value
 
-    gs = ffn.GroupStats(synthetic_df)
     if verbose:
-        gs.display()
-    return gs
+        ffn.GroupStats(synthetic_df).display()
+    return synthetic_df
 
 
 def simulate_model_portfolio(model_portfolio: dict[str, float],
@@ -556,8 +553,7 @@ def simulate_model_portfolio(model_portfolio: dict[str, float],
         result = bt.run(portfolio)
         if verbose:
             result.display()
-        # Return the bt.Result object directly.
         return result
     else:
-        # Use the custom simulation engine.
-        return _sim_model_port(model_portfolio, price_data, rebalance_freq, verbose)
+        simulated_df = _sim_model_port(model_portfolio, price_data, rebalance_freq, verbose)
+        return ffn.GroupStats(simulated_df)
