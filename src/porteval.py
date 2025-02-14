@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import bt
 import ffn
-from market_data import get_tickers_data
+from market_data import get_tickers_data, get_portfolio_data
 from utils import test_stationarity
 
 @dataclass
@@ -474,7 +474,7 @@ def _sim_model_port(model_portfolio: dict[str, float],
     return synthetic_df
 
 
-def simulate_model_portfolio(model_portfolio: dict[str, float],
+def simulate_model_portfolio(model_portfolio: dict,
                              start_date: str,
                              end_date: str | None = None,
                              rebalance_freq: str = "quarterly",
@@ -482,13 +482,15 @@ def simulate_model_portfolio(model_portfolio: dict[str, float],
                              engine: str = "custom",
                              verbose: bool = False,) -> "ffn.GroupStats":
     """
-    Simulate a model portfolio and return performance statistics.
+    Simulate model portfolio(s) and return performance statistics.
 
-    When engine is "custom", the function uses an internal simulation loop;
-    when engine is "bt", the bt backtesting framework is used.
+    The input 'model_portfolio' can be provided as either:
+      - A dict mapping ticker symbols to allocation weights (single portfolio), or
+      - A dict mapping portfolio names to dicts that map ticker symbols to allocation weights.
 
     Args:
-        model_portfolio: Dictionary mapping ticker symbols to allocation percentages.
+        model_portfolio: Either a dictionary mapping ticker symbols to weights (single portfolio)
+                         or a dictionary mapping portfolio names to such dictionaries.
                          Allocations are normalized if they do not sum to 1.
         start_date: Start date for historical price data retrieval.
         end_date: End date for historical price data retrieval (if None, data is fetched until today).
@@ -499,36 +501,40 @@ def simulate_model_portfolio(model_portfolio: dict[str, float],
         verbose: If True, print additional status messages.
 
     Returns:
-        ffn.GroupStats: A GroupStats object (or bt.Result) representing the simulated equity curve,
-                        along with performance statistics.
+        ffn.GroupStats: A GroupStats object (or bt.Result in the bt engine case) representing
+                        the simulated equity curve(s) along with performance statistics.
 
-    Example:
+     Example:
         portfolio = {'AAPL': 0.5, 'MSFT': 0.5}
         result = simulate_model_portfolio(portfolio, start_date="2000-01-01", end_date="2020-01-01")
     """
 
-    # Normalize allocations if necessary.
-    total_alloc = sum(model_portfolio.values())
-    if not np.isclose(total_alloc, 1.0):
-        if verbose:
-            print(f"Allocations sum to {total_alloc}, normalizing to 1.")
-        model_portfolio = {ticker: alloc / total_alloc for ticker, alloc in model_portfolio.items()}
+    # If the input is a single portfolio (dict mapping tickers to weights), wrap it.
+    first_val = next(iter(model_portfolio.values()))
+    if not isinstance(first_val, dict):
+        model_portfolio = {"Model Portfolio": model_portfolio}
 
-    tickers = list(model_portfolio.keys())
+    # Use the union of all tickers across portfolios.
+    union_tickers = set()
+    for port_alloc in model_portfolio.values():
+        union_tickers.update(port_alloc.keys())
+    tickers = sorted(union_tickers)
 
     # Retrieve historical price data if not provided.
     if price_data is None:
         if verbose:
-            print(f"Retrieving historical price data for tickers: {', '.join(tickers)}")
-        price_data, _ = get_tickers_data(tickers, start_date=start_date, end_date=end_date, price_type="Adj Close")
+            print("Retrieving historical price data for portfolios...")
+        # since the tickers are collected we can use get_tickers_data
+        price_data = get_portfolio_data(model_portfolio, start_date=start_date, end_date=end_date, price_type="Adj Close", verbose=verbose)
     if price_data.empty:
         raise ValueError("No historical price data retrieved.")
 
     # Ensure the price data is sorted by date.
     price_data.sort_index(inplace=True)
 
+    # Branch based on simulation engine.
     if engine.lower() == "bt":
-        import bt  # bt is only required when using the bt engine.
+        import bt  # bt is only required for the bt engine.
         frequency_map = {
             "daily": bt.algos.RunDaily(),
             "weekly": bt.algos.RunWeekly(),
@@ -540,20 +546,35 @@ def simulate_model_portfolio(model_portfolio: dict[str, float],
         if algo is None:
             raise ValueError(f"Unsupported rebalance frequency: {rebalance_freq}")
 
-        # Define the bt strategy.
-        strategy = bt.Strategy("ModelPortfolio",
-                               [
-                                   algo,
-                                   bt.algos.SelectAll(),
-                                   bt.algos.WeighSpecified(**model_portfolio),
-                                   bt.algos.Rebalance()
-                               ])
-        # Create and run the backtest.
-        portfolio = bt.Backtest(strategy, price_data)
-        result = bt.run(portfolio)
+        strategies = []
+        for port_name, alloc in model_portfolio.items():
+            total_alloc = sum(alloc.values())
+            if not np.isclose(total_alloc, 1.0):
+                if verbose:
+                    print(f"Portfolio '{port_name}': allocations sum to {total_alloc}, normalizing to 1.")
+                alloc = {ticker: weight / total_alloc for ticker, weight in alloc.items()}
+            # Create a full allocation vector over the union of tickers.
+            full_alloc = {ticker: alloc.get(ticker, 0) for ticker in tickers}
+            strat = bt.Strategy(port_name,
+                                [algo,
+                                 bt.algos.SelectAll(),
+                                 bt.algos.WeighSpecified(**full_alloc),
+                                 bt.algos.Rebalance()])
+            strategies.append(bt.Backtest(strat, price_data))
+        result = bt.run(*strategies)
         if verbose:
             result.display()
         return result
     else:
-        simulated_df = _sim_model_port(model_portfolio, price_data, rebalance_freq, verbose)
-        return ffn.GroupStats(simulated_df)
+        # Custom engine branch.
+        combined_df = pd.DataFrame(index=price_data.index)
+        for port_name, alloc in model_portfolio.items():
+            total_alloc = sum(alloc.values())
+            if not np.isclose(total_alloc, 1.0):
+                if verbose:
+                    print(f"Portfolio '{port_name}': allocations sum to {total_alloc}, normalizing to 1.")
+                alloc = {ticker: weight / total_alloc for ticker, weight in alloc.items()}
+            simulated_df = _sim_model_port(alloc, price_data, rebalance_freq, verbose)
+            # Add the simulated "Synthetic Value" as a column for this portfolio.
+            combined_df[port_name] = simulated_df["Synthetic Value"]
+        return ffn.GroupStats(combined_df)
