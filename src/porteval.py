@@ -420,6 +420,63 @@ def backtest_model_portfolio(model_portfolio: dict[str, float],
         "average_correlation": average_correlation
     }
 
+def _sim_model_port(model_portfolio: dict[str, float],
+                    price_data: pd.DataFrame,
+                    rebalance_freq: str,
+                    verbose: bool = False) -> "ffn.GroupStats":
+    """
+    Run the custom simulation engine for a single model portfolio.
+
+    Args:
+        model_portfolio: Dictionary mapping ticker symbols to allocation percentages.
+        price_data: DataFrame containing historical price data; must be sorted by date.
+        rebalance_freq: Rebalancing frequency. Options: "daily", "weekly", "monthly", "quarterly", "annually".
+        verbose: If True, display the resulting ffn.GroupStats object.
+
+    Returns:
+        ffn.GroupStats: A GroupStats object representing the simulated equity curve.
+    """
+    import numpy as np
+    import pandas as pd
+    import ffn
+
+    tickers = list(model_portfolio.keys())
+
+    # Determine rebalancing dates.
+    if rebalance_freq == "daily":
+        rebalance_dates = set(price_data.index)
+    else:
+        freq_aliases = {
+            "weekly": "W-MON",
+            "monthly": "MS",
+            "quarterly": "QS",
+            "annually": "AS"
+        }
+        rule = freq_aliases.get(rebalance_freq)
+        if rule is None:
+            raise ValueError(f"Unsupported rebalance frequency: {rebalance_freq}")
+        rebalance_dates = set(price_data.resample(rule).first().dropna().index)
+
+    weights = np.array([model_portfolio[ticker] for ticker in tickers])
+    portfolio_value = 100.0  # Starting portfolio value.
+    holdings = None  # Will be initialized at the first iteration.
+
+    synthetic_df = pd.DataFrame(index=price_data.index, columns=["Synthetic Value"], dtype=float)
+
+    # Simulate portfolio values day-by-day.
+    for current_date, row in price_data.iterrows():
+        current_prices = row[tickers].values
+        if (current_date in rebalance_dates) or (holdings is None):
+            holdings = (portfolio_value * weights) / current_prices
+        portfolio_value = (holdings * current_prices).sum()
+        synthetic_df.loc[current_date, "Synthetic Value"] = portfolio_value
+
+    gs = ffn.GroupStats(synthetic_df)
+    if verbose:
+        gs.display()
+    return gs
+
+
 def simulate_model_portfolio(model_portfolio: dict[str, float],
                              start_date: str,
                              end_date: str | None = None,
@@ -503,38 +560,4 @@ def simulate_model_portfolio(model_portfolio: dict[str, float],
         return result
     else:
         # Use the custom simulation engine.
-        if rebalance_freq == "daily":
-            rebalance_dates = set(price_data.index)
-        else:
-            freq_aliases = {
-                "weekly": "W-MON",
-                "monthly": "MS",
-                "quarterly": "QS",
-                "annually": "AS"
-            }
-            rule = freq_aliases.get(rebalance_freq)
-            if rule is None:
-                raise ValueError(f"Unsupported rebalance frequency: {rebalance_freq}")
-            rebalance_dates = set(price_data.resample(rule).first().dropna().index)
-
-        # Simulation setup: get the weights and initialize the portfolio value.
-        weights = np.array([model_portfolio[ticker] for ticker in tickers])
-        portfolio_value = 100.0  # Starting portfolio value set to 100
-        holdings = None  # Will be initialized on the first iteration
-
-        # Create an empty DataFrame for synthetic portfolio values.
-        synthetic_df = pd.DataFrame(index=price_data.index, columns=["Synthetic Value"], dtype=float)
-
-        # Simulate the portfolio values day-by-day.
-        for current_date, row in price_data.iterrows():
-            current_prices = row[tickers].values
-            # Rebalance if it's a rebalancing day or if holdings haven't been initialized.
-            if (current_date in rebalance_dates) or (holdings is None):
-                holdings = (portfolio_value * weights) / current_prices
-            portfolio_value = (holdings * current_prices).sum()
-            synthetic_df.loc[current_date, "Synthetic Value"] = portfolio_value
-
-        gs = ffn.GroupStats(synthetic_df)
-        if verbose:
-            gs.display()
-        return gs
+        return _sim_model_port(model_portfolio, price_data, rebalance_freq, verbose)
