@@ -523,9 +523,12 @@ def simulate_model_portfolio(model_portfolio: dict,
     # Retrieve historical price data if not provided.
     if price_data is None:
         if verbose:
-            print("Retrieving historical price data for portfolios...")
-        # since the tickers are collected we can use get_tickers_data
-        price_data = get_portfolio_data(model_portfolio, start_date=start_date, end_date=end_date, price_type="Adj Close", verbose=verbose)
+            print(f"Retrieving historical price data for tickers: {', '.join(tickers)}")
+        price_data, _ = get_tickers_data(tickers,
+                                         start_date=start_date,
+                                         end_date=end_date,
+                                         price_type="Adj Close",
+                                         verbose=verbose)
     if price_data.empty:
         raise ValueError("No historical price data retrieved.")
 
