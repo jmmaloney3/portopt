@@ -96,6 +96,67 @@ def is_money_market_ticker(ticker: str, verbose: bool = False) -> bool:
         return True
     return False
 
+def get_tickers_info(tickers: set[str] | list[str],
+                     price_type: str = "Adj Close",
+                     verbose: bool = False) -> pd.DataFrame:
+    """
+    Retrieve the maximum available historical price data for each ticker and return
+    a DataFrame with the following information for each ticker:
+      - min date
+      - max date
+      - number of data points
+
+    Args:
+        tickers: Set or list of ticker symbols.
+        price_type: Type of price to retrieve (default: "Adj Close").
+        verbose: If True, prints diagnostic messages.
+
+    Returns:
+        DataFrame with ticker symbols as index and columns:
+            - "min date"
+            - "max date"
+            - "# of data points"
+    """
+    # Ensure tickers is a set to eliminate duplicates.
+    if not isinstance(tickers, set):
+        tickers_set = set(tickers)
+    else:
+        tickers_set = tickers
+    tickers_list = list(tickers_set)
+
+    if verbose:
+        print(f"Downloading maximum available historical price data for tickers: {', '.join(tickers_list)}")
+
+    # Download the maximum available price data using yfinance.
+    data = yf.download(tickers_list, period="max", auto_adjust=False)[price_type]
+
+    # yf.download returns a Series if only one ticker is provided; convert to DataFrame.
+    if isinstance(data, pd.Series):
+        data = data.to_frame(name=tickers_list[0])
+
+    info = []
+    # For each ticker, compute the desired statistics.
+    for ticker in data.columns:
+        series = data[ticker].dropna()
+        if series.empty:
+            min_date = pd.NaT
+            max_date = pd.NaT
+            count = 0
+        else:
+            min_date = series.index.min()
+            max_date = series.index.max()
+            count = series.shape[0]
+        info.append({
+            "Ticker": ticker,
+            "min date": min_date,
+            "max date": max_date,
+            "# of data points": count
+        })
+
+    df_info = pd.DataFrame(info)
+    df_info.set_index("Ticker", inplace=True)
+    return df_info
+
 def get_portfolio_data(portfolio,
                       start_date: str = "1990-01-01",
                       end_date: str = None,
