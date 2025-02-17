@@ -157,6 +157,34 @@ def get_tickers_info(tickers: set[str] | list[str],
     df_info.set_index("Ticker", inplace=True)
     return df_info
 
+def get_portfolio_tickers(portfolio: dict) -> list[str]:
+    """
+    Convert a portfolio dict or a dict of portfolio dicts into a sorted list of unique tickers.
+
+    Args:
+        portfolio: Either a single portfolio represented by a dict mapping ticker symbols to allocation weights,
+                   or a dict mapping portfolio names to such dictionaries.
+
+    Returns:
+        Sorted list of unique ticker symbols present in the portfolio or portfolios.
+    """
+    if not portfolio:
+        return []
+
+    # Determine if we have a single portfolio or multiple portfolios
+    if all(isinstance(v, (int, float)) for v in portfolio.values()):
+        # Single portfolio case
+        tickers = set(portfolio.keys())
+    else:
+        # Multiple portfolios case
+        tickers = set()
+        for p in portfolio.values():
+            if not isinstance(p, dict):
+                raise ValueError("Invalid portfolio format")
+            tickers.update(p.keys())
+
+    return sorted(tickers)
+
 def get_portfolio_data(portfolio,
                       start_date: str = "1990-01-01",
                       end_date: str = None,
@@ -189,17 +217,7 @@ def get_portfolio_data(portfolio,
         }
         prices = get_portfolio_data(portfolios)
     """
-    # Determine if we have a single portfolio or multiple portfolios
-    if all(isinstance(v, (int, float)) for v in portfolio.values()):
-        # Single portfolio case
-        tickers = set(portfolio.keys())
-    else:
-        # Multiple portfolios case
-        tickers = set()
-        for p in portfolio.values():
-            if not isinstance(p, dict):
-                raise ValueError("Invalid portfolio format")
-            tickers.update(p.keys())
+    tickers = get_portfolio_tickers(portfolio)
 
     return get_tickers_data(tickers, start_date, end_date, price_type, verbose)
 
