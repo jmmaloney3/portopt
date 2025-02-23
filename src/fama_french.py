@@ -9,34 +9,40 @@ def load_ff_3factor_daily(csv_path: str = "../data/fama-french/F-F_Research_Data
     it will be renamed to "Date". The "Date" column contains dates in YYYYMMDD format,
     which are converted to a datetime index.
     
-    **Important:** The factor values are provided as percentages (e.g., 0.25 corresponds
-    to 0.25%) and are converted to decimals (i.e., 0.0025) by dividing by 100.
+    **Important:**
+    - The factor values are provided as percentages (e.g., 0.25 corresponds
+      to 0.25%) and are converted to decimals (i.e., 0.0025) by dividing by 100.
+    - Any rows with NaT (Not a Time) values in the index are removed.
     
     Args:
         csv_path: Path to the F-F_Research_Data_Factors_daily.CSV file.
     
     Returns:
         DataFrame indexed by Date with all available factor columns converted to decimal values.
+        Rows with NaT index values are removed.
     """
 
     # Read the CSV file while skipping the first 4 rows.
     df = pd.read_csv(csv_path, skiprows=4, header=0)
-    
+
     # Strip whitespace from column names.
     df.columns = [str(col).strip() for col in df.columns]
-    
+
     # If the first column is not "Date", rename it to "Date".
     if df.columns[0] != "Date":
         df.rename(columns={df.columns[0]: "Date"}, inplace=True)
-        
+
     # Convert the "Date" column from YYYYMMDD format to a datetime object and set it as the index.
     df["Date"] = pd.to_datetime(df["Date"], format="%Y%m%d", errors="coerce")
     df.set_index("Date", inplace=True)
-    
+
+    # Remove any rows where the index is NaT
+    df = df[df.index.notna()]
+
     # Convert the factor values from percentages to decimals by dividing by 100.
     for col in df.columns:
         df[col] = df[col] / 100.0
-    
+
     return df
 
 def asset_class_proxy_returns(factor_data: pd.DataFrame,
