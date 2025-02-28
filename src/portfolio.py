@@ -108,16 +108,20 @@ def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
     The CSV file should contain position details with some or all of:
     * Account information (Account Number, Account Name)
     * Position details (Symbol/SYMBOL/Ticker, Quantity/Shares/UNIT/SHARE OWNED, Cost Basis/Average Cost)
+    * Dollar Value amount (Balance/BALANCE/Current Value/Total Value)
     * Optional non-CSV lines (will be detected and skipped)
     * Optional footer section (will be detected and skipped)
 
     Special handling:
-    * Money market funds: When Quantity is empty, uses Current Value (assuming $1/share)
+    * Money market funds: When Quantity is empty, uses Original Value (assuming $1/share)
                          for both Quantity and Cost Basis (if Cost Basis is not provided)
     * Cost Basis:
         1. Uses 'Cost Basis' or 'Cost Basis Total' column if either exists
         2. If neither exists, calculates from Average Cost * Quantity if both are available
         3. Otherwise, sets to NaN
+    * Original Value:
+        - Loaded from 'Balance', 'BALANCE', 'Current Value', or 'Total Value' columns
+        - If not found, sets to NaN
     * Missing columns: Populated with 'N/A' for strings, NaN for numeric values
     * Empty string values: Replaced with 'N/A'
     * Ticker symbols:
@@ -135,6 +139,7 @@ def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
         - Account Name (if available, else 'N/A')
         - Quantity (from Quantity or Shares column)
         - Cost Basis (from Cost Basis/Cost Basis Total columns, or calculated from Average Cost * Quantity)
+        - Original Value (from Balance/BALANCE/Current Value/Total Value columns)
 
     Raises:
         ValueError:
@@ -213,6 +218,9 @@ def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
         'Shares': clean_numeric,
         'UNIT/SHARE OWNED': clean_numeric,
         'Current Value': clean_numeric,
+        'Total Value': clean_numeric,
+        'Balance': clean_numeric,
+        'BALANCE': clean_numeric,
         'Cost Basis': clean_numeric,
         'Cost Basis Total': clean_numeric,
         'Average Cost': clean_numeric
@@ -269,6 +277,13 @@ def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
     if quantity_col is None:
         raise ValueError("CSV must contain either 'Quantity', 'Shares', or 'UNIT/SHARE OWNED' column")
 
+    # Handle value column variations
+    value_col = None
+    for col in ['Balance', 'BALANCE', 'Current Value', 'Total Value']:
+        if col in data.columns:
+            value_col = col
+            break
+
     # Handle cost basis
     if 'Cost Basis' in data.columns:
         pass  # Use the column directly
@@ -304,6 +319,7 @@ def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
     result['Account Name'] = data.get('Account Name', 'N/A')
     result['Quantity'] = data[quantity_col]
     result['Cost Basis'] = data['Cost Basis']
+    result['Original Value'] = data[value_col] if value_col else np.nan
 
     if verbose:
         print(f"Loaded {result.shape[0]} holdings from file {file_path}")
