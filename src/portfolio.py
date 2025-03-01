@@ -43,7 +43,8 @@ def load_config(file_path: str = "../data/portfolio/config.yml") -> dict:
         file_path: Path to the configuration YAML file
 
     Returns:
-        dict: Complete configuration dictionary
+        dict: Complete configuration dictionary with defaults applied:
+              - field_mappings.Ticker.match_fields: ["Symbol"] if not specified
 
     Raises:
         ValueError: If file format is invalid
@@ -53,6 +54,16 @@ def load_config(file_path: str = "../data/portfolio/config.yml") -> dict:
 
     if not isinstance(config, dict):
         raise ValueError("YAML file must contain a dictionary of configuration settings")
+
+    # Ensure field_mappings section exists
+    if 'field_mappings' not in config:
+        config['field_mappings'] = {}
+
+    # Ensure Ticker field mapping exists with default
+    if 'Ticker' not in config['field_mappings']:
+        config['field_mappings']['Ticker'] = {}
+    if 'match_fields' not in config['field_mappings']['Ticker']:
+        config['field_mappings']['Ticker']['match_fields'] = ["Symbol"]
 
     return config
 
