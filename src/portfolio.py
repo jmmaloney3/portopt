@@ -128,9 +128,72 @@ def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
 
     return data
 
-def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
+def holdings_substitute_proxies(holdings: pd.DataFrame,
+                              proxy_funds: dict,
+                              verbose: bool = False) -> pd.DataFrame:
     """
-    Load holdings from CSV export file
+    Substitute proxy funds for private trust funds in a holdings DataFrame.
+
+    For each private trust fund in the proxy_funds mapping, this function:
+    1. Calculates equivalent shares of the proxy fund based on the original value
+    2. Preserves the original ticker and quantity in separate columns
+    3. Updates the index and quantity to use the proxy fund instead
+
+    Args:
+        holdings: DataFrame from load_holdings() containing at minimum:
+                 - Quantity
+                 - Original Value
+                 Must be indexed by ticker symbols
+        proxy_funds: Dictionary mapping private trust tickers to proxy tickers
+        verbose: If True, print status messages during substitution
+
+    Returns:
+        DataFrame with proxy substitutions applied, containing additional columns:
+        - Original Ticker (original ticker if proxy used, else same as index)
+        - Original Quantity (original quantity if proxy used, else same as Quantity)
+    """
+    # Create a copy to avoid modifying the input
+    result = holdings.copy()
+
+    # Add Original Ticker and Original Quantity columns if they don't exist
+    if 'Original Ticker' not in result.columns:
+        result['Original Ticker'] = result.index
+    if 'Original Quantity' not in result.columns:
+        result['Original Quantity'] = result['Quantity']
+
+    # Process proxy fund substitutions
+    for private_ticker, proxy_ticker in proxy_funds.items():
+        if private_ticker in result.index:
+            if verbose:
+                print(f"Substituting {private_ticker} with proxy {proxy_ticker}")
+
+            # Get the proxy price
+            from market_data import get_latest_ticker_price
+            proxy_price = get_latest_ticker_price(proxy_ticker)
+
+            if proxy_price is None or proxy_price == 0:
+                raise ValueError(f"Could not get valid price for proxy ticker {proxy_ticker}")
+
+            # Calculate new quantity based on original value and proxy price
+            new_quantity = result.loc[private_ticker, 'Original Value'] / proxy_price
+
+            # Create new row with proxy ticker
+            proxy_row = result.loc[private_ticker].copy()
+            proxy_row['Quantity'] = new_quantity
+            proxy_row['Original Ticker'] = private_ticker
+            proxy_row['Original Quantity'] = proxy_row['Quantity']
+
+            # Remove old row and add new row with proxy ticker
+            result = result.drop(private_ticker)
+            result.loc[proxy_ticker] = proxy_row
+
+    return result
+
+def load_holdings(file_path: str,
+                 proxy_funds: Optional[dict] = None,
+                 verbose: bool = False) -> pd.DataFrame:
+    """
+    Load holdings from CSV export file, optionally substituting proxy funds.
 
     The CSV file should contain position details with some or all of:
     * Account information (Account Number, Account Name)
@@ -157,6 +220,9 @@ def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
 
     Args:
         file_path: Path to the portfolio CSV file
+        proxy_funds: Optional dictionary mapping private trust tickers to proxy tickers.
+                    If provided, holdings for private trusts will be converted to use
+                    their proxy tickers, with quantities adjusted based on current value.
         verbose: Optional; if True, prints a message with the number rows loaded.
                  Defaults to False.
 
@@ -167,6 +233,8 @@ def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
         - Quantity (from Quantity or Shares column)
         - Cost Basis (from Cost Basis/Cost Basis Total columns, or calculated from Average Cost * Quantity)
         - Original Value (from Balance/BALANCE/Current Value/Total Value columns)
+        - Original Ticker (original ticker if proxy used, else same as index)
+        - Original Quantity (original quantity if proxy used, else same as Quantity)
 
     Raises:
         ValueError:
@@ -321,7 +389,9 @@ def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
     else:
         data['Cost Basis'] = np.nan
 
-    # Handle money market funds (indicated by missing Quantity)
+    # Handle money market funds (where Quantity is missing):
+    # - Use Original Value as Quantity (assuming $1/share)
+    # - Use Original Value as Cost Basis (if not already set)
     if pd.isna(data[quantity_col]).any():
         if 'Current Value' not in data.columns:
             raise ValueError("Current Value column required for money market funds")
@@ -350,6 +420,10 @@ def load_holdings(file_path: str, verbose: bool = False) -> pd.DataFrame:
 
     if verbose:
         print(f"Loaded {result.shape[0]} holdings from file {file_path}")
+
+    # If proxy funds provided, substitute them
+    if proxy_funds:
+        result = holdings_substitute_proxies(result, proxy_funds, verbose)
 
     return result
 
