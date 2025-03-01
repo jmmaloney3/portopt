@@ -12,7 +12,7 @@ Functions:
     get_holding_allocations: Calculate portfolio allocations by security
     get_asset_class_allocations: Calculate portfolio allocations by asset class
     load_and_consolidate_holdings: Load and consolidate holdings from multiple CSV files
-    load_proxy_fund_mappings: Load proxy fund mappings from YAML file
+    load_config: Load configuration settings from YAML file
 
 Dependencies:
     - pandas: Data manipulation and analysis
@@ -30,19 +30,20 @@ from market_data import get_latest_ticker_prices
 import os
 import yaml
 
-def load_proxy_fund_mappings(file_path: str = "../data/portfolio/config.yml") -> dict:
+def load_config(file_path: str = "../data/portfolio/config.yml") -> dict:
     """
-    Load proxy fund mappings from YAML file.
+    Load configuration settings from YAML file.
 
-    The YAML file should have the format:
-    proxy_funds:
-      "PRIVATE_TICKER": "PROXY_TICKER"
+    The YAML file should contain configuration sections such as:
+    - proxy_funds: Mapping of private trust tickers to proxy tickers
+    - field_mappings: CSV field name mappings
+    - missing_ticker_patterns: Rules for identifying missing tickers
 
     Args:
-        file_path: Path to the proxy funds YAML file
+        file_path: Path to the configuration YAML file
 
     Returns:
-        dict: Mapping of private trust tickers to their proxy tickers
+        dict: Complete configuration dictionary
 
     Raises:
         ValueError: If file format is invalid
@@ -50,10 +51,10 @@ def load_proxy_fund_mappings(file_path: str = "../data/portfolio/config.yml") ->
     with open(file_path, 'r') as f:
         config = yaml.safe_load(f)
 
-    if not isinstance(config, dict) or 'proxy_funds' not in config:
-        raise ValueError("YAML file must contain a 'proxy_funds' mapping")
+    if not isinstance(config, dict):
+        raise ValueError("YAML file must contain a dictionary of configuration settings")
 
-    return config['proxy_funds']
+    return config
 
 def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
     """
@@ -190,7 +191,7 @@ def holdings_substitute_proxies(holdings: pd.DataFrame,
     return result
 
 def load_holdings(file_path: str,
-                 proxy_funds: Optional[dict] = None,
+                 config: Optional[dict] = None,
                  verbose: bool = False) -> pd.DataFrame:
     """
     Load holdings from CSV export file, optionally substituting proxy funds.
@@ -220,9 +221,10 @@ def load_holdings(file_path: str,
 
     Args:
         file_path: Path to the portfolio CSV file
-        proxy_funds: Optional dictionary mapping private trust tickers to proxy tickers.
-                    If provided, holdings for private trusts will be converted to use
-                    their proxy tickers, with quantities adjusted based on current value.
+        config: Optional dictionary containing configuration settings including:
+               - proxy_funds: Mapping of private trust tickers to proxy tickers
+               - field_mappings: CSV field name mappings
+               - missing_ticker_patterns: Rules for identifying missing tickers
         verbose: Optional; if True, prints a message with the number rows loaded.
                  Defaults to False.
 
@@ -421,9 +423,9 @@ def load_holdings(file_path: str,
     if verbose:
         print(f"Loaded {result.shape[0]} holdings from file {file_path}")
 
-    # If proxy funds provided, substitute them
-    if proxy_funds:
-        result = holdings_substitute_proxies(result, proxy_funds, verbose)
+    # If config provided and contains proxy_funds, apply substitutions
+    if config and 'proxy_funds' in config:
+        result = holdings_substitute_proxies(result, config['proxy_funds'], verbose)
 
     return result
 
@@ -471,7 +473,7 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
     return result
 
 def load_and_consolidate_holdings(*args,
-                                proxy_funds: Optional[dict] = None,
+                                config: Optional[dict] = None,
                                 verbose: bool = False) -> pd.DataFrame:
     """
     Load and consolidate holdings from multiple CSV files.
@@ -484,9 +486,10 @@ def load_and_consolidate_holdings(*args,
 
     Args:
         *args: A list of file paths, a directory path, or multiple file path arguments.
-        proxy_funds: Optional dictionary mapping private trust tickers to proxy tickers.
-                    If provided, holdings for private trusts will be converted to use
-                    their proxy tickers, with quantities adjusted based on current value.
+        config: Optional dictionary containing configuration settings including:
+               - proxy_funds: Mapping of private trust tickers to proxy tickers
+               - field_mappings: CSV field name mappings
+               - missing_ticker_patterns: Rules for identifying missing tickers
         verbose: Optional; if True, prints verbose messages during loading. Defaults to False.
 
     Returns:
@@ -514,7 +517,7 @@ def load_and_consolidate_holdings(*args,
         raise ValueError("No candidate files found from the provided arguments.")
 
     # Load holdings for each candidate; file-level validation is handled in load_holdings.
-    holdings_list = [load_holdings(file, proxy_funds=proxy_funds, verbose=verbose) 
+    holdings_list = [load_holdings(file, config=config, verbose=verbose)
                     for file in candidate_files]
 
     # Consolidate all holdings using the existing consolidate_holdings function.
