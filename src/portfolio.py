@@ -12,6 +12,7 @@ Functions:
     get_holding_allocations: Calculate portfolio allocations by security
     get_asset_class_allocations: Calculate portfolio allocations by asset class
     load_and_consolidate_holdings: Load and consolidate holdings from multiple CSV files
+    load_proxy_fund_mappings: Load proxy fund mappings from YAML file
 
 Dependencies:
     - pandas: Data manipulation and analysis
@@ -27,6 +28,32 @@ import pandas as pd
 from typing import Optional
 from market_data import get_latest_ticker_prices
 import os
+import yaml
+
+def load_proxy_fund_mappings(file_path: str = "../data/portfolio/config.yml") -> dict:
+    """
+    Load proxy fund mappings from YAML file.
+
+    The YAML file should have the format:
+    proxy_funds:
+      "PRIVATE_TICKER": "PROXY_TICKER"
+
+    Args:
+        file_path: Path to the proxy funds YAML file
+
+    Returns:
+        dict: Mapping of private trust tickers to their proxy tickers
+
+    Raises:
+        ValueError: If file format is invalid
+    """
+    with open(file_path, 'r') as f:
+        config = yaml.safe_load(f)
+
+    if not isinstance(config, dict) or 'proxy_funds' not in config:
+        raise ValueError("YAML file must contain a 'proxy_funds' mapping")
+
+    return config['proxy_funds']
 
 def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
     """

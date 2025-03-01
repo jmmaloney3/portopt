@@ -15,6 +15,7 @@ scikit-learn = "*"
 pyportfolioopt = "*"
 statsmodels = "*"
 bt = "*"
+pyyaml = "*"
 
 [dev-packages]
 ipykernel = "*"
