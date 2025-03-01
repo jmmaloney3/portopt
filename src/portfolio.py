@@ -45,6 +45,7 @@ def load_config(file_path: str = "../data/portfolio/config.yml") -> dict:
     Returns:
         dict: Complete configuration dictionary with defaults applied:
               - field_mappings.Ticker.match_fields: ["Symbol"] if not specified
+              - field_mappings.Ticker.type: "string" if not specified
 
     Raises:
         ValueError: If file format is invalid
@@ -59,11 +60,15 @@ def load_config(file_path: str = "../data/portfolio/config.yml") -> dict:
     if 'field_mappings' not in config:
         config['field_mappings'] = {}
 
-    # Ensure Ticker field mapping exists with default
+    # Ensure Ticker field mapping exists with defaults
     if 'Ticker' not in config['field_mappings']:
         config['field_mappings']['Ticker'] = {}
-    if 'match_fields' not in config['field_mappings']['Ticker']:
-        config['field_mappings']['Ticker']['match_fields'] = ["Symbol"]
+    ticker_config = config['field_mappings']['Ticker']
+
+    if 'match_fields' not in ticker_config:
+        ticker_config['match_fields'] = ["Symbol"]
+    if 'type' not in ticker_config:
+        ticker_config['type'] = "string"
 
     return config
 
