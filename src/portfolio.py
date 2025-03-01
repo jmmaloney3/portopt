@@ -470,7 +470,9 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
 
     return result
 
-def load_and_consolidate_holdings(*args, verbose: bool = False) -> pd.DataFrame:
+def load_and_consolidate_holdings(*args,
+                                proxy_funds: Optional[dict] = None,
+                                verbose: bool = False) -> pd.DataFrame:
     """
     Load and consolidate holdings from multiple CSV files.
 
@@ -480,17 +482,11 @@ def load_and_consolidate_holdings(*args, verbose: bool = False) -> pd.DataFrame:
         files in the directory will be used.
       - Multiple arguments, with each argument being a file path.
 
-    The function first builds a candidate list of file paths by processing each argument:
-      - If an argument is a list, its items are directly assumed to be valid file paths.
-      - If an argument is a string representing a directory, all CSV files in that
-        directory are added.
-      - Otherwise, if the argument is a string representing a file, it is added.
-
-    Then, it calls `load_holdings` for each candidate file (with the provided verbose flag),
-    which performs the necessary file validations.
-
     Args:
         *args: A list of file paths, a directory path, or multiple file path arguments.
+        proxy_funds: Optional dictionary mapping private trust tickers to proxy tickers.
+                    If provided, holdings for private trusts will be converted to use
+                    their proxy tickers, with quantities adjusted based on current value.
         verbose: Optional; if True, prints verbose messages during loading. Defaults to False.
 
     Returns:
@@ -518,7 +514,9 @@ def load_and_consolidate_holdings(*args, verbose: bool = False) -> pd.DataFrame:
         raise ValueError("No candidate files found from the provided arguments.")
 
     # Load holdings for each candidate; file-level validation is handled in load_holdings.
-    holdings_list = [load_holdings(file, verbose=verbose) for file in candidate_files]
+    holdings_list = [load_holdings(file, proxy_funds=proxy_funds, verbose=verbose) 
+                    for file in candidate_files]
+
     # Consolidate all holdings using the existing consolidate_holdings function.
     consolidated = consolidate_holdings(*holdings_list)
     return consolidated
