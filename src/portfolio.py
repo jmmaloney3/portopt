@@ -40,10 +40,10 @@ def default_config() -> dict:
               - field_mappings.Ticker.type: "string"
     """
     return {
-        'field_mappings': {
+        'columns': {
             'Ticker': {
-                'match_fields': ["Symbol"],
-                'type': "string"
+                'alt_names': ["Symbol"],
+                'type': "ticker"
             }
         }
     }
@@ -213,6 +213,81 @@ def holdings_substitute_proxies(holdings: pd.DataFrame,
             result.loc[proxy_ticker] = proxy_row
 
     return result
+
+def get_converters(config: dict) -> dict:
+    """
+    Create a dictionary of data converters based on configuration.
+
+    Args:
+        config: Configuration dictionary containing column definitions
+               under the 'columns' key
+
+    Returns:
+        dict: Mapping of column names to converter functions
+    """
+    def clean_numeric(x):
+        if not x or x == '--':
+            return None
+        # Remove quotes, dollar signs, and commas
+        return float(str(x).replace('"', '').replace('$', '').replace(',', ''))
+
+    def clean_string(x):
+        return x.strip() if x and x.strip() else 'N/A'
+
+    def clean_ticker(x):
+        """Clean ticker symbols, handling various formats"""
+        if not x or not x.strip():
+            return 'N/A'
+
+        # Convert to uppercase and strip whitespace
+        ticker = str(x).strip().upper()
+
+        # Take only the first word (handles "VTSAX Some Fund Name" format)
+        ticker = ticker.split()[0]
+
+        # Check if it's an option contract (e.g., -SPY250321P580)
+        option_pattern = r'^-?([A-Z]{1,5}\d{6}[CP]\d+)$'
+        option_match = re.match(option_pattern, ticker)
+        if option_match:
+            # Return the option ticker without the leading hyphen
+            return option_match.group(1)
+
+        # For regular symbols, remove any non-alphanumeric characters except dots and hyphens
+        return re.sub(r'[^A-Z0-9.-]', '', ticker)
+
+    # Map config types to cleaner functions
+    cleaners = {
+        'numeric': clean_numeric,
+        'string': clean_string,
+        'ticker': clean_ticker
+    }
+
+    # Create converter dictionary based on column types
+    converters = {}
+
+    # Add converters for configured columns
+    for col_name, col_config in config['columns'].items():
+        config_type = col_config['type']
+        converters[col_name] = cleaners[config_type]
+        for alt_name in col_config['alt_names']:
+            converters[alt_name] = cleaners[config_type]
+
+    # Add default converters for standard columns
+    numeric_columns = [
+        'Quantity', 'Shares', 'UNIT/SHARE OWNED',
+        'Current Value', 'Total Value',
+        'Balance', 'BALANCE',
+        'Cost Basis', 'Cost Basis Total',
+        'Average Cost'
+    ]
+    string_columns = ['Account Number', 'Account Name']
+
+    for col in numeric_columns:
+        converters[col] = clean_numeric
+    for col in string_columns:
+        converters[col] = clean_string
+
+    return converters
 
 def load_holdings(file_path: str,
                  config: Optional[dict] = None,
