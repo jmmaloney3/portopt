@@ -42,7 +42,7 @@ def default_config() -> dict:
     return {
         'columns': {
             'Ticker': {
-                'alt_names': ["Symbol"],
+                'alt_names': ["Symbol", "Investment"],
                 'type': "ticker"
             }
         }
@@ -351,36 +351,6 @@ def load_holdings(file_path: str,
     if not os.path.isfile(file_path):
         raise ValueError(f"Path is not a file: {file_path}")
 
-    def clean_numeric(x):
-        if not x or x == '--':
-            return None
-        # Remove quotes, dollar signs, and commas
-        return float(str(x).replace('"', '').replace('$', '').replace(',', ''))
-
-    def clean_string(x):
-        return x.strip() if x and x.strip() else 'N/A'
-
-    def clean_ticker(x):
-        """Clean ticker symbols, handling various formats"""
-        if not x or not x.strip():
-            return 'N/A'
-
-        # Convert to uppercase and strip whitespace
-        ticker = str(x).strip().upper()
-
-        # Take only the first word (handles "VTSAX Some Fund Name" format)
-        ticker = ticker.split()[0]
-
-        # Check if it's an option contract (e.g., -SPY250321P580)
-        option_pattern = r'^-?([A-Z]{1,5}\d{6}[CP]\d+)$'
-        option_match = re.match(option_pattern, ticker)
-        if option_match:
-            # Return the option ticker without the leading hyphen
-            return option_match.group(1)
-
-        # For regular symbols, remove any non-alphanumeric characters except dots and hyphens
-        return re.sub(r'[^A-Z0-9.-]', '', ticker)
-
     def is_header_row(row):
         """Check if row contains required column headers.
 
@@ -404,23 +374,7 @@ def load_holdings(file_path: str,
         return has_symbol and has_quantity
 
     # Define converters for data cleaning
-    converters = {
-        'Account Number': clean_string,
-        'Account Name': clean_string,
-        'Symbol': clean_ticker,
-        'SYMBOL': clean_ticker,
-        'Investment': clean_ticker,
-        'Quantity': clean_numeric,
-        'Shares': clean_numeric,
-        'UNIT/SHARE OWNED': clean_numeric,
-        'Current Value': clean_numeric,
-        'Total Value': clean_numeric,
-        'Balance': clean_numeric,
-        'BALANCE': clean_numeric,
-        'Cost Basis': clean_numeric,
-        'Cost Basis Total': clean_numeric,
-        'Average Cost': clean_numeric
-    }
+    converters = get_converters(config)
 
     # Read CSV rows and find header
     header = None
