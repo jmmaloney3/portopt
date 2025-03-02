@@ -278,7 +278,7 @@ def get_converters(config: dict) -> dict:
 
     # Add default converters for standard columns
     numeric_columns = [
-        'Quantity', 'Shares', 'UNIT/SHARE OWNED',
+        'UNIT/SHARE OWNED',
         'Current Value', 'Total Value',
         'Balance', 'BALANCE',
         'Cost Basis', 'Cost Basis Total',
