@@ -44,6 +44,10 @@ def default_config() -> dict:
             'Ticker': {
                 'alt_names': ["Symbol", "Investment"],
                 'type': "ticker"
+            },
+            'Quantity': {
+                'alt_names': ["Shares"],
+                'type': "numeric"
             }
         }
     }
