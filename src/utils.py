@@ -459,3 +459,48 @@ def plot_time_series(data: pd.DataFrame | pd.Series,
 
     # Show plot
     plt.show()
+
+class CaseInsensitiveDict(dict):
+    """
+    Dictionary that enables case insensitive searching while preserving case sensitivity
+    when keys are listed.
+
+    Args:
+        *args: Variable length argument list passed to dict constructor
+        **kwargs: Arbitrary keyword arguments passed to dict constructor
+
+    Example:
+        >>> d = CaseInsensitiveDict({'Name': 'John', 'AGE': 30})
+        >>> d['name']  # Returns 'John'
+        >>> d['AGE']   # Returns 30
+        >>> d['age']   # Returns 30
+        >>> list(d.keys())  # Returns ['Name', 'AGE'] (original case preserved)
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._lower_to_original = {key.lower(): key for key in self.keys()}
+
+    def __getitem__(self, key):
+        return super().__getitem__(self._lower_to_original[key.lower()])
+
+    def __setitem__(self, key, value):
+        lower_key = key.lower()
+        if lower_key in self._lower_to_original:
+            super().__setitem__(self._lower_to_original[lower_key], value)
+        else:
+            self._lower_to_original[lower_key] = key
+            super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        lower_key = key.lower()
+        super().__delitem__(self._lower_to_original[lower_key])
+        del self._lower_to_original[lower_key]
+
+    def __contains__(self, key):
+        return key.lower() in self._lower_to_original
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
