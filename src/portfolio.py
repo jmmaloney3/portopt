@@ -302,6 +302,50 @@ def holdings_fill_missing_tickers(holdings: pd.DataFrame,
 
     return result
 
+def holdings_remove_ignored_tickers(holdings: pd.DataFrame,
+                                  ignore_tickers: list,
+                                  verbose: bool = False) -> pd.DataFrame:
+    """
+    Remove specified tickers from holdings DataFrame.
+
+    Args:
+        holdings: DataFrame with holdings data
+        ignore_tickers: List of ticker symbols to remove
+        verbose: If True, print details about removed tickers
+
+    Returns:
+        DataFrame with specified tickers removed
+    """
+    if not isinstance(holdings, pd.DataFrame):
+        raise TypeError("holdings must be a pandas DataFrame")
+    if not isinstance(ignore_tickers, list):
+        raise TypeError("ignore_tickers must be a list")
+
+    # Create copy to avoid modifying original
+    result = holdings.copy()
+
+    # Skip if no tickers to ignore
+    if not ignore_tickers:
+        if verbose:
+            print("No tickers specified to ignore")
+        return result
+
+    # Create mask for tickers to remove
+    ignore_mask = result.index.isin(ignore_tickers)
+
+    # Remove tickers and report if any were found
+    if ignore_mask.any():
+        ignored_tickers = result.index[ignore_mask]
+        if verbose:
+            print("Removing ignored tickers:")
+            for ticker in ignored_tickers:
+                print(f"  {ticker}")
+        result = result[~ignore_mask]
+    elif verbose:
+        print("No matching tickers found to ignore")
+
+    return result
+
 def get_converters(config: dict) -> dict:
     """
     Create a dictionary of data converters based on configuration.
@@ -574,6 +618,10 @@ def load_holdings(file_path: str,
     # Apply proxy fund substitutions if defined in config
     if config and 'proxy_funds' in config:
         result = holdings_substitute_proxies(result, config['proxy_funds'], verbose)
+
+    # Remove ignored tickers if defined in config
+    if config and 'ignore_tickers' in config:
+        result = holdings_remove_ignored_tickers(result, config['ignore_tickers'], verbose)
 
     return result
 
