@@ -29,6 +29,7 @@ from typing import Optional
 from market_data import get_latest_ticker_prices
 import os
 import yaml
+from utils import CaseInsensitiveDict
 
 def default_config() -> dict:
     """
@@ -266,8 +267,8 @@ def get_converters(config: dict) -> dict:
         'ticker': clean_ticker
     }
 
-    # Create converter dictionary based on column types
-    converters = {}
+    # Create case-insensitive converter dictionary
+    converters = CaseInsensitiveDict()
 
     # Add converters for configured columns
     for col_name, col_config in config['columns'].items():
