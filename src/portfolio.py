@@ -219,6 +219,89 @@ def holdings_substitute_proxies(holdings: pd.DataFrame,
 
     return result
 
+def holdings_fill_missing_tickers(holdings: pd.DataFrame,
+                                missing_ticker_patterns: dict,
+                                verbose: bool = False) -> pd.DataFrame:
+    """
+    Fill in missing tickers based on pattern matching rules.
+
+    Args:
+        holdings: DataFrame with holdings data
+        missing_ticker_patterns: Dictionary mapping new tickers to pattern matching rules
+        verbose: If True, print details about matches found
+
+    Returns:
+        DataFrame with missing tickers filled where patterns match
+
+    Example config:
+        missing_ticker_patterns:
+          "FFTHX":
+            match_column: "Description"
+            pattern: "RETIREMENT 2035 FUND"
+    """
+    if not isinstance(holdings, pd.DataFrame):
+        raise TypeError("holdings must be a pandas DataFrame")
+    if not isinstance(missing_ticker_patterns, dict):
+        raise TypeError("missing_ticker_patterns must be a dictionary")
+
+    # Create copy to avoid modifying original
+    result = holdings.copy()
+
+    # Skip if no patterns defined
+    if not missing_ticker_patterns:
+        if verbose:
+            print("No missing ticker patterns defined in config")
+        return result
+
+    # Track matches found for verbose output
+    matches_found = []
+
+    # Create boolean mask for rows where ticker is 'N/A'
+    # Example: [True, False, True, False] for a DataFrame where rows 0 and 2 have 'N/A' tickers
+    na_mask = result.index == 'N/A'
+
+    for ticker, pattern_info in missing_ticker_patterns.items():
+        match_column = pattern_info['match_column']
+        pattern = pattern_info['pattern']
+
+        # Skip if match column not found
+        if match_column not in result.columns:
+            if verbose:
+                print(f"Warning: Match column '{match_column}' not found in holdings")
+            continue
+
+        # Create boolean mask for rows where pattern matches in the specified column
+        # Example: [True, False, False, True] for pattern found in rows 0 and 3
+        match_mask = result[match_column].str.contains(pattern, case=False, na=False)
+
+        # Combine masks with AND operation (&) to find rows that need updating
+        # True only where BOTH conditions are met: index is 'N/A' AND pattern matches
+        # Example using above masks:
+        #   na_mask:    [True,  False, True,  False]
+        #   match_mask: [True,  False, False, True ]
+        #   matches:    [True,  False, False, False]
+        # Only row 0 will get its index updated
+        matches = match_mask & na_mask
+
+        if matches.any():
+            # Create new index with matched ticker
+            # Only positions where matches is True will be updated with new ticker
+            # Convert index to numpy array, update it, then create new index
+            new_index_array = result.index.to_numpy()
+            new_index_array[matches] = ticker
+            result.index = pd.Index(new_index_array, name=result.index.name)
+
+            if verbose:
+                num_matches = matches.sum()
+                matches_found.append(f"'{pattern}' → {ticker} ({num_matches} matches)")
+
+    if verbose and matches_found:
+        print("Missing ticker patterns matched:")
+        for match in matches_found:
+            print(f"  {match}")
+
+    return result
+
 def get_converters(config: dict) -> dict:
     """
     Create a dictionary of data converters based on configuration.
@@ -349,6 +432,9 @@ def load_holdings(file_path: str,
           nor Shares column is present
         TypeError: If file_path is not a string.
     """
+    if config is None:
+        config = default_config()
+
     if not isinstance(file_path, str):
         raise TypeError("file_path must be a string.")
     if not os.path.exists(file_path):
@@ -470,6 +556,10 @@ def load_holdings(file_path: str,
     data.set_index(symbol_col, inplace=True)
     data.index.name = 'Ticker'
 
+    # Fill in missing tickers if patterns are defined in config
+    if config and 'missing_ticker_patterns' in config:
+        data = holdings_fill_missing_tickers(data, config['missing_ticker_patterns'], verbose)
+
     # Prepare final DataFrame with required columns
     result = pd.DataFrame(index=data.index)
     result['Account Number'] = data.get('Account Number', 'N/A')
@@ -481,7 +571,7 @@ def load_holdings(file_path: str,
     if verbose:
         print(f"Loaded {result.shape[0]} holdings from file {file_path}")
 
-    # If config provided and contains proxy_funds, apply substitutions
+    # Apply proxy fund substitutions if defined in config
     if config and 'proxy_funds' in config:
         result = holdings_substitute_proxies(result, config['proxy_funds'], verbose)
 
