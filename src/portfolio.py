@@ -31,6 +31,9 @@ import os
 import yaml
 from utils import CaseInsensitiveDict
 
+# Constants for standard column names
+TICKER_COL = 'Ticker'
+
 def default_config() -> dict:
     """
     Create default configuration settings.
@@ -42,7 +45,7 @@ def default_config() -> dict:
     """
     return {
         'columns': {
-            'Ticker': {
+            TICKER_COL: {
                 'alt_names': ["Symbol", "Investment"],
                 'type': "ticker"
             },
@@ -115,12 +118,12 @@ def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
     # - Float columns: All others (asset class weights)
     dtype_dict = {
         col: float for col in headers
-        if col not in ['Ticker', 'Description', 'Name', 'Accounts']
+        if col not in [TICKER_COL, 'Description', 'Name', 'Accounts']
     }
 
     # Define string handling for non-numeric columns
     converters = {
-        'Ticker': lambda x: x.strip(),
+        TICKER_COL: lambda x: x.strip(),
         'Description': lambda x: x.strip(),
         'Name': lambda x: x.strip(),
         'Accounts': lambda x: [item.strip() for item in x.split(",") if item.strip()]
@@ -134,7 +137,7 @@ def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
     )
 
     # Set Ticker as index
-    data.set_index('Ticker', inplace=True)
+    data.set_index(TICKER_COL, inplace=True)
 
     # Remove Target rows
     data = data[~data.index.str.contains('Target', case=False, na=False)]
@@ -493,20 +496,22 @@ def load_holdings(file_path: str,
             row: A list of column headers to check
 
         Returns:
-            bool: True if row contains required Symbol and Quantity columns
+            bool: True if row contains required Ticker and Quantity columns
                  (with variations in column names supported)
         """
         # Convert all column names to uppercase for case-insensitive matching
         cols_upper = [col.upper() for col in row]
 
-        # Check for Symbol column (may be called SYMBOL or INVESTMENT)
-        has_symbol = any(col in cols_upper for col in ['SYMBOL', 'INVESTMENT'])
+        # Check for Ticker column using config-defined names
+        ticker_names = [TICKER_COL.upper()] + [name.upper() for name in config['columns'][TICKER_COL]['alt_names']]
+        has_ticker = any(col in ticker_names for col in cols_upper)
 
-        # Check for Quantity column (may be called Shares or UNIT/SHARE OWNED)
-        has_quantity = any(col in row for col in ['Quantity', 'Shares', 'UNIT/SHARE OWNED'])
+        # Check for Quantity column (using original hard-coded logic)
+        quantity_names = ['QUANTITY', 'SHARES', 'UNIT/SHARE OWNED']
+        has_quantity = any(col in quantity_names for col in cols_upper)
 
         # Row is a header if it contains both required columns
-        return has_symbol and has_quantity
+        return has_ticker and has_quantity
 
     # Define converters for data cleaning
     converters = get_converters(config)
@@ -544,14 +549,16 @@ def load_holdings(file_path: str,
         if col in data.columns:
             data[col] = data[col].apply(converter)
 
-    # Verify required columns (case-insensitive check for Symbol)
-    symbol_col = None
+    # Find the ticker column using config-defined names
+    ticker_col = None
+    ticker_config = config['columns'][TICKER_COL]
     for col in data.columns:
-        if col.upper() in ['SYMBOL', 'INVESTMENT']:
-            symbol_col = col
+        possible_names = [TICKER_COL] + ticker_config['alt_names']
+        if col.upper() in [name.upper() for name in possible_names]:
+            ticker_col = col
             break
-    if symbol_col is None:
-        raise ValueError("Required column 'Symbol' or 'Investment' not found")
+    if ticker_col is None:
+        raise ValueError(f"Required column '{TICKER_COL}' or one of {ticker_config['alt_names']} not found")
 
     # Handle quantity column variations
     quantity_col = None
@@ -596,9 +603,9 @@ def load_holdings(file_path: str,
             axis=1
         )
 
-    # Set Symbol as index and rename it to 'Ticker'
-    data.set_index(symbol_col, inplace=True)
-    data.index.name = 'Ticker'
+    # Set Ticker as index and rename it to 'Ticker'
+    data.set_index(ticker_col, inplace=True)
+    data.index.name = TICKER_COL
 
     # Fill in missing tickers if patterns are defined in config
     if config and 'missing_ticker_patterns' in config:
@@ -659,7 +666,7 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
     result = pd.DataFrame(0.0,
                          index=sorted(all_tickers),
                          columns=['Quantity', 'Cost Basis'])
-    result.index.name = 'Ticker'
+    result.index.name = TICKER_COL
 
     # Accumulate quantities and costs across all holdings
     for df in holdings:
@@ -777,7 +784,7 @@ def get_holding_allocations(holdings: pd.DataFrame,
 
     # Create result DataFrame
     result = pd.DataFrame(index=holdings.index)
-    result.index.name = 'Ticker'
+    result.index.name = TICKER_COL
 
     # Add quantity from holdings
     result['Quantity'] = holdings['Quantity']
