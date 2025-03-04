@@ -33,15 +33,14 @@ from utils import CaseInsensitiveDict
 
 # Constants for standard column names
 TICKER_COL = 'Ticker'
+QUANTITY_COL = 'Quantity'
 
 def default_config() -> dict:
     """
     Create default configuration settings.
 
     Returns:
-        dict: Default configuration dictionary containing:
-              - field_mappings.Ticker.match_fields: ["Symbol"]
-              - field_mappings.Ticker.type: "string"
+        dict: Default configuration dictionary containing column definitions
     """
     return {
         'columns': {
@@ -49,8 +48,8 @@ def default_config() -> dict:
                 'alt_names': ["Symbol", "Investment"],
                 'type': "ticker"
             },
-            'Quantity': {
-                'alt_names': ["Shares"],
+            QUANTITY_COL: {
+                'alt_names': ["Shares", "UNIT/SHARE OWNED"],
                 'type': "numeric"
             }
         }
@@ -192,7 +191,7 @@ def holdings_substitute_proxies(holdings: pd.DataFrame,
     if 'Original Ticker' not in result.columns:
         result['Original Ticker'] = result.index
     if 'Original Quantity' not in result.columns:
-        result['Original Quantity'] = result['Quantity']
+        result['Original Quantity'] = result[QUANTITY_COL]
 
     # Process proxy fund substitutions
     for private_ticker, proxy_ticker in proxy_funds.items():
@@ -212,9 +211,9 @@ def holdings_substitute_proxies(holdings: pd.DataFrame,
 
             # Create new row with proxy ticker
             proxy_row = result.loc[private_ticker].copy()
-            proxy_row['Quantity'] = new_quantity
+            proxy_row[QUANTITY_COL] = new_quantity
             proxy_row['Original Ticker'] = private_ticker
-            proxy_row['Original Quantity'] = proxy_row['Quantity']
+            proxy_row['Original Quantity'] = proxy_row[QUANTITY_COL]
 
             # Remove old row and add new row with proxy ticker
             result = result.drop(private_ticker)
@@ -506,8 +505,8 @@ def load_holdings(file_path: str,
         ticker_names = [TICKER_COL.upper()] + [name.upper() for name in config['columns'][TICKER_COL]['alt_names']]
         has_ticker = any(col in ticker_names for col in cols_upper)
 
-        # Check for Quantity column (using original hard-coded logic)
-        quantity_names = ['QUANTITY', 'SHARES', 'UNIT/SHARE OWNED']
+        # Check for Quantity column using config-defined names
+        quantity_names = [QUANTITY_COL.upper()] + [name.upper() for name in config['columns'][QUANTITY_COL]['alt_names']]
         has_quantity = any(col in quantity_names for col in cols_upper)
 
         # Row is a header if it contains both required columns
@@ -560,14 +559,16 @@ def load_holdings(file_path: str,
     if ticker_col is None:
         raise ValueError(f"Required column '{TICKER_COL}' or one of {ticker_config['alt_names']} not found")
 
-    # Handle quantity column variations
+    # Find the quantity column using config-defined names
     quantity_col = None
-    for col in ['Quantity', 'Shares', 'UNIT/SHARE OWNED']:
-        if col in data.columns:
+    quantity_config = config['columns'][QUANTITY_COL]
+    for col in data.columns:
+        possible_names = [QUANTITY_COL] + quantity_config['alt_names']
+        if col.upper() in [name.upper() for name in possible_names]:
             quantity_col = col
             break
     if quantity_col is None:
-        raise ValueError("CSV must contain either 'Quantity', 'Shares', or 'UNIT/SHARE OWNED' column")
+        raise ValueError(f"Required column '{QUANTITY_COL}' or one of {quantity_config['alt_names']} not found")
 
     # Handle value column variations
     value_col = None
@@ -615,7 +616,7 @@ def load_holdings(file_path: str,
     result = pd.DataFrame(index=data.index)
     result['Account Number'] = data.get('Account Number', 'N/A')
     result['Account Name'] = data.get('Account Name', 'N/A')
-    result['Quantity'] = data[quantity_col]
+    result[QUANTITY_COL] = data[quantity_col]
     result['Cost Basis'] = data['Cost Basis']
     result['Original Value'] = data[value_col] if value_col else np.nan
 
@@ -665,12 +666,12 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
     # Initialize result DataFrame with zeros
     result = pd.DataFrame(0.0,
                          index=sorted(all_tickers),
-                         columns=['Quantity', 'Cost Basis'])
+                         columns=[QUANTITY_COL, 'Cost Basis'])
     result.index.name = TICKER_COL
 
     # Accumulate quantities and costs across all holdings
     for df in holdings:
-        result.loc[df.index, 'Quantity'] += df['Quantity']
+        result.loc[df.index, QUANTITY_COL] += df[QUANTITY_COL]
         result.loc[df.index, 'Cost Basis'] += df['Cost Basis']
 
     return result
@@ -762,8 +763,8 @@ def get_holding_allocations(holdings: pd.DataFrame,
     if not isinstance(holdings, pd.DataFrame):
         raise ValueError("holdings must be a pandas DataFrame")
 
-    if 'Quantity' not in holdings.columns:
-        raise ValueError("holdings DataFrame must contain a 'Quantity' column")
+    if QUANTITY_COL not in holdings.columns:
+        raise ValueError(f"holdings DataFrame must contain a '{QUANTITY_COL}' column")
 
     # Get or validate prices
     if prices is None:
@@ -787,13 +788,13 @@ def get_holding_allocations(holdings: pd.DataFrame,
     result.index.name = TICKER_COL
 
     # Add quantity from holdings
-    result['Quantity'] = holdings['Quantity']
+    result[QUANTITY_COL] = holdings[QUANTITY_COL]
 
     # Add current prices
     result['Price'] = prices['Price']
 
     # Calculate total value for each holding
-    result['Total Value'] = result['Quantity'] * result['Price']
+    result['Total Value'] = result[QUANTITY_COL] * result['Price']
 
     # Calculate allocation percentages
     total_value = result['Total Value'].sum()
