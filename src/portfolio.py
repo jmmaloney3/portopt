@@ -544,9 +544,15 @@ def load_holdings(file_path: str,
 
     # Create DataFrame and apply converters
     data = pd.DataFrame(data_rows, columns=header)
-    for col, converter in converters.items():
-        if col in data.columns:
+    for col in data.columns:
+        converter = converters.get(col)
+        if converter:
+            if verbose:
+                print(f"Converting '{col}' column using '{converter.__name__}'")
             data[col] = data[col].apply(converter)
+        else:
+            if verbose:
+                print(f"No converter found for '{col}' column")
 
     # Find the ticker column using config-defined names
     ticker_col = None
