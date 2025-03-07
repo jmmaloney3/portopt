@@ -88,6 +88,7 @@ def is_money_market_ticker(ticker: str, verbose: bool = False) -> bool:
         'VMMXX',  # Vanguard Prime Money Market Fund
         'TIMXX',  # RBC BlueBay US Govt Mny Mkt Instl 2
         'DAGXX',  # Dreyfus Government Cash Management Fund
+        'AMAXX',  # PIMCO Government Money Market Fund A
     }
     ticker_str = str(ticker).upper()
     if ticker_str in money_market_funds:
