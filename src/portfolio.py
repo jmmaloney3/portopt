@@ -25,7 +25,7 @@ import re
 import csv
 import numpy as np
 import pandas as pd
-from typing import Optional
+from typing import Optional, Union, List
 from market_data import get_latest_ticker_prices
 import os
 import yaml
@@ -810,19 +810,31 @@ def get_holding_allocations(holdings: pd.DataFrame,
 
 def get_asset_class_allocations(holdings: pd.DataFrame,
                               asset_class_weights: pd.DataFrame,
-                              verbose: bool = False) -> tuple[pd.DataFrame, float, float]:
-    """Calculate asset class allocations for a portfolio.
+                              config: Optional[dict] = None,
+                              verbose: bool = False) -> pd.DataFrame:
+    """Calculate asset class allocations for a portfolio with hierarchical grouping.
 
     Args:
-        holdings: DataFrame indexed by ticker symbols containing:
-            - Total Value (current dollar value of holding)
-        asset_class_weights: DataFrame indexed by ticker symbols containing
-            weight columns for each asset class (weights sum to 1)
-        verbose: If True, print status messages (default: False)
+        holdings: DataFrame indexed by ticker symbols containing Total Value
+        asset_class_weights: DataFrame indexed by ticker symbols containing weight columns
+        config: Configuration dictionary containing:
+               - asset_class_hierarchy: Nested dict defining the hierarchy of asset classes
+                 Example:
+                 {
+                     'Equity': {
+                         'US': {
+                             'Large Cap': {
+                                 'Growth': 'US Large Cap Growth',
+                                 'Value': 'US Large Cap Value'
+                             }
+                         }
+                     }
+                 }
+        verbose: If True, print status messages
 
     Returns:
         Tuple containing:
-        - DataFrame indexed by asset class names containing:
+        - DataFrame with hierarchical index containing:
           * Total Value (dollar amount allocated to asset class)
           * Allocation (percentage of total portfolio value)
         - Float representing total allocated value in dollars
@@ -832,6 +844,7 @@ def get_asset_class_allocations(holdings: pd.DataFrame,
         holdings = get_holding_allocations(portfolio_df)[0]  # Get holdings with values
         weights = load_fund_asset_class_weights('asset_classes.csv')
         allocations, total_value, total_alloc = get_asset_class_allocations(holdings, weights)
+
     """
     # Get total portfolio value
     total_portfolio_value = holdings['Total Value'].sum()
@@ -851,5 +864,93 @@ def get_asset_class_allocations(holdings: pd.DataFrame,
     result.index.name = 'Asset Class'
     result['Total Value'] = dollar_allocations.sum()
     result['Allocation'] = result['Total Value'] / total_portfolio_value
+
+    # Add hierarchy information if provided in config
+    if config and 'asset_class_hierarchy' in config:
+        if verbose:
+            print("Building asset class hierarchy")
+        hierarchy = config['asset_class_hierarchy']
+
+        def find_path_to_asset_class(hierarchy: dict, target: str, path: list = None) -> list:
+            """Recursively find the path to an asset class in the hierarchy."""
+            if path is None:
+                path = []
+
+            for key, value in hierarchy.items():
+                if isinstance(value, dict):
+                    # Recurse into dictionary
+                    result = find_path_to_asset_class(value, target, path + [key])
+                    if result:
+                        return result
+                elif isinstance(value, str) and value == target:
+                    # Found the target asset class
+                    return path + [key]
+            return None
+
+        # Find the maximum depth of the hierarchy
+        def get_max_depth(hierarchy: dict, depth: int = 0) -> int:
+            """Recursively find the maximum depth of the hierarchy."""
+            if not isinstance(hierarchy, dict):
+                return depth
+            if not hierarchy:
+                return depth
+            return max(get_max_depth(v, depth + 1) if isinstance(v, dict) else depth + 1
+                      for v in hierarchy.values())
+
+        max_depth = get_max_depth(hierarchy)
+        level_names = [f'Level_{i}' for i in range(max_depth)]
+
+        # Add debug printing
+        if verbose:
+            print(f"Maximum hierarchy depth: {max_depth}")
+            print(f"Level names: {level_names}")
+
+        # Build index levels from hierarchy
+        index_levels = []
+        for asset_class in result.index:
+            # Find path to this asset class
+            path = find_path_to_asset_class(hierarchy, asset_class)
+            if path is None:
+                # Asset class not found in hierarchy
+                path = ['Unclassified'] + ['N/A'] * (max_depth - 2) + [asset_class]
+            else:
+                # Pad path with N/A values if it's shorter than max_depth
+                path.extend(['N/A'] * (max_depth - len(path)))
+
+            # Add debug printing for first few paths
+            if verbose and len(index_levels) < 3:
+                print(f"Path for {asset_class}: {path}")
+
+            index_levels.append(path)
+
+        # Add debug printing
+        if verbose:
+            print(f"Number of levels in first tuple: {len(index_levels[0])}")
+            print(f"Number of level names: {len(level_names)}")
+
+        # Create multi-index DataFrame
+        result.index = pd.MultiIndex.from_tuples(index_levels, names=level_names)
+
+    return result, result['Total Value'].sum(), result['Allocation'].sum()
+
+def aggregate_by_level(allocations: pd.DataFrame, level: Union[str, int, List[Union[str, int]]]) -> pd.DataFrame:
+    """Aggregate allocations by hierarchy level(s).
+
+    Args:
+        allocations: DataFrame returned by get_asset_class_allocations
+        level: Level name(s) or position(s) to aggregate by
+
+    Returns:
+        DataFrame with aggregated allocations
+        Float representing total allocated value in dollars
+        Float representing sum of allocation percentages
+    """
+    if not isinstance(allocations.index, pd.MultiIndex):
+        raise ValueError("Allocations DataFrame must have hierarchical index")
+
+    result = allocations.groupby(level=level).agg({
+        'Total Value': 'sum',
+        'Allocation': 'sum'
+    })
 
     return result, result['Total Value'].sum(), result['Allocation'].sum()
