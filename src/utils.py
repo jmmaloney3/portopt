@@ -21,9 +21,10 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
     Write a formatted table to the specified output stream.
 
     Args:
-        df: pandas DataFrame to display
+        df: pandas DataFrame to display (supports hierarchical index)
         columns: Dictionary of column formats. Keys are column names, values are format specs.
-                If None, all DataFrame columns are displayed with defaults.
+                For hierarchical indices, include index level names to display them.
+                If None, all DataFrame columns and index levels are displayed with defaults.
                 Columns specified but not in DataFrame are ignored.
         stream: Output stream (defaults to sys.stdout)
         sort_order: Controls table sorting by index (default: 'asc')
@@ -66,9 +67,8 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
     elif sort_order is not None:
         raise ValueError("sort_order must be 'asc', 'desc', or None")
 
-    # If index is named, include it in the display
-    if display_df.index.name is not None:
-        display_df = display_df.reset_index()
+    # Convert all indices to columns
+    display_df = display_df.reset_index()
 
     # If no columns specified, create default format for all DataFrame columns
     if columns is None:
