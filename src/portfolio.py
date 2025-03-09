@@ -598,7 +598,6 @@ def load_holdings(file_path: str,
 
     # Prepare final DataFrame with required columns
     result = pd.DataFrame(index=data.index)
-    result['Account Number'] = data.get('Account Number', 'N/A')
     result['Account Name'] = data.get('Account Name', default_account)
     result[QUANTITY_COL] = data[quantity_col]
     result['Original Value'] = data[value_col] if value_col else np.nan
