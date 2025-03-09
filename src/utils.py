@@ -1,5 +1,5 @@
 import sys
-from typing import Dict, Optional, TextIO, Any
+from typing import Dict, Optional, TextIO, Any, Union, List
 import numpy as np
 import pandas as pd
 import warnings
@@ -504,3 +504,19 @@ class CaseInsensitiveDict(dict):
             return self[key]
         except KeyError:
             return default
+
+def aggregate_by_level(df: pd.DataFrame,
+                      dimensions: Union[str, int, List[Union[str, int]]],
+                      measures: List[str]) -> pd.DataFrame:
+    """
+    Aggregate DataFrame by specified dimensions and measures.
+
+    Args:
+        df: DataFrame with hierarchical index
+        dimensions: Level name(s) or position(s) to aggregate by
+        measures: List of column names to sum
+
+    Returns:
+        DataFrame aggregated by specified dimensions
+    """
+    return df.groupby(level=dimensions)[measures].sum()

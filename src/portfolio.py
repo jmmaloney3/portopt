@@ -628,8 +628,8 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
         *holdings: One or more holdings DataFrames to consolidate
 
     Returns:
-        DataFrame indexed by ticker symbols containing:
-        - Quantity (sum of quantities across all holdings)
+        DataFrame indexed by Ticker symbols and Account Names containing:
+        - Quantity
 
     Example:
         df1 = load_holdings('holdings1.csv')
@@ -639,20 +639,10 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
     if not holdings:
         raise ValueError("At least one holdings DataFrame is required")
 
-    # Get all unique tickers
-    all_tickers = set()
-    for df in holdings:
-        all_tickers.update(df.index)
-
-    # Initialize result DataFrame with zeros
-    result = pd.DataFrame(0.0,
-                         index=sorted(all_tickers),
-                         columns=[QUANTITY_COL])
-    result.index.name = TICKER_COL
-
-    # Accumulate quantities across all holdings
-    for df in holdings:
-        result.loc[df.index, QUANTITY_COL] += df[QUANTITY_COL]
+    # Concatenate all holdings and set hierarchical index
+    result = pd.concat(holdings)
+    result.set_index(['Account Name'], append=True, inplace=True)
+    result = result.reorder_levels(['Ticker', 'Account Name'])
 
     return result
 
@@ -904,27 +894,5 @@ def get_asset_class_allocations(holdings: pd.DataFrame,
 
         # Create multi-index DataFrame
         result.index = pd.MultiIndex.from_tuples(index_levels, names=level_names)
-
-    return result, result['Total Value'].sum(), result['Allocation'].sum()
-
-def aggregate_by_level(allocations: pd.DataFrame, level: Union[str, int, List[Union[str, int]]]) -> pd.DataFrame:
-    """Aggregate allocations by hierarchy level(s).
-
-    Args:
-        allocations: DataFrame returned by get_asset_class_allocations
-        level: Level name(s) or position(s) to aggregate by
-
-    Returns:
-        DataFrame with aggregated allocations
-        Float representing total allocated value in dollars
-        Float representing sum of allocation percentages
-    """
-    if not isinstance(allocations.index, pd.MultiIndex):
-        raise ValueError("Allocations DataFrame must have hierarchical index")
-
-    result = allocations.groupby(level=level).agg({
-        'Total Value': 'sum',
-        'Allocation': 'sum'
-    })
 
     return result, result['Total Value'].sum(), result['Allocation'].sum()
