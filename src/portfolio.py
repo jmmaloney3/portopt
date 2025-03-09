@@ -430,19 +430,14 @@ def load_holdings(file_path: str,
     Load holdings from CSV export file, optionally substituting proxy funds.
 
     The CSV file should contain position details with some or all of:
-    * Account information (Account Number, Account Name)
-    * Position details (Symbol/SYMBOL/Ticker, Quantity/Shares/UNIT/SHARE OWNED, Cost Basis/Average Cost)
+    * Account information (Account Number, Account Name, or derived from filename)
+    * Position details (Symbol/SYMBOL/Ticker, Quantity/Shares/UNIT/SHARE OWNED)
     * Dollar Value amount (Balance/BALANCE/Current Value/Total Value)
     * Optional non-CSV lines (will be detected and skipped)
     * Optional footer section (will be detected and skipped)
 
     Special handling:
     * Money market funds: When Quantity is empty, uses Original Value (assuming $1/share)
-                         for both Quantity and Cost Basis (if Cost Basis is not provided)
-    * Cost Basis:
-        1. Uses 'Cost Basis' or 'Cost Basis Total' column if either exists
-        2. If neither exists, calculates from Average Cost * Quantity if both are available
-        3. Otherwise, sets to NaN
     * Original Value:
         - Loaded from 'Balance', 'BALANCE', 'Current Value', or 'Total Value' columns
         - If not found, sets to NaN
@@ -464,19 +459,15 @@ def load_holdings(file_path: str,
     Returns:
         DataFrame indexed by ticker symbols containing:
         - Account Number (if available, else 'N/A')
-        - Account Name (if available, else 'N/A')
+        - Account Name (from file, or derived from filename if not in file)
         - Quantity (from Quantity or Shares column)
-        - Cost Basis (from Cost Basis/Cost Basis Total columns, or calculated from Average Cost * Quantity)
         - Original Value (from Balance/BALANCE/Current Value/Total Value columns)
         - Original Ticker (original ticker if proxy used, else same as index)
         - Original Quantity (original quantity if proxy used, else same as Quantity)
 
     Raises:
-        ValueError:
-        - If file_path does not exist or is not a file
-        - If file format is invalid, required Symbol column is missing, or neither Quantity
-          nor Shares column is present
-        TypeError: If file_path is not a string.
+        ValueError: If file format is invalid or required columns missing
+        TypeError: If file_path is not a string
     """
     if config is None:
         config = default_config()
@@ -583,30 +574,14 @@ def load_holdings(file_path: str,
             value_col = col
             break
 
-    # Handle cost basis
-    if 'Cost Basis' in data.columns:
-        pass  # Use the column directly
-    elif 'Cost Basis Total' in data.columns:
-        data['Cost Basis'] = data['Cost Basis Total']
-    elif 'Average Cost' in data.columns:
-        data['Cost Basis'] = data[quantity_col] * data['Average Cost']
-    else:
-        data['Cost Basis'] = np.nan
-
     # Handle money market funds (where Quantity is missing):
-    # - Use Original Value as Quantity (assuming $1/share)
-    # - Use Original Value as Cost Basis (if not already set)
+    # Use Original Value as Quantity (assuming $1/share)
     if pd.isna(data[quantity_col]).any():
         if 'Current Value' not in data.columns:
             raise ValueError("Current Value column required for money market funds")
         # Use Current Value for Quantity where missing
         data[quantity_col] = data.apply(
             lambda row: row['Current Value'] if pd.isna(row[quantity_col]) else row[quantity_col],
-            axis=1
-        )
-        # Use Current Value for Cost Basis if Cost Basis is missing
-        data['Cost Basis'] = data.apply(
-            lambda row: row['Current Value'] if pd.isna(row['Cost Basis']) else row['Cost Basis'],
             axis=1
         )
 
@@ -618,12 +593,14 @@ def load_holdings(file_path: str,
     if config and 'missing_ticker_patterns' in config:
         data = holdings_fill_missing_tickers(data, config['missing_ticker_patterns'], verbose)
 
+    # Get default account name from filename if Account Name not in data
+    default_account = os.path.splitext(os.path.basename(file_path))[0]
+
     # Prepare final DataFrame with required columns
     result = pd.DataFrame(index=data.index)
     result['Account Number'] = data.get('Account Number', 'N/A')
-    result['Account Name'] = data.get('Account Name', 'N/A')
+    result['Account Name'] = data.get('Account Name', default_account)
     result[QUANTITY_COL] = data[quantity_col]
-    result['Cost Basis'] = data['Cost Basis']
     result['Original Value'] = data[value_col] if value_col else np.nan
 
     if verbose:
@@ -645,7 +622,7 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
 
     Each input DataFrame should be in the format produced by load_holdings():
     - Indexed by ticker symbols
-    - Contains Quantity and Cost Basis columns
+    - Contains Quantity column
     - May contain other columns (which will be ignored)
 
     Args:
@@ -654,7 +631,6 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame indexed by ticker symbols containing:
         - Quantity (sum of quantities across all holdings)
-        - Cost Basis (sum of total cost basis across all holdings)
 
     Example:
         df1 = load_holdings('holdings1.csv')
@@ -672,13 +648,12 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
     # Initialize result DataFrame with zeros
     result = pd.DataFrame(0.0,
                          index=sorted(all_tickers),
-                         columns=[QUANTITY_COL, 'Cost Basis'])
+                         columns=[QUANTITY_COL])
     result.index.name = TICKER_COL
 
-    # Accumulate quantities and costs across all holdings
+    # Accumulate quantities across all holdings
     for df in holdings:
         result.loc[df.index, QUANTITY_COL] += df[QUANTITY_COL]
-        result.loc[df.index, 'Cost Basis'] += df['Cost Basis']
 
     return result
 
