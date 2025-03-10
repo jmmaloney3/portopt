@@ -767,13 +767,15 @@ def get_asset_class_allocations(holdings: pd.DataFrame,
                               asset_class_weights: pd.DataFrame,
                               config: Optional[dict] = None,
                               verbose: bool = False) -> pd.DataFrame:
-    """Calculate asset class allocations for a portfolio with hierarchical grouping.
+    """
+    Calculate asset class allocations with hierarchical grouping.
 
     Args:
-        holdings: DataFrame indexed by ticker symbols containing Total Value
-        asset_class_weights: DataFrame indexed by ticker symbols containing weight columns
-        config: Configuration dictionary containing:
-               - asset_class_hierarchy: Nested dict defining the hierarchy of asset classes
+        holdings: DataFrame with hierarchical index (Ticker, Account Name)
+                 containing Total Value column
+        asset_class_weights: DataFrame indexed by ticker symbols containing
+                           weight columns for each asset class.  Nested dict
+                           defining the hierarchy of asset classes
                  Example:
                  {
                      'Equity': {
@@ -785,105 +787,112 @@ def get_asset_class_allocations(holdings: pd.DataFrame,
                          }
                      }
                  }
+        config: Configuration dictionary containing asset_class_hierarchy
         verbose: If True, print status messages
 
     Returns:
-        Tuple containing:
-        - DataFrame with hierarchical index containing:
-          * Total Value (dollar amount allocated to asset class)
-          * Allocation (percentage of total portfolio value)
-        - Float representing total allocated value in dollars
-        - Float representing sum of allocation percentages
-
+        DataFrame with hierarchical index (Asset Class Levels, Ticker, Account Name)
+        containing:
+        - Total Value (dollar amount allocated)
+        - Allocation (percentage of total portfolio)
     Example:
         holdings = get_holding_allocations(portfolio_df)[0]  # Get holdings with values
         weights = load_fund_asset_class_weights('asset_classes.csv')
-        allocations, total_value, total_alloc = get_asset_class_allocations(holdings, weights)
+        allocations = get_asset_class_allocations(holdings, weights,
+                                                  config=config,
+                                                  verbose=verbose)
 
     """
-    # Get total portfolio value
+    def find_path_to_asset_class(hierarchy: dict, target: str, path: list = None) -> list:
+        """Recursively find the path to an asset class in the hierarchy."""
+        if path is None:
+            path = []
+
+        for key, value in hierarchy.items():
+            if isinstance(value, dict):
+                # Recurse into dictionary
+                result = find_path_to_asset_class(value, target, path + [key])
+                if result:
+                    return result
+            elif isinstance(value, str) and value == target:
+                # Found the target asset class
+                return path + [key]
+        return None
+
+    def get_max_depth(hierarchy: dict, depth: int = 0) -> int:
+        """Recursively find the maximum depth of the hierarchy."""
+        if not isinstance(hierarchy, dict):
+            return depth
+        if not hierarchy:
+            return depth
+        return max(get_max_depth(v, depth + 1) if isinstance(v, dict) else depth + 1
+                  for v in hierarchy.values())
+
+    # Initialize data storage
+    data = []
     total_portfolio_value = holdings['Total Value'].sum()
 
-    # Calculate dollar amount allocated to each asset class by each fund
-    dollar_allocations = pd.DataFrame(columns=asset_class_weights.columns)
-    for ticker in holdings.index:
+    if verbose:
+        print(f"Initial portfolio value: ${total_portfolio_value:,.2f}")
+
+    # Calculate allocations
+    allocated_value = 0.0
+    for ticker, account in holdings.index:
         if ticker in asset_class_weights.index:
-            # Multiply fund value by its asset class weights
-            fund_value = holdings.loc[ticker, 'Total Value']
-            dollar_allocations.loc[ticker] = asset_class_weights.loc[ticker] * fund_value
-        elif verbose:
-            print(f"Warning: No asset class weights found for {ticker}")
+            position_value = holdings.loc[(ticker, account), 'Total Value']
 
-    # Sum up allocations across all funds for each asset class
-    result = pd.DataFrame(index=asset_class_weights.columns)
-    result.index.name = 'Asset Class'
-    result['Total Value'] = dollar_allocations.sum()
-    result['Allocation'] = result['Total Value'] / total_portfolio_value
+            # Get weights for this ticker
+            weights = asset_class_weights.loc[ticker]
+            weights = weights[weights > 0]  # Only keep non-zero weights
+            weight_sum = weights.sum()
 
-    # Add hierarchy information if provided in config
-    if config and 'asset_class_hierarchy' in config:
-        if verbose:
-            print("Building asset class hierarchy")
-        hierarchy = config['asset_class_hierarchy']
+            # Normalize weights if they sum to more than 1.0
+            if weight_sum > 1.0:
+                if verbose:
+                    print(f"Warning: {ticker} weights sum to {weight_sum:.3f}, normalizing")
+                weights = weights / weight_sum
 
-        def find_path_to_asset_class(hierarchy: dict, target: str, path: list = None) -> list:
-            """Recursively find the path to an asset class in the hierarchy."""
-            if path is None:
-                path = []
+            ticker_allocated = 0.0
+            for asset_class, weight in weights.items():
+                # Find path in hierarchy
+                path = find_path_to_asset_class(config['asset_class_hierarchy'],
+                                                asset_class) if config else []
+                if not path:
+                    path = ['Unclassified']
 
-            for key, value in hierarchy.items():
-                if isinstance(value, dict):
-                    # Recurse into dictionary
-                    result = find_path_to_asset_class(value, target, path + [key])
-                    if result:
-                        return result
-                elif isinstance(value, str) and value == target:
-                    # Found the target asset class
-                    return path + [key]
-            return None
+                value = position_value * weight
+                ticker_allocated += value
+                allocated_value += value
 
-        # Find the maximum depth of the hierarchy
-        def get_max_depth(hierarchy: dict, depth: int = 0) -> int:
-            """Recursively find the maximum depth of the hierarchy."""
-            if not isinstance(hierarchy, dict):
-                return depth
-            if not hierarchy:
-                return depth
-            return max(get_max_depth(v, depth + 1) if isinstance(v, dict) else depth + 1
-                      for v in hierarchy.values())
+                # Store all components
+                data.append({
+                    'Level_0': path[0] if len(path) > 0 else 'Unclassified',
+                    'Level_1': path[1] if len(path) > 1 else None,
+                    'Level_2': path[2] if len(path) > 2 else None,
+                    'Level_3': path[3] if len(path) > 3 else None,
+                    'Ticker': ticker,
+                    'Account Name': account,
+                    'Total Value': value,
+                    'Allocation': value / total_portfolio_value
+                })
 
-        max_depth = get_max_depth(hierarchy)
-        level_names = [f'Level_{i}' for i in range(max_depth)]
+            if verbose and not np.isclose(ticker_allocated, position_value, rtol=1e-3):
+                print(f"Warning: {ticker} in {account} allocated {ticker_allocated:,.2f} "
+                      f"vs position value {position_value:,.2f}")
 
-        # Add debug printing
-        if verbose:
-            print(f"Maximum hierarchy depth: {max_depth}")
-            print(f"Level names: {level_names}")
+    if verbose:
+        print(f"Total allocated value: ${allocated_value:,.2f}")
+        print(f"Allocation percentage: {(allocated_value/total_portfolio_value)*100:.2f}%")
 
-        # Build index levels from hierarchy
-        index_levels = []
-        for asset_class in result.index:
-            # Find path to this asset class
-            path = find_path_to_asset_class(hierarchy, asset_class)
-            if path is None:
-                # Asset class not found in hierarchy
-                path = ['Unclassified'] + ['N/A'] * (max_depth - 2) + [asset_class]
-            else:
-                # Pad path with N/A values if it's shorter than max_depth
-                path.extend(['N/A'] * (max_depth - len(path)))
+    # Create DataFrame
+    result = pd.DataFrame(data)
 
-            # Add debug printing for first few paths
-            if verbose and len(index_levels) < 3:
-                print(f"Path for {asset_class}: {path}")
+    # Set up hierarchical index
+    index_levels = ['Level_0', 'Level_1', 'Level_2', 'Level_3', 'Ticker', 'Account Name']
+    result = result.set_index(['Level_0', 'Level_1', 'Level_2', 'Level_3', 'Ticker', 'Account Name'])
+    result.index.names = index_levels
 
-            index_levels.append(path)
+    # Sort index
+    result = result.sort_index()
 
-        # Add debug printing
-        if verbose:
-            print(f"Number of levels in first tuple: {len(index_levels[0])}")
-            print(f"Number of level names: {len(level_names)}")
-
-        # Create multi-index DataFrame
-        result.index = pd.MultiIndex.from_tuples(index_levels, names=level_names)
-
-    return result, result['Total Value'].sum(), result['Allocation'].sum()
+    return result

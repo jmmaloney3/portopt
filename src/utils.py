@@ -518,5 +518,26 @@ def aggregate_by_level(df: pd.DataFrame,
 
     Returns:
         DataFrame aggregated by specified dimensions
+
+    Raises:
+        ValueError: If aggregation results in loss of values
     """
-    return df.groupby(level=dimensions)[measures].sum()
+    # Ensure dimensions is a list
+    if not isinstance(dimensions, list):
+        dimensions = [dimensions]
+
+    # Create groupby object using requested dimensions
+    # Use dropna=False to keep NaN values in the grouping
+    grouped = df.groupby(level=dimensions, dropna=False)
+
+    # Aggregate columns by sum
+    result = grouped[measures].sum()
+
+    # Verify totals match original DataFrame
+    for measure in measures:
+        if not np.isclose(df[measure].sum(), result[measure].sum(), rtol=1e-10):
+            diff = df[measure].sum() - result[measure].sum()
+            raise ValueError(f"Aggregation mismatch in measure {measure}: "
+                           f"diff = {diff:.2f}")
+
+    return result
