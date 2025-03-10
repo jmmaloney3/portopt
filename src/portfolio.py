@@ -700,35 +700,34 @@ def load_and_consolidate_holdings(*args,
 
 def get_holding_allocations(holdings: pd.DataFrame, 
                           prices: Optional[pd.DataFrame] = None,
-                          verbose: bool = False) -> tuple[pd.DataFrame, float, float]:
-    """Calculate current allocations for a set of holdings.
+                          verbose: bool = False) -> pd.DataFrame:
+    """
+    Get holdings with current prices and allocations.
 
     Args:
         holdings: DataFrame in format produced by load_holdings() or consolidate_holdings()
-                 Must be indexed by ticker symbols and contain a 'Quantity' column
+                 Must have a hierarchical index (Ticker, Account Name)
+                 and contain a 'Quantity' column
         prices: Optional DataFrame with price data (default: None)
                 If provided, must be indexed by ticker symbols and contain a 'Price' column
                 If None, prices will be retrieved using get_latest_ticker_prices()
-        verbose: If True, print status messages when retrieving prices (default: False)
+        verbose: If True, print status messages (default: False)
 
     Returns:
-        Tuple containing:
-        - DataFrame indexed by ticker symbols containing:
-          * Quantity (number of shares held)
-          * Price (current price per share)
-          * Total Value (Quantity * Price)
-          * Allocation (percentage of total portfolio value)
-        - Float representing total portfolio value in dollars
-        - Float representing sum of allocation percentages
+        DataFrame with hierarchical index (Ticker, Account Name) containing:
+        - Quantity
+        - Price
+        - Total Value (Quantity * Price)
+        - Allocation (percentage of total value)
 
     Example:
         # Using retrieved prices
         holdings = load_holdings('portfolio.csv')
-        allocations, total_value, total_alloc = get_holding_allocations(holdings)
+        allocations = get_holding_allocations(holdings)
 
         # Using provided prices
         prices = get_latest_ticker_prices(holdings.index)
-        allocations, total_value, total_alloc = get_holding_allocations(holdings, prices=prices)
+        allocations = get_holding_allocations(holdings, prices=prices)
     """
     if not isinstance(holdings, pd.DataFrame):
         raise ValueError("holdings must be a pandas DataFrame")
@@ -737,40 +736,32 @@ def get_holding_allocations(holdings: pd.DataFrame,
         raise ValueError(f"holdings DataFrame must contain a '{QUANTITY_COL}' column")
 
     # Get or validate prices
+    tickers = holdings.index.get_level_values('Ticker').unique()
     if prices is None:
         # Get current prices for all tickers
-        prices = get_latest_ticker_prices(holdings.index, verbose=verbose)
+        prices = get_latest_ticker_prices(tickers, verbose=verbose)
     else:
         # Validate provided prices DataFrame
         if not isinstance(prices, pd.DataFrame):
             raise ValueError("prices must be a pandas DataFrame")
         if 'Price' not in prices.columns:
             raise ValueError("prices DataFrame must contain a 'Price' column")
-        if not all(ticker in prices.index for ticker in holdings.index):
-            missing_tickers = [ticker for ticker in holdings.index if ticker not in prices.index]
+        if not all(ticker in prices.index for ticker in tickers):
+            missing_tickers = [ticker for ticker in tickers if ticker not in prices.index]
             raise ValueError(f"Missing prices for tickers: {missing_tickers}")
 
     if prices['Price'].isna().all():
         raise ValueError("No price data retrieved for holdings")
 
-    # Create result DataFrame
-    result = pd.DataFrame(index=holdings.index)
-    result.index.name = TICKER_COL
+    # Create result DataFrame preserving hierarchical index
+    result = holdings[[QUANTITY_COL]].copy()
 
-    # Add quantity from holdings
-    result[QUANTITY_COL] = holdings[QUANTITY_COL]
-
-    # Add current prices
-    result['Price'] = prices['Price']
-
-    # Calculate total value for each holding
+    # Add price and calculated columns
+    result['Price'] = prices.loc[result.index.get_level_values('Ticker'), 'Price'].values
     result['Total Value'] = result[QUANTITY_COL] * result['Price']
+    result['Allocation'] = result['Total Value'] / result['Total Value'].sum()
 
-    # Calculate allocation percentages
-    total_value = result['Total Value'].sum()
-    result['Allocation'] = result['Total Value'] / total_value
-
-    return result, total_value, result['Allocation'].sum()
+    return result
 
 def get_asset_class_allocations(holdings: pd.DataFrame,
                               asset_class_weights: pd.DataFrame,
