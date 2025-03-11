@@ -458,7 +458,6 @@ def load_holdings(file_path: str,
 
     Returns:
         DataFrame indexed by ticker symbols containing:
-        - Account Number (if available, else 'N/A')
         - Account Name (from file, or derived from filename if not in file)
         - Quantity (from Quantity or Shares column)
         - Original Value (from Balance/BALANCE/Current Value/Total Value columns)
