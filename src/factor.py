@@ -12,6 +12,7 @@ Functions:
 
 import pandas as pd
 import numpy as np
+from constants import Constants
 from typing import Optional, Dict, Any, List, Tuple
 
 def get_hierarchy_depth(hierarchy: Dict[str, Any]) -> int:
@@ -200,3 +201,149 @@ def get_child_factors(factor_dim: pd.DataFrame, parent_factor: str,
     mask = factor_dim.index.get_level_values(parent_level) == parent_factor
     
     return factor_dim[mask]
+
+def load_fund_factor_weights(file_path: str) -> pd.DataFrame:
+    """
+    Load fund factor weights from a CSV file.
+
+    The CSV file should have:
+    * First column named 'Ticker' containing fund ticker symbols
+    * Additional columns for factors containing factor weights
+
+    The following columns are optional and will be excluded from output:
+    * Optional 'Name' column with fund names
+    * Optional 'Description' column with fund descriptions
+    * Optional 'Accounts' column (will be excluded from output)
+    * Optional 'Target' rows (will be excluded from output)
+
+    Args:
+        file_path: Path to the CSV file containing fund factor weights
+
+    Returns:
+        DataFrame indexed by ticker symbols containing factor weights.
+        Factor weights sum to 1 (may include negative weights for leveraged positions).
+
+    Raises:
+        ValueError: If file format is invalid or if weights don't sum to 1
+        FileNotFoundError: If the file doesn't exist
+    """
+    try:
+        # Read only the header row to determine column types
+        headers = pd.read_csv(file_path, nrows=0).columns.tolist()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Factor weights file not found: {file_path}")
+    except Exception as e:
+        raise ValueError(f"Error reading factor weights file: {e}")
+
+    if Constants.TICKER_COL not in headers:
+        raise ValueError(f"CSV file must contain '{Constants.TICKER_COL}' column")
+
+    # Define dtype for each column
+    # - String columns: Ticker, Description, Name, Accounts
+    # - Float columns: All others (factor weights)
+    dtype_dict = {
+        col: float for col in headers
+        if col not in [Constants.TICKER_COL, 'Description', 'Name', 'Accounts']
+    }
+
+    # Define string handling for non-numeric columns
+    converters = {
+        Constants.TICKER_COL: lambda x: x.strip(),
+        'Description': lambda x: x.strip() if pd.notna(x) else x,
+        'Name': lambda x: x.strip() if pd.notna(x) else x,
+        'Accounts': lambda x: [item.strip() for item in str(x).split(",")] if pd.notna(x) else []
+    }
+
+    try:
+        # Read the full file
+        data = pd.read_csv(
+            file_path,
+            dtype=dtype_dict,
+            converters=converters
+        )
+    except Exception as e:
+        raise ValueError(f"Error parsing factor weights file: {e}")
+
+    # Set Ticker as index
+    data.set_index(Constants.TICKER_COL, inplace=True)
+
+    # Remove Target rows
+    data = data[~data.index.str.contains('Target', case=False, na=False)]
+
+    # Remove unnecessary columns if they exist
+    optional_columns = ['Accounts', 'Name', 'Description']
+    data = data.drop(columns=[col for col in optional_columns if col in data.columns])
+
+    # Fill NaN values with 0
+    data = data.fillna(0.0)
+
+    # Verify weights sum to approximately 1
+    row_sums = data.sum(axis=1)
+    problematic_funds = data.index[~np.isclose(row_sums, 1.0, rtol=1e-3)]
+    if not problematic_funds.empty:
+        raise ValueError(
+            f"Fund weights do not sum to 1 for: {list(problematic_funds)}\n"
+            f"Sums: {row_sums[problematic_funds].to_dict()}"
+        )
+
+    return data
+
+def load_factor_weights(file_path: str,
+                       factor_dim: pd.DataFrame,
+                       verbose: bool = False) -> pd.DataFrame:
+    """
+    Load factor weights for tickers from file and validate against factor dimension.
+
+    Args:
+        file_path: Path to CSV file containing fund factor weights
+        factor_dim: Factor dimension DataFrame from load_factor_dimension()
+        verbose: If True, print status messages
+
+    Returns:
+        DataFrame indexed by [Ticker, Factor] containing:
+        - Weight: The weight (allocation) of the factor for the ticker
+
+    Example:
+        >>> factor_dim = load_factor_dimension()
+        >>> weights = load_factor_weights('fund_weights.csv', factor_dim)
+        >>> weights.loc['VTSAX']
+        Factor
+        US Equity: Large Cap Core    0.70
+        US Equity: Mid Cap Core      0.20
+        US Equity: Small Cap Core    0.10
+        Name: VTSAX, dtype: float64
+
+    Raises:
+        ValueError: If weights file is invalid or contains undefined factors
+        FileNotFoundError: If the file doesn't exist
+    """
+    # Get valid factors from dimension
+    valid_factors = set(factor_dim['Factor'])
+
+    # Load fund weights using existing function
+    weights_df = load_fund_factor_weights(file_path)
+
+    # Validate factor columns exist in factor dimension
+    invalid_factors = set(weights_df.columns) - valid_factors
+    if invalid_factors:
+        raise ValueError(f"Found weights for undefined factors: {invalid_factors}")
+
+    # Convert wide format to long format (melting)
+    weights_long = weights_df.reset_index().melt(
+        id_vars=[Constants.TICKER_COL],
+        var_name='Factor',
+        value_name='Weight'
+    )
+
+    # Filter out zero weights
+    weights_long = weights_long[weights_long['Weight'] > 0].copy()
+
+    # Set multi-index and sort
+    weights_long = weights_long.set_index([Constants.TICKER_COL, 'Factor']).sort_index()
+
+    if verbose:
+        print(f"Loaded weights for {len(weights_long.index.unique(level=Constants.TICKER_COL))} "
+              f"funds across {len(weights_long.index.unique(level='Factor'))} factors "
+              f"from {file_path}")
+
+    return weights_long
