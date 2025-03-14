@@ -12,7 +12,7 @@ Functions:
 import pandas as pd
 from typing import Optional, Dict, Any
 import yaml
-from portfolio import default_config, load_config
+from config import default_config
 
 def validate_account_dimension(accounts_dict: Dict[str, Dict[str, Any]]) -> None:
     """
@@ -59,7 +59,7 @@ def load_account_dimension(config: Optional[dict] = None) -> pd.DataFrame:
     """
     # Load configuration if not provided
     if config is None:
-        config = load_config()
+        config = default_config()
 
     # Extract accounts section
     if 'accounts' not in config:

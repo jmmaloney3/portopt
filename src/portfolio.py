@@ -31,58 +31,7 @@ from constants import Constants
 import os
 import yaml
 from utils import CaseInsensitiveDict
-
-def default_config() -> dict:
-    """
-    Create default configuration settings.
-
-    Returns:
-        dict: Default configuration dictionary containing column definitions
-    """
-    return {
-        'columns': {
-            Constants.TICKER_COL: {
-                'alt_names': ["Symbol", "Investment"],
-                'type': "ticker"
-            },
-            Constants.QUANTITY_COL: {
-                'alt_names': ["Shares", "UNIT/SHARE OWNED"],
-                'type': "numeric"
-            }
-        }
-    }
-
-def load_config(file_path: str = "../data/portfolio/config.yml") -> dict:
-    """
-    Load configuration settings from YAML file.
-
-    The YAML file should contain configuration sections such as:
-    - proxy_funds: Mapping of private trust tickers to proxy tickers
-    - field_mappings: CSV field name mappings
-    - missing_ticker_patterns: Rules for identifying missing tickers
-
-    Args:
-        file_path: Path to the configuration YAML file
-
-    Returns:
-        dict: Complete configuration dictionary with defaults applied:
-              - field_mappings.Ticker.match_fields: ["Symbol"] if not specified
-              - field_mappings.Ticker.type: "string" if not specified
-
-    Raises:
-        ValueError: If file format is invalid
-    """
-    # Start with defaults
-    config = default_config()
-
-    # Load and merge settings from file
-    with open(file_path, 'r') as f:
-        file_config = yaml.safe_load(f)
-        if not isinstance(file_config, dict):
-            raise ValueError("YAML file must contain a dictionary of configuration settings")
-        config.update(file_config)
-
-    return config
+from config import default_config
 
 def load_fund_asset_class_weights(file_path: str) -> pd.DataFrame:
     """

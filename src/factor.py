@@ -136,8 +136,8 @@ def load_factor_dimension(config: Optional[dict] = None) -> pd.DataFrame:
     """
     # Load configuration if not provided
     if config is None:
-        from portfolio import load_config
-        config = load_config()
+        from config import default_config
+        config = default_config()
 
     # Extract and validate hierarchy
     if 'asset_class_hierarchy' not in config:
