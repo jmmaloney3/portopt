@@ -18,7 +18,6 @@ def default_config() -> Dict[str, Any]:
         Dictionary containing default configuration settings:
         - proxy_funds: Empty dict for mapping private trust tickers to proxy tickers
         - columns: dict for column name mappings with required columns
-        - field_mappings: Empty dict for mapping field names
         - missing_ticker_patterns: Empty dict for identifying missing tickers
         - ignore_tickers: Empty list of tickers to ignore
         - accounts: Empty dict of account metadata
@@ -27,7 +26,6 @@ def default_config() -> Dict[str, Any]:
     default_config = {
         'proxy_funds': {},
         'columns': {},
-        'field_mappings': {},
         'missing_ticker_patterns': {},
         'ignore_tickers': [],
         'accounts': {},
