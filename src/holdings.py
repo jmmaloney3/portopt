@@ -536,6 +536,8 @@ def load_and_consolidate_holdings(*args,
             else:
                 candidate_files.append(arg)
         else:
+            if verbose:
+                print(f"Found non-string and non-list argument: {arg}")
             raise TypeError("Arguments must be a string or a list of strings representing file paths.")
 
     if not candidate_files:
