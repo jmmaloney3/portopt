@@ -16,6 +16,7 @@ pyportfolioopt = "*"
 statsmodels = "*"
 bt = "*"
 pyyaml = "*"
+duckdb = "*"
 
 [dev-packages]
 ipykernel = "*"
