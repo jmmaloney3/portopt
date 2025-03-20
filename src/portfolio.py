@@ -496,22 +496,29 @@ class Portfolio:
             # Construct list of dimension column names to be used in
             # SELECT, GROUP BY, and ORDER BY clauses
             dim_cols = []
-            includes_factors = False
+
+            # Flags to control query building
+            include_weights = False
+            include_quantity = False
 
             if 'Ticker' in dimensions:
                 dim_cols.append('h.Ticker')
+                include_quantity = True
 
-            #if 'Account' in dimensions:
-            #    dim_cols.append('h.Account')
+            if 'Account' in dimensions:
+                dim_cols.append('h.Account')
 
             if 'Factor' in dimensions:
                 dim_cols.append('f.Factor')
-                includes_factors = True
+                include_quantity = False
+                include_weights = True
+
             # Add Level_X dimensions if requested
             for dim in dimensions:
                 if dim.startswith('Level_'):
                     dim_cols.append(f'f.{dim}')
-                    includes_factors = True
+                    include_quantity = False
+                    include_weights = True
 
             # Build the query
             dim_cols_clause = ', '.join(dim_cols)
@@ -523,17 +530,17 @@ class Portfolio:
             query = f"""
             SELECT
                 {dim_cols_clause},
-                {"SUM(h.Quantity) as Quantity," if not includes_factors else ""}
-                SUM(p.Price * h.Quantity{" * w.Weight" if includes_factors else ""}) as "Total Value",
-                SUM(p.Price * h.Quantity{" * w.Weight" if includes_factors else ""}) / (
+                {"SUM(h.Quantity) as Quantity," if include_quantity else ""}
+                SUM(p.Price * h.Quantity{" * w.Weight" if include_weights else ""}) as "Total Value",
+                SUM(p.Price * h.Quantity{" * w.Weight" if include_weights else ""}) / (
                     SELECT SUM(p.Price * h.Quantity)
                     FROM holdings h
                     JOIN prices p ON h.Ticker = p.Ticker
                 ) as Allocation
             FROM holdings h
                 JOIN prices p ON h.Ticker = p.Ticker
-                {"JOIN factor_weights w ON h.Ticker = w.Ticker" if includes_factors else ""}
-                {"JOIN factors f ON w.Factor = f.Factor" if includes_factors else ""}
+                {"JOIN factor_weights w ON h.Ticker = w.Ticker" if include_weights else ""}
+                {"JOIN factors f ON w.Factor = f.Factor" if include_weights else ""}
             GROUP BY {dim_cols_clause}
             ORDER BY {dim_cols_clause}
             """
