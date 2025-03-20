@@ -65,7 +65,6 @@ def holdings_substitute_proxies(holdings: pd.DataFrame,
             proxy_row = result.loc[private_ticker].copy()
             proxy_row[Constants.QUANTITY_COL] = new_quantity
             proxy_row['Original Ticker'] = private_ticker
-            proxy_row['Original Quantity'] = proxy_row[Constants.QUANTITY_COL]
 
             # Remove old row and add new row with proxy ticker
             result = result.drop(private_ticker)
