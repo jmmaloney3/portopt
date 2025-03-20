@@ -310,7 +310,7 @@ def load_holdings(file_path: str,
 
     Returns:
         DataFrame indexed by ticker symbols containing:
-        - Account Name (from file, or derived from filename if not in file)
+        - Account (from file, or derived from filename if not in file)
         - Quantity (from Quantity or Shares column)
         - Original Value (from Balance/BALANCE/Current Value/Total Value columns)
         - Original Ticker (original ticker if proxy used, else same as index)
@@ -449,7 +449,7 @@ def load_holdings(file_path: str,
 
     # Prepare final DataFrame with required columns
     result = pd.DataFrame(index=data.index)
-    result['Account Name'] = data.get('Account Name', default_account)
+    result[Constants.ACCOUNT_COL] = data.get(Constants.ACCOUNT_COL, default_account)
     result[Constants.QUANTITY_COL] = data[quantity_col]
     result['Original Value'] = data[value_col] if value_col else np.nan
 
@@ -492,8 +492,8 @@ def consolidate_holdings(*holdings: pd.DataFrame) -> pd.DataFrame:
 
     # Concatenate all holdings and set hierarchical index
     result = pd.concat(holdings)
-    result.set_index(['Account Name'], append=True, inplace=True)
-    result = result.reorder_levels(['Ticker', 'Account Name'])
+    result.set_index([Constants.ACCOUNT_COL], append=True, inplace=True)
+    result = result.reorder_levels(['Ticker', Constants.ACCOUNT_COL])
 
     return result
 

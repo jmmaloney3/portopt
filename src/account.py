@@ -13,6 +13,7 @@ import pandas as pd
 from typing import Optional, Dict, Any
 import yaml
 from config import default_config
+from constants import Constants
 
 def validate_account_dimension(accounts_dict: Dict[str, Dict[str, Any]]) -> None:
     """
@@ -27,7 +28,7 @@ def validate_account_dimension(accounts_dict: Dict[str, Dict[str, Any]]) -> None
     if not isinstance(accounts_dict, dict):
         raise ValueError("Accounts configuration must be a dictionary")
 
-    required_fields = {'Institution', 'Type', 'Owner'}
+    required_fields = {Constants.INSTITUTION_COL, Constants.TYPE_COL, Constants.OWNER_COL}
     
     for account_name, account_info in accounts_dict.items():
         if not isinstance(account_info, dict):
@@ -47,7 +48,7 @@ def load_account_dimension(config: Optional[dict] = None) -> pd.DataFrame:
         config: Optional configuration dictionary. If None, loads from default config.
 
     Returns:
-        DataFrame indexed by Account Name with columns:
+        DataFrame indexed by Name with columns:
         - Institution
         - Type
         - Owner
@@ -74,11 +75,11 @@ def load_account_dimension(config: Optional[dict] = None) -> pd.DataFrame:
     df = pd.DataFrame.from_dict(accounts, orient='index')
     
     # Ensure standard column order for required fields
-    standard_columns = ['Institution', 'Type', 'Owner']
+    standard_columns = [Constants.INSTITUTION_COL, Constants.TYPE_COL, Constants.OWNER_COL]
     other_columns = [col for col in df.columns if col not in standard_columns]
     df = df[standard_columns + other_columns]
     
     # Set index name
-    df.index.name = 'Account Name'
+    df.index.name = Constants.NAME_COL
     
     return df

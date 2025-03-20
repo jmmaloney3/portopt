@@ -12,3 +12,7 @@ class Constants:
     FACTOR_NAME_COL = 'Factor Name'
     FACTOR_LEVEL_COL = 'Factor Level'
     FACTOR_WEIGHT_COL = 'Factor Weight'
+    INSTITUTION_COL = 'Institution'
+    TYPE_COL = 'Type'
+    OWNER_COL = 'Owner'
+    NAME_COL = 'Name'
