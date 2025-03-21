@@ -1,33 +1,40 @@
 """
-Portfolio loading and analysis functions.
+Portfolio module for managing investment portfolio data and analysis.
 
-This module provides functions for loading and analyzing investment portfolio data,
-including fund allocations, holdings, and asset class weights. It supports various
-input formats and handles special cases like money market funds and options.
+This module provides a Portfolio class that serves as a unified interface for accessing
+and analyzing portfolio data. It handles:
 
-Functions:
-    load_fund_asset_class_weights: Load fund asset class allocations from CSV
-    load_holdings: Load portfolio holdings from CSV export
-    consolidate_holdings: Combine holdings across accounts
-    get_holding_allocations: Calculate portfolio allocations by security
-    get_asset_class_allocations: Calculate portfolio allocations by asset class
-    load_and_consolidate_holdings: Load and consolidate holdings from multiple CSV files
-    load_config: Load configuration settings from YAML file
+- Holdings data across multiple accounts
+- Account dimension data (institution, type, owner)
+- Latest security prices
+- Factor (asset class) dimension data
+- Factor weights for asset allocation analysis
+- Portfolio metrics calculation and aggregation
+
+The Portfolio class implements a caching pattern for efficient data access while
+allowing forced refresh when needed. It integrates with DuckDB for performant
+metric calculations across various portfolio dimensions.
+
+Classes:
+    Portfolio: Main class for portfolio data management and analysis
 
 Dependencies:
     - pandas: Data manipulation and analysis
-    - numpy: Numerical computing
-    - re: Regular expressions for parsing symbols
-    - market_data: Local module for retrieving security prices
+    - duckdb: SQL query execution
+    - holdings: Holdings data loading and consolidation
+    - account: Account dimension management
+    - factor: Factor dimension and weights handling
+    - market_data: Security price retrieval
 """
 
-from holdings import load_and_consolidate_holdings
-from account import load_account_dimension
-from factor import load_factor_dimension
-from factor import load_factor_weights
-from market_data import get_latest_ticker_prices
 import pandas as pd
 import os
+
+from .holdings import load_and_consolidate_holdings
+from .account import load_account_dimension
+from .factor import load_factor_dimension
+from .factor import load_factor_weights
+from .market_data import get_latest_ticker_prices
 
 """
 Portfolio class for managing investment portfolio data and analysis.
@@ -174,7 +181,7 @@ class Portfolio:
             )
         return self._factor_weights_cache
 
-    def getMetrics(self, *dimensions):
+    def getMetrics(self, *dimensions, verbose: bool = False):
         """Get portfolio metrics grouped by specified dimensions.
 
         Args:
@@ -262,7 +269,8 @@ class Portfolio:
             ORDER BY {dim_cols_clause}
             """
 
-            print(query)
+            if verbose:
+                print(query)
 
             # Execute query and get results
             result = con.execute(query).df()

@@ -8,7 +8,8 @@ from YAML files.
 import os
 import yaml
 from typing import Dict, Any, Optional
-from constants import Constants
+
+from .constants import Constants
 
 def default_config() -> Dict[str, Any]:
     """
@@ -41,7 +42,7 @@ def default_config() -> Dict[str, Any]:
             'type': "numeric"
         }
     }
-    
+
     return default_config
 
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:

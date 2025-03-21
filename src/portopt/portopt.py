@@ -1,13 +1,12 @@
 import pandas as pd
 import cvxpy as cp
-import numpy as np
 import argparse
-from collections import defaultdict
 import math
 import yfinance as yf
 import os
 from contextlib import redirect_stderr
-from utils import write_table
+
+from .utils import write_table
 
 # constants
 ACCOUNT_NAME = "account_name"

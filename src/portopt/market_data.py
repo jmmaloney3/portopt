@@ -318,7 +318,6 @@ def get_tickers_data(tickers: set[str] | list[str],
 
         # Warn the user if rows were dropped during cleaning
         if df_clean.shape[0] < df.shape[0]:
-            import warnings
             warnings.warn(f"Dropped {df.shape[0] - df_clean.shape[0]} rows containing N/A values")
 
         return df_clean, stats

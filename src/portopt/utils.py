@@ -10,11 +10,8 @@ from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.stats.diagnostic import het_arch
 from statsmodels.stats.stattools import durbin_watson
 from statsmodels.tsa.stattools import adfuller, kpss
-import csv
 
-from market_data import get_tickers_data
-
-def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None, 
+def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
                 stream: TextIO = sys.stdout,
                 sort_order: Optional[str] = 'asc'):
     """
@@ -79,14 +76,14 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
 
     # Select columns to display
     display_df = display_df[list(columns.keys())]
-    
+
     # Process format specifications
     formats = {}
     for col, specs in columns.items():
         # Determine if column is numeric based on dtype
         col_type = dtype_to_format.get(str(display_df[col].dtype), 's')
         is_numeric = col_type in ['f', 'd']
-        
+
         # Start with defaults
         fmt = {
             'type': col_type,
@@ -97,17 +94,17 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
             'prefix': '',
             'suffix': ''
         }
-        
+
         # Add decimal places default for numeric types
         if is_numeric:
             fmt['decimal'] = 1
-        
+
         # Update with provided specifications
         fmt.update(specs)
-        
+
         # Calculate width available for actual data
         data_width = fmt['width'] - len(fmt['prefix']) - len(fmt['suffix'])
-        
+
         # Build format string for data
         fmt_str = '{'
         if fmt['type'] == 's':
@@ -122,31 +119,31 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
                 fmt_str += '.' + str(fmt['decimal'])
             fmt_str += fmt['type']
         fmt_str += '}'
-        
+
         # Add prefix/suffix if specified
         if fmt['prefix']:
             fmt_str = fmt['prefix'] + fmt_str
         if fmt['suffix']:
             fmt_str = fmt_str + fmt['suffix']
-        
+
         # Build header format string (truncate/pad to exact width)
         hdr_fmt = '{:' + fmt['hdr_align'] + str(fmt['width']) + '.' + str(fmt['width']) + '}'
-        
+
         formats[col] = {
             'data_fmt': fmt_str,
             'hdr_fmt': hdr_fmt,
             'width': fmt['width'],
             'sep': fmt['hdr_sep']
         }
-    
+
     # Create header line
     header_strs = [formats[col]['hdr_fmt'].format(col) for col in columns.keys()]
     print(' '.join(header_strs), file=stream)
-    
+
     # Create separator line
     sep_strs = [formats[col]['sep'] * formats[col]['width'] for col in columns.keys()]
     print(' '.join(sep_strs), file=stream)
-    
+
     # Print data rows
     for _, row in display_df.iterrows():
         data_strs = []

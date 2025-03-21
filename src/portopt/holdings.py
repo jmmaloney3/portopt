@@ -8,9 +8,9 @@ import numpy as np
 import re
 import csv
 
-from constants import Constants
-from utils import CaseInsensitiveDict
-from config import default_config
+from .constants import Constants
+from .utils import CaseInsensitiveDict
+from .config import default_config
 
 def holdings_substitute_proxies(holdings: pd.DataFrame,
                               proxy_funds: dict,
