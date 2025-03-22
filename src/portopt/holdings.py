@@ -52,7 +52,7 @@ def holdings_substitute_proxies(holdings: pd.DataFrame,
                 print(f"Substituting {private_ticker} with proxy {proxy_ticker}")
 
             # Get the proxy price
-            from market_data import get_latest_ticker_price
+            from portopt.market_data import get_latest_ticker_price
             proxy_price = get_latest_ticker_price(proxy_ticker)
 
             if proxy_price is None or proxy_price == 0:
