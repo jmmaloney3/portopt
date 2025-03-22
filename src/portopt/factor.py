@@ -137,7 +137,7 @@ def load_factor_dimension(config: Optional[dict] = None) -> pd.DataFrame:
     """
     # Load configuration if not provided
     if config is None:
-        from config import default_config
+        from portopt.config import default_config
         config = default_config()
 
     # Extract and validate hierarchy
@@ -336,8 +336,8 @@ def load_factor_weights(file_path: str,
         value_name='Weight'
     )
 
-    # Filter out zero weights
-    weights_long = weights_long[weights_long['Weight'] > 0].copy()
+    # Filter out zero weights but keep negative weights
+    weights_long = weights_long[weights_long['Weight'] != 0].copy()
 
     # Set multi-index and sort
     weights_long = weights_long.set_index([Constants.TICKER_COL, 'Factor']).sort_index()
