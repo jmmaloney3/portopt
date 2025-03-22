@@ -181,23 +181,26 @@ class Portfolio:
             )
         return self._factor_weights_cache
 
-    def getMetrics(self, *dimensions, verbose: bool = False):
-        """Get portfolio metrics grouped by specified dimensions.
+    def getMetrics(self, *dimensions, filters: dict = None, verbose: bool = False):
+        """Get portfolio metrics grouped by specified dimensions with optional filtering.
 
         Args:
             *dimensions: Variable number of dimension names ('Ticker', 'Factor', 'Level_0', etc.)
-                       Note: 'Account' dimension is temporarily disabled
+            filters: Dictionary of filters to apply. Keys are dimension names, values are
+                    lists of values to include (single values should be in a list).
+                    Example: {'Account': ['IRA', '401k'], 'Level_0': ['Equity']}
+            verbose: If True, print the generated SQL query. Default is False.
 
         Returns:
             DataFrame: Portfolio metrics including Total Value and Allocation %,
                       grouped by the requested dimensions.
 
         Example:
-            # Get metrics by account
-            metrics = portfolio.getMetrics('Account')
+            # Get metrics by account for specific accounts
+            metrics = portfolio.getMetrics('Account', filters={'Account': ['IRA', '401k']})
 
-            # Get metrics by factor level and account
-            metrics = portfolio.getMetrics('Level_0', 'Account')
+            # Get metrics by factor level for equity investments only
+            metrics = portfolio.getMetrics('Level_0', 'Level_1', filters={'Level_0': ['Equity']})
         """
         import duckdb
 
@@ -244,27 +247,52 @@ class Portfolio:
                     include_quantity = False
                     include_weights = True
 
-            # Build the query
             dim_cols_clause = ', '.join(dim_cols)
 
             if not dim_cols:  # If no dimensions specified, group by 1
                 dim_cols_clause = "1"
 
-            # build query
+            # Build WHERE clause for filters
+            where_conditions = []
+            if filters:
+                for dim, values in filters.items():
+                    # Convert single values to list
+                    values_list = values if isinstance(values, (list, tuple)) else [values]
+                    values_str = ", ".join(f"'{v}'" for v in values_list)
+
+                    if dim == 'Account':
+                        where_conditions.append(f"h.Account IN ({values_str})")
+                    elif dim == 'Ticker':
+                        where_conditions.append(f"h.Ticker IN ({values_str})")
+                    elif dim == 'Factor':
+                        where_conditions.append(f"f.Factor IN ({values_str})")
+                    elif dim.startswith('Level_'):
+                        where_conditions.append(f"f.{dim} IN ({values_str})")
+
+            where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
+
+            # Build the query
             query = f"""
+            WITH portfolio_value AS (
+                SELECT SUM(p.Price * h.Quantity{" * w.Weight" if include_weights else ""}) as total
+                FROM holdings h
+                JOIN prices p ON h.Ticker = p.Ticker
+                {"JOIN factor_weights w ON h.Ticker = w.Ticker" if include_weights else ""}
+                {"JOIN factors f ON w.Factor = f.Factor" if include_weights else ""}
+                {where_clause}
+            )
             SELECT
                 {dim_cols_clause},
                 {"SUM(h.Quantity) as Quantity," if include_quantity else ""}
                 SUM(p.Price * h.Quantity{" * w.Weight" if include_weights else ""}) as "Total Value",
                 SUM(p.Price * h.Quantity{" * w.Weight" if include_weights else ""}) / (
-                    SELECT SUM(p.Price * h.Quantity)
-                    FROM holdings h
-                    JOIN prices p ON h.Ticker = p.Ticker
+                    SELECT total FROM portfolio_value
                 ) as Allocation
             FROM holdings h
                 JOIN prices p ON h.Ticker = p.Ticker
                 {"JOIN factor_weights w ON h.Ticker = w.Ticker" if include_weights else ""}
                 {"JOIN factors f ON w.Factor = f.Factor" if include_weights else ""}
+            {where_clause}
             GROUP BY {dim_cols_clause}
             ORDER BY {dim_cols_clause}
             """
