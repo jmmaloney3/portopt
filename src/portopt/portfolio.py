@@ -6,6 +6,7 @@ and analyzing portfolio data. It handles:
 
 - Holdings data across multiple accounts
 - Account dimension data (institution, type, owner)
+- Tickers dimension data (name, long name, type, category, family)
 - Latest security prices
 - Factor (asset class) dimension data
 - Factor weights for asset allocation analysis
@@ -34,7 +35,7 @@ from .holdings import load_and_consolidate_holdings
 from .account import load_account_dimension
 from .factor import load_factor_dimension
 from .factor import load_factor_weights
-from .market_data import get_latest_ticker_prices
+from .market_data import get_latest_ticker_prices, get_tickers_info
 
 """
 Portfolio class for managing investment portfolio data and analysis.
@@ -81,6 +82,7 @@ class Portfolio:
         self._prices_cache = None
         self._factors_cache = None
         self._factor_weights_cache = None
+        self._tickers_cache = None
 
     def getHoldings(self, forceRefresh: bool = False) -> pd.DataFrame:
         """
@@ -180,6 +182,33 @@ class Portfolio:
                 factors
             )
         return self._factor_weights_cache
+
+    def getTickers(self, forceRefresh: bool = False, verbose: bool = False) -> pd.DataFrame:
+        """
+        Get information about all tickers in the portfolio from Yahoo Finance.
+
+        Args:
+            forceRefresh: If True, force refresh from Yahoo Finance. Default is False.
+            verbose: If True, print status messages for each ticker. Default is False.
+
+        Returns:
+            DataFrame indexed by Ticker containing:
+            - Name: Short name of the security
+            - Long Name: Full name of the security
+            - Type: Security type (ETF, MUTUALFUND, EQUITY, etc.)
+            - Category: Fund category/investment strategy
+            - Family: Fund family/provider name
+            Note: Some fields may be NaN if not available for a particular security
+        """
+        if forceRefresh or self._tickers_cache is None:
+            # Get holdings to extract unique tickers
+            holdings = self.getHoldings()
+            tickers = holdings.index.get_level_values('Ticker').unique()
+
+            # Get ticker information from Yahoo Finance
+            self._tickers_cache = get_tickers_info(tickers, verbose=verbose)
+
+        return self._tickers_cache
 
     def getMetrics(self, *dimensions, filters: dict = None, verbose: bool = False):
         """Get portfolio metrics grouped by specified dimensions with optional filtering.
