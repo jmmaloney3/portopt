@@ -553,8 +553,8 @@ def get_tickers_info(tickers: pd.Index | set[str] | list[str], verbose: bool = F
 
     # Define the fields we want to retrieve
     fields = {
-        'Name': 'shortName',
-        'Long Name': 'longName',
+        'Name': 'longName',
+        'Short Name': 'shortName',
         'Type': 'quoteType',
         'Category': 'category',
         'Family': 'fundFamily'
