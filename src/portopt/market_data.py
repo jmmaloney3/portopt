@@ -518,3 +518,75 @@ def get_latest_option_price(option_symbol: str, verbose: bool = False) -> float:
         if verbose:
             print(f"Error retrieving price for {option_symbol}: {str(e)}")
         return np.nan
+
+def get_tickers_info(tickers: pd.Index | set[str] | list[str], verbose: bool = False) -> pd.DataFrame:
+    """
+    Retrieve basic information for multiple tickers from Yahoo Finance.
+
+    Args:
+        tickers: Index, set, or list of ticker symbols
+        verbose: If True, print status messages for each ticker (default: False)
+
+    Returns:
+        DataFrame indexed by ticker symbols containing:
+        - Name: Short name of the security
+        - Long Name: Full name of the security
+        - Type: Security type (ETF, MUTUALFUND, EQUITY, etc.)
+        - Category: Fund category/investment strategy
+        - Family: Fund family/provider name
+        Note: Some fields may be NaN if not available for a particular security
+
+    Example:
+        # Get info for a mix of securities
+        info = get_tickers_info(['VTSAX', 'SPY', 'AAPL'])
+    """
+    # Convert input to set of tickers if it isn't already
+    if isinstance(tickers, set):
+        tickers_set = tickers
+    elif isinstance(tickers, (pd.Index, list)):
+        tickers_set = set(tickers)
+    else:
+        raise TypeError("tickers must be a set, list, or pandas Index")
+
+    if not tickers_set:
+        raise ValueError("No tickers provided")
+
+    # Define the fields we want to retrieve
+    fields = {
+        'Name': 'shortName',
+        'Long Name': 'longName',
+        'Type': 'quoteType',
+        'Category': 'category',
+        'Family': 'fundFamily'
+    }
+
+    # Initialize result DataFrame with proper dtypes
+    result = pd.DataFrame(
+        index=sorted(tickers_set),
+        columns=fields.keys(),
+        dtype='object'  # Use object dtype for string data
+    )
+    result.index.name = 'Ticker'
+
+    # Process each ticker
+    for ticker in tickers_set:
+        try:
+            if verbose:
+                print(f"Retrieving info for {ticker}")
+
+            # Get ticker info from Yahoo Finance
+            yf_ticker = yf.Ticker(ticker)
+            info = yf_ticker.info
+
+            # Extract desired fields
+            for col, field in fields.items():
+                result.at[ticker, col] = info.get(field, pd.NA)
+
+        except Exception as e:
+            if verbose:
+                print(f"Error retrieving info for {ticker}: {str(e)}")
+            # Set all fields to NA for this ticker
+            for col in fields.keys():
+                result.at[ticker, col] = pd.NA
+
+    return result
