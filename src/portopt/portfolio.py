@@ -230,6 +230,9 @@ class Portfolio:
 
             # Get metrics by factor level for equity investments only
             metrics = portfolio.getMetrics('Level_0', 'Level_1', filters={'Level_0': ['Equity']})
+
+            # Get metrics by ticker including security information
+            metrics = portfolio.getMetrics('Ticker')  # Includes Name and Type columns
         """
         import duckdb
 
@@ -238,6 +241,7 @@ class Portfolio:
         prices = self.getPrices().reset_index()
         factors = self.getFactors().reset_index()
         factor_weights = self.getFactorWeights().reset_index()
+        tickers = self.getTickers().reset_index() if 'Ticker' in dimensions else None
 
         # Create DuckDB connection
         con = duckdb.connect()
@@ -248,6 +252,8 @@ class Portfolio:
             con.register("prices", prices)
             con.register("factors", factors)
             con.register("factor_weights", factor_weights)
+            if tickers is not None:
+                con.register("tickers", tickers)
 
             # Construct list of dimension column names to be used in
             # SELECT, GROUP BY, and ORDER BY clauses
@@ -256,10 +262,12 @@ class Portfolio:
             # Flags to control query building
             include_weights = False
             include_quantity = False
+            include_ticker_info = False
 
             if 'Ticker' in dimensions:
                 dim_cols.append('h.Ticker')
                 include_quantity = True
+                include_ticker_info = True
 
             if 'Account' in dimensions:
                 dim_cols.append('h.Account')
@@ -280,6 +288,9 @@ class Portfolio:
 
             if not dim_cols:  # If no dimensions specified, group by 1
                 dim_cols_clause = "1"
+
+            # Add ticker info columns if Ticker dimension is included
+            ticker_info_cols = ", t.Name, t.Type" if include_ticker_info else ""
 
             # Build WHERE clause for filters
             where_conditions = []
@@ -311,7 +322,7 @@ class Portfolio:
                 {where_clause}
             )
             SELECT
-                {dim_cols_clause},
+                {dim_cols_clause}{ticker_info_cols},
                 {"SUM(h.Quantity) as Quantity," if include_quantity else ""}
                 SUM(p.Price * h.Quantity{" * w.Weight" if include_weights else ""}) as "Total Value",
                 SUM(p.Price * h.Quantity{" * w.Weight" if include_weights else ""}) / (
@@ -321,8 +332,9 @@ class Portfolio:
                 JOIN prices p ON h.Ticker = p.Ticker
                 {"JOIN factor_weights w ON h.Ticker = w.Ticker" if include_weights else ""}
                 {"JOIN factors f ON w.Factor = f.Factor" if include_weights else ""}
+                {"LEFT JOIN tickers t ON h.Ticker = t.Ticker" if include_ticker_info else ""}
             {where_clause}
-            GROUP BY {dim_cols_clause}
+            GROUP BY {dim_cols_clause}{ticker_info_cols}
             ORDER BY {dim_cols_clause}
             """
 
