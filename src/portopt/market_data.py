@@ -97,7 +97,7 @@ def is_money_market_ticker(ticker: str, verbose: bool = False) -> bool:
         return True
     return False
 
-def get_tickers_info(tickers: set[str] | list[str],
+def get_tickers_date_ranges(tickers: set[str] | list[str],
                      price_type: str = "Adj Close",
                      verbose: bool = False) -> pd.DataFrame:
     """
