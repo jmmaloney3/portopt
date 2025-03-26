@@ -115,7 +115,11 @@ class RebalanceMixin:
         
         ticker_results['New Value'] = new_values
         ticker_results['New Allocation'] = new_allocations
-        
+
+        # Calculate difference between new and original values
+        ticker_results['Value Diff'] = ticker_results['New Value'] - ticker_results['Original Value']
+        ticker_results['Allocation Diff'] = ticker_results['New Allocation'] - ticker_results['Original Allocation']
+
         # Calculate factor allocations
         factor_results = pd.DataFrame(index=factors)
         factor_results['Original Value'] = F @ current_values['Total Value']
