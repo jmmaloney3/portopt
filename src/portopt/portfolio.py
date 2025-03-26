@@ -36,6 +36,7 @@ from .account import load_account_dimension
 from .factor import load_factor_dimension
 from .factor import load_factor_weights
 from .market_data import get_latest_ticker_prices, get_tickers_info
+from .rebalance import RebalanceMixin
 
 """
 Portfolio class for managing investment portfolio data and analysis.
@@ -45,7 +46,7 @@ portfolio data including holdings, accounts, prices, factors, and
 factor weights.
 """
 
-class Portfolio:
+class Portfolio(RebalanceMixin):
     """
     Portfolio management class that provides access to portfolio data and analysis.
 
