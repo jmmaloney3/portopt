@@ -18,12 +18,83 @@ Dependencies:
 import pandas as pd
 import numpy as np
 import cvxpy as cp
+from typing import Dict
+from .utils import write_table
 
 class RebalanceMixin:
     """
     Mixin class that adds portfolio rebalancing capabilities to Portfolio class.
     """
-    
+
+    def adjust_factor_allocations(
+        self,
+        filters: Dict[str, str],
+        reduction: float,
+        verbose: bool = False
+    ) -> pd.DataFrame:
+        """Adjust factor allocations by reducing specified factors by a percentage.
+
+        Args:
+            filters: Dictionary of filters to apply (e.g., {'Level_0': ['Equity'], 'Level_1': ['US']})
+            reduction: Percentage points to reduce the filtered factors by (e.g., 5.0 for 5%)
+            verbose: If True, print detailed information about the changes
+
+        Returns:
+            DataFrame with original and new allocations
+        """
+        # Get current allocations to use as base
+        base_allocations = self.getMetrics('Factor', portfolio_allocation=True)['Allocation']
+
+        # Get the current metrics for filtered factors
+        filtered_metrics = self.getMetrics('Factor', filters=filters, portfolio_allocation=True)
+        current_total = filtered_metrics['Allocation'].sum()
+        target_total = current_total - reduction  # reduction is already in decimal form
+        reduction_amount = reduction  # reduction is already in decimal form
+
+        if verbose:
+            print(f"\nCurrent total for filtered factors: {current_total:.2%}")
+            print(f"Target total: {target_total:.2%}")
+            print(f"Reduction amount: {reduction_amount:.2%}")
+
+        # Create target allocations starting from current allocations
+        target_allocations = base_allocations.copy()
+
+        # Get filtered factors
+        filtered_factors = filtered_metrics.index
+
+        # Scale down each filtered factor proportionally
+        scale_factor = target_total / current_total
+        target_allocations[filtered_factors] *= scale_factor
+
+        # Add the reduction to Cash
+        target_allocations['Cash'] += reduction_amount
+
+        # Create DataFrame with original and new allocations
+        results = pd.DataFrame({
+            'Original Allocation': base_allocations,
+            'New Allocation': target_allocations,
+        })
+
+        # Display the changes
+        if verbose:
+            print("\nTarget Allocation Changes:")
+            print("=========================")
+            # Filter for factors that changed significantly
+            changed_factors = results[abs(results['New Allocation'] - results['Original Allocation']) > 0.0001]
+            if not changed_factors.empty:
+                column_formats = {
+                    'Factor': {'width': 30},
+                    'Original Allocation': {'width': 15, 'type': '%', 'decimal': 2},
+                    'New Allocation': {'width': 15, 'type': '%', 'decimal': 2}
+                }
+                write_table(changed_factors, columns=column_formats)
+
+            # Verify the total change
+            print(f"\nTotal filtered factors (Original): {filtered_metrics['Allocation'].sum():.2%}")
+            print(f"Total filtered factors (New): {results.loc[filtered_factors, 'New Allocation'].sum():.2%}")
+
+        return results
+
     def rebalance(self, target_allocations: pd.Series, turnover_penalty: float = 1.0, verbose: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Rebalance the portfolio to match target factor allocations as closely as possible.
