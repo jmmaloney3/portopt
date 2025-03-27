@@ -24,12 +24,15 @@ class RebalanceMixin:
     Mixin class that adds portfolio rebalancing capabilities to Portfolio class.
     """
     
-    def rebalance(self, target_allocations: pd.Series, verbose: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def rebalance(self, target_allocations: pd.Series, turnover_penalty: float = 1.0, verbose: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Rebalance the portfolio to match target factor allocations as closely as possible.
 
         Args:
             target_allocations: Series indexed by Factor containing target allocation percentages
+            turnover_penalty: Weight for penalizing changes from current allocations (default: 1.0)
+                            Higher values mean prefer keeping current allocations
+                            0.0 means ignore current allocations
             verbose: If True, print optimization details. Default is False.
 
         Returns:
@@ -82,37 +85,47 @@ class RebalanceMixin:
             print(F)
             print("\nTarget allocations:")
             print(target_allocations)
-        
+
         # Set up optimization problem
         x = cp.Variable(len(tickers))  # Allocation percentages to each ticker
-        
-        # Objective: Minimize sum of squared differences between target and actual factor allocations
+
+        # Objective: Minimize weighted sum of:
+        # 1. Squared differences between target and actual factor allocations
+        # 2. Squared differences between current and new ticker allocations
         portfolio_allocations = F.to_numpy() @ x
-        objective = cp.Minimize(cp.sum_squares(portfolio_allocations - target_allocations.to_numpy()))
-        
+        factor_objective = cp.sum_squares(portfolio_allocations - target_allocations.to_numpy())
+
+        # Create vector of current allocations (0 for tickers not in current portfolio)
+        current_allocations = pd.Series(0, index=tickers)
+        current_allocations.update(current_values['Allocation'])
+
+        turnover_objective = cp.sum_squares(x - current_allocations.to_numpy())
+
+        objective = cp.Minimize(factor_objective + turnover_penalty * turnover_objective)
+
         # Constraints
         constraints = [
             cp.sum(x) == 1,     # Allocations must sum to 100%
             x >= 0,             # No negative allocations
             x <= 1,             # No allocations over 100%
         ]
-        
+
         # Solve optimization problem
         problem = cp.Problem(objective, constraints)
         problem.solve(solver=cp.SCIP, verbose=verbose)
-        
+
         if problem.status != 'optimal':
             raise RuntimeError(f"Optimization failed with status: {problem.status}")
-        
+
         # Create results DataFrames
         ticker_results = pd.DataFrame(index=tickers)
         ticker_results['Original Value'] = current_values['Total Value']
         ticker_results['Original Allocation'] = current_values['Allocation']
-        
+
         # Calculate new values
         new_allocations = pd.Series(x.value, index=tickers)
         new_values = new_allocations * total_value
-        
+
         ticker_results['New Value'] = new_values
         ticker_results['New Allocation'] = new_allocations
 
@@ -129,5 +142,5 @@ class RebalanceMixin:
         factor_results['Target Allocation'] = target_allocations
         factor_results['Value Diff'] = factor_results['New Value'] - factor_results['Original Value']
         factor_results['Allocation Diff'] = factor_results['New Allocation'] - factor_results['Target Allocation']
-        
+
         return ticker_results, factor_results
