@@ -30,6 +30,7 @@ Dependencies:
 
 import pandas as pd
 import os
+from typing import Dict
 
 from .holdings import load_and_consolidate_holdings
 from .account import load_account_dimension
@@ -211,7 +212,13 @@ class Portfolio(RebalanceMixin):
 
         return self._tickers_cache
 
-    def getMetrics(self, *dimensions, filters: dict = None, verbose: bool = False):
+    def getMetrics(
+        self,
+        *dimensions,
+        filters: Dict[str, str] = None,
+        portfolio_allocation: bool = False,
+        verbose: bool = False,
+    ) -> pd.DataFrame:
         """Get portfolio metrics grouped by specified dimensions with optional filtering.
 
         Args:
@@ -220,6 +227,8 @@ class Portfolio(RebalanceMixin):
                     lists of values to include (single values should be in a list).
                     Example: {'Account': ['IRA', '401k'], 'Level_0': ['Equity']}
             verbose: If True, print the generated SQL query. Default is False.
+            portfolio_allocation: If True, calculate allocations relative to total portfolio value
+                                If False, calculate relative to filtered portfolio value (default)
 
         Returns:
             DataFrame: Portfolio metrics including Total Value and Allocation %,
@@ -320,7 +329,7 @@ class Portfolio(RebalanceMixin):
                 JOIN prices p ON h.Ticker = p.Ticker
                 {"JOIN factor_weights w ON h.Ticker = w.Ticker" if include_weights else ""}
                 {"JOIN factors f ON w.Factor = f.Factor" if include_weights else ""}
-                {where_clause}
+                {where_clause if not portfolio_allocation else ""}
             )
             SELECT
                 {dim_cols_clause}{ticker_info_cols},
