@@ -106,6 +106,7 @@ class RebalanceMixin:
         self,
         target_allocations: pd.Series,
         turnover_penalty: float = 1.0,
+        complexity_penalty: float = 0.0,
         min_alloc: float = 0.0,
         verbose: bool = False
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -117,6 +118,9 @@ class RebalanceMixin:
             turnover_penalty: Weight for penalizing changes from current allocations (default: 1.0)
                             Higher values mean prefer keeping current allocations
                             0.0 means ignore current allocations
+            complexity_penalty: Weight for penalizing the number of funds used (default: 0.0)
+                            Higher values favor solutions with fewer funds
+                            0.0 means ignore portfolio complexity
             min_alloc: Minimum non-zero allocation for any fund (default: 0.0)
                       Fund allocation will either be 0 or >= min_alloc
             verbose: If True, print optimization details. Default is False.
@@ -179,6 +183,9 @@ class RebalanceMixin:
         # Objective: Minimize weighted sum of:
         # 1. Squared differences between target and actual factor allocations
         # 2. Squared differences between current and new ticker allocations
+        # 3. Number of funds used (complexity penalty)
+
+        # 1. Set up factor objective
         portfolio_allocations = F.to_numpy() @ x
         factor_objective = cp.sum_squares(portfolio_allocations - target_allocations.to_numpy())
 
@@ -186,11 +193,20 @@ class RebalanceMixin:
         current_allocations = pd.Series(0, index=tickers)
         current_allocations.update(current_values['Allocation'])
 
+        # 2. Set up turnover objective
         turnover_objective = cp.sum_squares(x - current_allocations.to_numpy())
 
-        objective = cp.Minimize(factor_objective + turnover_penalty * turnover_objective)
+        # 3. Set up complexity objective
+        complexity_objective = cp.sum(z)  # Count number of funds used
 
-        # Constraints
+
+        objective = cp.Minimize(
+            factor_objective +
+            turnover_penalty * turnover_objective +
+            complexity_penalty * complexity_objective
+        )
+
+        # Define constraints
         constraints = [
             cp.sum(x) == 1,     # Allocations must sum to 100%
             x >= 0,             # No negative allocations
