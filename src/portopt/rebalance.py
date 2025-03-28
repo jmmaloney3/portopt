@@ -102,7 +102,13 @@ class RebalanceMixin:
 
         return results
 
-    def rebalance(self, target_allocations: pd.Series, turnover_penalty: float = 1.0, verbose: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def rebalance(
+        self,
+        target_allocations: pd.Series,
+        turnover_penalty: float = 1.0,
+        min_alloc: float = 0.0,
+        verbose: bool = False
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Rebalance the portfolio to match target factor allocations as closely as possible.
 
@@ -111,6 +117,8 @@ class RebalanceMixin:
             turnover_penalty: Weight for penalizing changes from current allocations (default: 1.0)
                             Higher values mean prefer keeping current allocations
                             0.0 means ignore current allocations
+            min_alloc: Minimum non-zero allocation for any fund (default: 0.0)
+                      Fund allocation will either be 0 or >= min_alloc
             verbose: If True, print optimization details. Default is False.
 
         Returns:
@@ -166,6 +174,7 @@ class RebalanceMixin:
 
         # Set up optimization problem
         x = cp.Variable(len(tickers))  # Allocation percentages to each ticker
+        z = cp.Variable(len(tickers), boolean=True)  # Binary selection variables
 
         # Objective: Minimize weighted sum of:
         # 1. Squared differences between target and actual factor allocations
@@ -185,7 +194,8 @@ class RebalanceMixin:
         constraints = [
             cp.sum(x) == 1,     # Allocations must sum to 100%
             x >= 0,             # No negative allocations
-            x <= 1,             # No allocations over 100%
+            x <= z,             # Link x and z (if z=0, x=0)
+            x >= min_alloc * z  # Minimum allocation when fund is selected
         ]
 
         # Solve optimization problem
