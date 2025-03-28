@@ -29,14 +29,15 @@ class RebalanceMixin:
     def adjust_factor_allocations(
         self,
         filters: Dict[str, str],
-        reduction: float,
+        change: float,
         verbose: bool = False
     ) -> pd.DataFrame:
-        """Adjust factor allocations by reducing specified factors by a percentage.
+        """Adjust factor allocations by changing specified factors by a percentage.
 
         Args:
             filters: Dictionary of filters to apply (e.g., {'Level_0': ['Equity'], 'Level_1': ['US']})
-            reduction: Percentage points to reduce the filtered factors by (e.g., 5.0 for 5%)
+            change: Percentage points to change the filtered factors by (e.g., -0.05 to reduce by 5%)
+                    Negative values reduce allocation, positive values increase allocation
             verbose: If True, print detailed information about the changes
 
         Returns:
@@ -48,13 +49,13 @@ class RebalanceMixin:
         # Get the current metrics for filtered factors
         filtered_metrics = self.getMetrics('Factor', filters=filters, portfolio_allocation=True)
         current_total = filtered_metrics['Allocation'].sum()
-        target_total = current_total - reduction  # reduction is already in decimal form
-        reduction_amount = reduction  # reduction is already in decimal form
+        target_total = current_total + change  # change can be positive or negative
+        change_amount = change
 
         if verbose:
             print(f"\nCurrent total for filtered factors: {current_total:.2%}")
             print(f"Target total: {target_total:.2%}")
-            print(f"Reduction amount: {reduction_amount:.2%}")
+            print(f"Change amount: {change_amount:+.2%}")
 
         # Create target allocations starting from current allocations
         target_allocations = base_allocations.copy()
@@ -62,12 +63,12 @@ class RebalanceMixin:
         # Get filtered factors
         filtered_factors = filtered_metrics.index
 
-        # Scale down each filtered factor proportionally
+        # Scale factors proportionally
         scale_factor = target_total / current_total
         target_allocations[filtered_factors] *= scale_factor
 
-        # Add the reduction to Cash
-        target_allocations['Cash'] += reduction_amount
+        # Add the change to Cash (subtract if change is positive)
+        target_allocations['Cash'] -= change_amount
 
         # Create DataFrame with original and new allocations
         results = pd.DataFrame({
