@@ -1,0 +1,1 @@
+This directory contains notebooks used to evaluate various Python packages and prototype various approaches and designs.  These notebooks may no longer work since dependent modules and packaages may have changed or dependent libraries are no longer included in the Pipfile.

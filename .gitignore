@@ -1,0 +1,18 @@
+
+# ignore notebook checkpoints
+.ipynb_checkpoints/
+
+# ignore Python cache directories
+__pycache__/
+**/__pycache__/
+
+# ignore Python egg-info directories
+*.egg-info/
+**/*.egg-info/
+
+# ignore data exports directory
+exports/
+
+# ignore MacOS directory info files
+.DS_Store
+**/.DS_Store
