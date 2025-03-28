@@ -28,16 +28,17 @@ class RebalanceMixin:
 
     def adjust_factor_allocations(
         self,
-        filters: Dict[str, str],
-        change: float,
+        source_filter: Dict[str, str],
+        dest_filter: Dict[str, str],
+        transfer: float,
         verbose: bool = False
     ) -> pd.DataFrame:
-        """Adjust factor allocations by changing specified factors by a percentage.
+        """Adjust factor allocations by transferring allocation between two sets of factors.
 
         Args:
-            filters: Dictionary of filters to apply (e.g., {'Level_0': ['Equity'], 'Level_1': ['US']})
-            change: Percentage points to change the filtered factors by (e.g., -0.05 to reduce by 5%)
-                    Negative values reduce allocation, positive values increase allocation
+            source_filter: Dictionary of filters to identify source factors
+            dest_filter: Dictionary of filters to identify destination factors
+            transfer: Percentage points to transfer from source to destination (e.g., 0.05 for 5%)
             verbose: If True, print detailed information about the changes
 
         Returns:
@@ -46,29 +47,32 @@ class RebalanceMixin:
         # Get current allocations to use as base
         base_allocations = self.getMetrics('Factor', portfolio_allocation=True)['Allocation']
 
-        # Get the current metrics for filtered factors
-        filtered_metrics = self.getMetrics('Factor', filters=filters, portfolio_allocation=True)
-        current_total = filtered_metrics['Allocation'].sum()
-        target_total = current_total + change  # change can be positive or negative
-        change_amount = change
+        # Get the current metrics for source and destination factors
+        source_metrics = self.getMetrics('Factor', filters=source_filter, portfolio_allocation=True)
+        dest_metrics = self.getMetrics('Factor', filters=dest_filter, portfolio_allocation=True)
+
+        source_total = source_metrics['Allocation'].sum()
+        dest_total = dest_metrics['Allocation'].sum()
 
         if verbose:
-            print(f"\nCurrent total for filtered factors: {current_total:.2%}")
-            print(f"Target total: {target_total:.2%}")
-            print(f"Change amount: {change_amount:+.2%}")
+            print(f"\nSource factors total: {source_total:.2%}")
+            print(f"Destination factors total: {dest_total:.2%}")
+            print(f"Transfer amount: {transfer:.2%}")
 
         # Create target allocations starting from current allocations
         target_allocations = base_allocations.copy()
 
-        # Get filtered factors
-        filtered_factors = filtered_metrics.index
+        # Get source and destination factors
+        source_factors = source_metrics.index
+        dest_factors = dest_metrics.index
 
-        # Scale factors proportionally
-        scale_factor = target_total / current_total
-        target_allocations[filtered_factors] *= scale_factor
+        # Scale down source factors proportionally
+        source_scale = (source_total - transfer) / source_total
+        target_allocations[source_factors] *= source_scale
 
-        # Add the change to Cash (subtract if change is positive)
-        target_allocations['Cash'] -= change_amount
+        # Scale up destination factors proportionally
+        dest_scale = (dest_total + transfer) / dest_total
+        target_allocations[dest_factors] *= dest_scale
 
         # Create DataFrame with original and new allocations
         results = pd.DataFrame({
@@ -90,9 +94,11 @@ class RebalanceMixin:
                 }
                 write_table(changed_factors, columns=column_formats)
 
-            # Verify the total change
-            print(f"\nTotal filtered factors (Original): {filtered_metrics['Allocation'].sum():.2%}")
-            print(f"Total filtered factors (New): {results.loc[filtered_factors, 'New Allocation'].sum():.2%}")
+            # Verify the total changes
+            print(f"\nSource factors (Original): {source_metrics['Allocation'].sum():.2%}")
+            print(f"Source factors (New): {results.loc[source_factors, 'New Allocation'].sum():.2%}")
+            print(f"Destination factors (Original): {dest_metrics['Allocation'].sum():.2%}")
+            print(f"Destination factors (New): {results.loc[dest_factors, 'New Allocation'].sum():.2%}")
 
         return results
 
