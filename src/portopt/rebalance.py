@@ -134,12 +134,12 @@ class RebalanceMixin:
               assumes all tickers are available for allocation.
         """
         # Get current portfolio data
-        current_values = self.getMetrics('Ticker')
+        current_allocations = self.getMetrics('Ticker')['Allocation']
         prices = self.getPrices()
         factor_weights = self.getFactorWeights()
         
-        # Get total portfolio value
-        total_portfolio_value = current_values['Total Value'].sum()
+        # Get current (original) portfolio factor allocations
+        current_portfolio_factor_allocations = self.getMetrics('Factor')['Allocation']
 
         # Prepare optimization inputs
         tickers = prices.index
@@ -189,17 +189,13 @@ class RebalanceMixin:
         portfolio_allocations = F.to_numpy() @ x
         factor_objective = cp.sum_squares(portfolio_allocations - target_allocations.to_numpy())
 
-        # Create vector of current allocations (0 for tickers not in current portfolio)
-        current_allocations = pd.Series(0, index=tickers)
-        current_allocations.update(current_values['Allocation'])
-
         # 2. Set up turnover objective
         turnover_objective = cp.sum_squares(x - current_allocations.to_numpy())
 
         # 3. Set up complexity objective
         complexity_objective = cp.sum(z)  # Count number of funds used
 
-
+        # Define objective
         objective = cp.Minimize(
             factor_objective +
             turnover_penalty * turnover_objective +
@@ -221,30 +217,20 @@ class RebalanceMixin:
         if problem.status != 'optimal':
             raise RuntimeError(f"Optimization failed with status: {problem.status}")
 
-        # Create results DataFrames
-        ticker_results = pd.DataFrame(index=tickers)
-        ticker_results['Original Value'] = current_values['Total Value']
-        ticker_results['Original Allocation'] = current_values['Allocation']
-
-        # Calculate new values
+        # Create new allocations series
         new_allocations = pd.Series(x.value, index=tickers)
-        new_values = new_allocations * total_portfolio_value
 
-        ticker_results['New Value'] = new_values
+        # Ticker results
+        ticker_results = pd.DataFrame(index=tickers)
+        ticker_results['Original Allocation'] = current_allocations
         ticker_results['New Allocation'] = new_allocations
-
-        # Calculate difference between new and original values
-        ticker_results['Value Diff'] = ticker_results['New Value'] - ticker_results['Original Value']
         ticker_results['Allocation Diff'] = ticker_results['New Allocation'] - ticker_results['Original Allocation']
 
-        # Calculate factor allocations
+        # Factor results
         factor_results = pd.DataFrame(index=factors)
-        factor_results['Original Value'] = F @ current_values['Total Value']
-        factor_results['Original Allocation'] = factor_results['Original Value'] / total_portfolio_value
-        factor_results['New Value'] = F @ new_values
+        factor_results['Original Allocation'] = current_portfolio_factor_allocations
         factor_results['New Allocation'] = F @ new_allocations
         factor_results['Target Allocation'] = target_allocations
-        factor_results['Value Diff'] = factor_results['New Value'] - factor_results['Original Value']
         factor_results['Allocation Diff'] = factor_results['New Allocation'] - factor_results['Target Allocation']
 
         return ticker_results, factor_results
