@@ -86,12 +86,13 @@ class Portfolio(RebalanceMixin):
         self._factor_weights_cache = None
         self._tickers_cache = None
 
-    def getHoldings(self, forceRefresh: bool = False) -> pd.DataFrame:
+    def getHoldings(self, forceRefresh: bool = False, verbose: bool = False) -> pd.DataFrame:
         """
         Get consolidated holdings data across all accounts.
 
         Args:
             forceRefresh: If True, force reload from source files. Default is False.
+            verbose: If True, print status messages. Default is False.
 
         Returns:
             DataFrame with hierarchical index [Ticker, Account Name] containing:
@@ -101,7 +102,8 @@ class Portfolio(RebalanceMixin):
         if forceRefresh or self._holdings_cache is None:
             self._holdings_cache = load_and_consolidate_holdings(
                 *self.holdings_files,
-                config=self.config
+                config=self.config,
+                verbose=verbose
             )
         return self._holdings_cache
 
@@ -123,12 +125,13 @@ class Portfolio(RebalanceMixin):
             self._accounts_cache = load_account_dimension(self.config)
         return self._accounts_cache
 
-    def getPrices(self, forceRefresh: bool = False) -> pd.DataFrame:
+    def getPrices(self, forceRefresh: bool = False, verbose: bool = False) -> pd.DataFrame:
         """
         Get latest prices for all holdings.
 
         Args:
             forceRefresh: If True, force refresh from market data source. Default is False.
+            verbose: If True, print status messages. Default is False.
 
         Returns:
             DataFrame indexed by Ticker containing:
@@ -136,11 +139,11 @@ class Portfolio(RebalanceMixin):
         """
         if forceRefresh or self._prices_cache is None:
             # Get holdings to extract unique tickers
-            holdings = self.getHoldings()
+            holdings = self.getHoldings(verbose=verbose)
             tickers = holdings.index.get_level_values('Ticker').unique()
 
             # Get latest prices for all tickers
-            self._prices_cache = get_latest_ticker_prices(tickers)
+            self._prices_cache = get_latest_ticker_prices(tickers, verbose=verbose)
 
         return self._prices_cache
 
@@ -204,7 +207,7 @@ class Portfolio(RebalanceMixin):
         """
         if forceRefresh or self._tickers_cache is None:
             # Get holdings to extract unique tickers
-            holdings = self.getHoldings()
+            holdings = self.getHoldings(verbose=verbose)
             tickers = holdings.index.get_level_values('Ticker').unique()
 
             # Get ticker information from Yahoo Finance
@@ -247,8 +250,8 @@ class Portfolio(RebalanceMixin):
         import duckdb
 
         # Get required data
-        holdings = self.getHoldings().reset_index()
-        prices = self.getPrices().reset_index()
+        holdings = self.getHoldings(verbose=verbose).reset_index()
+        prices = self.getPrices(verbose=verbose).reset_index()
         factors = self.getFactors().reset_index()
         factor_weights = self.getFactorWeights().reset_index()
         tickers = self.getTickers().reset_index() if 'Ticker' in dimensions else None
