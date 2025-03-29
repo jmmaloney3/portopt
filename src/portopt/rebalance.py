@@ -139,7 +139,7 @@ class RebalanceMixin:
         factor_weights = self.getFactorWeights()
         
         # Get total portfolio value
-        total_value = current_values['Total Value'].sum()
+        total_portfolio_value = current_values['Total Value'].sum()
 
         # Prepare optimization inputs
         tickers = prices.index
@@ -228,7 +228,7 @@ class RebalanceMixin:
 
         # Calculate new values
         new_allocations = pd.Series(x.value, index=tickers)
-        new_values = new_allocations * total_value
+        new_values = new_allocations * total_portfolio_value
 
         ticker_results['New Value'] = new_values
         ticker_results['New Allocation'] = new_allocations
@@ -240,7 +240,7 @@ class RebalanceMixin:
         # Calculate factor allocations
         factor_results = pd.DataFrame(index=factors)
         factor_results['Original Value'] = F @ current_values['Total Value']
-        factor_results['Original Allocation'] = factor_results['Original Value'] / total_value
+        factor_results['Original Allocation'] = factor_results['Original Value'] / total_portfolio_value
         factor_results['New Value'] = F @ new_values
         factor_results['New Allocation'] = F @ new_allocations
         factor_results['Target Allocation'] = target_allocations
