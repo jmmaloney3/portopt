@@ -104,25 +104,25 @@ class RebalanceMixin:
 
     def rebalance(
         self,
-        target_allocations: pd.Series,
+        target_factor_allocations: pd.Series,
         turnover_penalty: float = 1.0,
         complexity_penalty: float = 0.0,
-        min_alloc: float = 0.0,
+        min_ticker_alloc: float = 0.0,
         verbose: bool = False
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Rebalance the portfolio to match target factor allocations as closely as possible.
 
         Args:
-            target_allocations: Series indexed by Factor containing target allocation percentages
+            target_factor_allocations: Series indexed by Factor containing target allocation percentages
             turnover_penalty: Weight for penalizing changes from current allocations (default: 1.0)
                             Higher values mean prefer keeping current allocations
                             0.0 means ignore current allocations
             complexity_penalty: Weight for penalizing the number of funds used (default: 0.0)
                             Higher values favor solutions with fewer funds
                             0.0 means ignore portfolio complexity
-            min_alloc: Minimum non-zero allocation for any fund (default: 0.0)
-                      Fund allocation will either be 0 or >= min_alloc
+            min_ticker_alloc: Minimum non-zero allocation for any fund (default: 0.0)
+                      Fund allocation will either be 0 or >= min_ticker_alloc
             verbose: If True, print optimization details. Default is False.
 
         Returns:
@@ -134,16 +134,13 @@ class RebalanceMixin:
               assumes all tickers are available for allocation.
         """
         # Get current portfolio data
-        current_allocations = self.getMetrics('Ticker')['Allocation']
+        current_ticker_allocations = self.getMetrics('Ticker')['Allocation']
         prices = self.getPrices()
         factor_weights = self.getFactorWeights()
-        
-        # Get current (original) portfolio factor allocations
-        current_portfolio_factor_allocations = self.getMetrics('Factor')['Allocation']
 
         # Prepare optimization inputs
         tickers = prices.index
-        factors = target_allocations.index
+        factors = target_factor_allocations.index
 
         # Create factor weights matrix (factors x tickers)
         F = pd.pivot_table(
@@ -156,17 +153,17 @@ class RebalanceMixin:
 
         # Reindex F to match exactly:
         # - rows (factors): 
-        #   1. Keep only factors that are in target_allocations
+        #   1. Keep only factors that are in target_factor_allocations
         #   2. Add rows with zeros for any target factors not in factor_weights
-        #   3. Ensure factors are in same order as target_allocations
+        #   3. Ensure factors are in same order as target_factor_allocations
         # - columns (tickers):
         #   1. Keep only tickers that are in our prices DataFrame
         #   2. Ensure tickers are in same order as prices
         # 
         # This is crucial for the optimization to work correctly because:
         # 1. Allows element-wise comparison in the objective function:
-        #    portfolio_allocations = F @ x
-        #    minimize: sum_squares(portfolio_allocations - target_allocations)
+        #    portfolio_factor_allocations = F @ x
+        #    minimize: sum_squares(portfolio_factor_allocations - target_factor_allocations)
         # 2. Ensures matrix dimensions are compatible for optimization
         F = F.reindex(index=factors, columns=tickers, fill_value=0)
 
@@ -174,7 +171,7 @@ class RebalanceMixin:
             print("\nFactor weights matrix F:")
             print(F)
             print("\nTarget allocations:")
-            print(target_allocations)
+            print(target_factor_allocations)
 
         # Set up optimization problem
         x = cp.Variable(len(tickers))  # Allocation percentages to each ticker
@@ -186,11 +183,11 @@ class RebalanceMixin:
         # 3. Number of funds used (complexity penalty)
 
         # 1. Set up factor objective
-        portfolio_allocations = F.to_numpy() @ x
-        factor_objective = cp.sum_squares(portfolio_allocations - target_allocations.to_numpy())
+        portfolio_factor_allocations = F.to_numpy() @ x
+        factor_objective = cp.sum_squares(portfolio_factor_allocations - target_factor_allocations.to_numpy())
 
         # 2. Set up turnover objective
-        turnover_objective = cp.sum_squares(x - current_allocations.to_numpy())
+        turnover_objective = cp.sum_squares(x - current_ticker_allocations.to_numpy())
 
         # 3. Set up complexity objective
         complexity_objective = cp.sum(z)  # Count number of funds used
@@ -204,10 +201,10 @@ class RebalanceMixin:
 
         # Define constraints
         constraints = [
-            cp.sum(x) == 1,     # Allocations must sum to 100%
-            x >= 0,             # No negative allocations
-            x <= z,             # Link x and z (if z=0, x=0)
-            x >= min_alloc * z  # Minimum allocation when fund is selected
+            cp.sum(x) == 1,            # Allocations must sum to 100%
+            x >= 0,                    # No negative allocations
+            x <= z,                    # Link x and z (if z=0, x=0)
+            x >= min_ticker_alloc * z  # Minimum allocation when fund is selected
         ]
 
         # Solve optimization problem
@@ -218,19 +215,19 @@ class RebalanceMixin:
             raise RuntimeError(f"Optimization failed with status: {problem.status}")
 
         # Create new allocations series
-        new_allocations = pd.Series(x.value, index=tickers)
+        new_ticker_allocations = pd.Series(x.value, index=tickers)
 
         # Ticker results
         ticker_results = pd.DataFrame(index=tickers)
-        ticker_results['Original Allocation'] = current_allocations
-        ticker_results['New Allocation'] = new_allocations
+        ticker_results['Original Allocation'] = current_ticker_allocations
+        ticker_results['New Allocation'] = new_ticker_allocations
         ticker_results['Allocation Diff'] = ticker_results['New Allocation'] - ticker_results['Original Allocation']
 
         # Factor results
         factor_results = pd.DataFrame(index=factors)
-        factor_results['Original Allocation'] = current_portfolio_factor_allocations
-        factor_results['New Allocation'] = F @ new_allocations
-        factor_results['Target Allocation'] = target_allocations
+        factor_results['Original Allocation'] = self.getMetrics('Factor')['Allocation']
+        factor_results['New Allocation'] = F @ new_ticker_allocations
+        factor_results['Target Allocation'] = target_factor_allocations
         factor_results['Allocation Diff'] = factor_results['New Allocation'] - factor_results['Target Allocation']
 
         return ticker_results, factor_results
