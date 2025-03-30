@@ -369,3 +369,21 @@ class Portfolio(RebalanceMixin):
         finally:
             # Ensure connection is closed
             con.close()
+
+    def getAccountTickers(self, verbose: bool = False) -> pd.DataFrame:
+        """
+        Get mapping of valid Account-Ticker pairs.
+
+        Args:
+            verbose: If True, print status messages. Default is False.
+
+        Returns:
+            DataFrame with hierarchical index [Account, Ticker]
+        """
+        # Get holdings to extract Account-Ticker pairs
+        holdings = self.getHoldings(verbose=verbose)
+
+        # Create DataFrame with Account-Ticker pairs from holdings index
+        account_tickers = pd.DataFrame(index=holdings.index)
+
+        return account_tickers
