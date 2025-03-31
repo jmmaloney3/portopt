@@ -238,7 +238,7 @@ class RebalanceMixin:
         target_factor_allocations: pd.Series,
         min_ticker_alloc: float = 0.0,
         verbose: bool = False
-    ) -> tuple[Dict[str, cp.Variable], Dict[str, cp.Expression], list[cp.Constraint]]:
+    ) -> Dict[str, any]:
         """Create optimization components (variables, objectives, constraints) for a single account.
 
         Args:
@@ -248,10 +248,13 @@ class RebalanceMixin:
             verbose: If True, print optimization details
 
         Returns:
-            Tuple containing:
-            - Dictionary of variables (x: allocations, z: binary selection)
-            - Dictionary of objective expressions (factor, turnover, complexity)
-            - List of constraints for the account
+            Dictionary containing:
+            - variables: Dict of optimization variables (x: allocations, z: binary selection)
+            - objectives: Dict of objective expressions (factor, turnover, complexity)
+            - constraints: List of account-level constraints
+            - factor_allocations: Expression for account's factor allocations (F @ x)
+            - tickers: List of tickers for this account
+            - factors: List of factors for this account
         """
         # Get account-specific data
         account_tickers = self.getAccountTickers()
@@ -290,17 +293,25 @@ class RebalanceMixin:
         if verbose:
             print(f"\nAccount: {account}")
             print(f"Number of tickers: {len(tickers)}")
+            print("Tickers:", tickers.tolist())
             print("\nFactor weights matrix F:")
             print(F)
 
-        # Create variables
+        # Create variables with meaningful names
+        x_vars = [cp.Variable(name=f"x_{account}_{ticker}") for ticker in tickers]
+        z_vars = [cp.Variable(boolean=True, name=f"z_{account}_{ticker}") for ticker in tickers]
+
         variables = {
-            'x': cp.Variable(len(tickers), name=f"{account}_ticker_allocations"),  # Allocation percentages
-            'z': cp.Variable(len(tickers), boolean=True, name=f"{account}_ticker_selection")  # Binary selection variables
+            'x': cp.vstack(x_vars),  # Stack into column vector
+            'z': cp.vstack(z_vars),  # Stack into column vector
+            'x_dict': {var.name: var for var in x_vars},  # For easier lookup
+            'z_dict': {var.name: var for var in z_vars}   # For easier lookup
         }
 
-        # Create objective components
+        # Calculate account's factor allocations
         account_factor_allocations = F.to_numpy() @ variables['x']
+
+        # Create objective components
         objectives = {
             # factor objective: minimize difference between account factor allocations and target factor allocations
             'factor': cp.sum_squares(account_factor_allocations - target_factor_allocations.to_numpy()),
@@ -318,4 +329,18 @@ class RebalanceMixin:
             variables['x'] >= min_ticker_alloc * variables['z']  # Minimum allocation
         ]
 
-        return variables, objectives, constraints
+        if verbose:
+            print("\nCreated variables:")
+            print("Allocation variables (x):", [var.name for var in x_vars])
+            print("Selection variables (z):", [var.name for var in z_vars])
+            print("\nFactor alignment:")
+            print("Factors:", factors.tolist())
+
+        return {
+            'variables': variables,
+            'objectives': objectives,
+            'constraints': constraints,
+            'factor_allocations': account_factor_allocations,
+            'tickers': tickers,
+            'factors': factors
+        }
