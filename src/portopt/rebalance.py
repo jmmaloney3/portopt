@@ -144,7 +144,7 @@ class RebalanceMixin:
 
         # Create factor weights matrix (factors x tickers)
         F = pd.pivot_table(
-            factor_weights.reset_index(),
+            factor_weights,
             values='Weight',
             index='Factor',
             columns='Ticker',
