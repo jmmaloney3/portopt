@@ -135,11 +135,11 @@ class RebalanceMixin:
         """
         # Get current portfolio data
         current_ticker_allocations = self.getMetrics('Ticker')['Allocation']
-        prices = self.getPrices()
+        account_tickers = self.getAccountTickers()
         factor_weights = self.getFactorWeights()
 
         # Prepare optimization inputs
-        tickers = prices.index
+        tickers = account_tickers.index.get_level_values('Ticker').unique()
         factors = target_factor_allocations.index
 
         # Create factor weights matrix (factors x tickers)
@@ -157,9 +157,9 @@ class RebalanceMixin:
         #   2. Add rows with zeros for any target factors not in factor_weights
         #   3. Ensure factors are in same order as target_factor_allocations
         # - columns (tickers):
-        #   1. Keep only tickers that are in our prices DataFrame
-        #   2. Ensure tickers are in same order as prices
-        # 
+        #   1. Keep only tickers that are in our account_tickers DataFrame
+        #   2. Ensure tickers are in same order as the unique tickers list
+        #
         # This is crucial for the optimization to work correctly because:
         # 1. Allows element-wise comparison in the objective function:
         #    portfolio_factor_allocations = F @ x
@@ -231,3 +231,91 @@ class RebalanceMixin:
         factor_results['Allocation Diff'] = factor_results['New Allocation'] - factor_results['Target Allocation']
 
         return ticker_results, factor_results
+
+    def _create_account_optimization_components(
+        self,
+        account: str,
+        target_factor_allocations: pd.Series,
+        min_ticker_alloc: float = 0.0,
+        verbose: bool = False
+    ) -> tuple[Dict[str, cp.Variable], Dict[str, cp.Expression], list[cp.Constraint]]:
+        """Create optimization components (variables, objectives, constraints) for a single account.
+
+        Args:
+            account: Account identifier
+            target_factor_allocations: Series indexed by Factor containing target allocation percentages
+            min_ticker_alloc: Minimum non-zero allocation for any fund
+            verbose: If True, print optimization details
+
+        Returns:
+            Tuple containing:
+            - Dictionary of variables (x: allocations, z: binary selection)
+            - Dictionary of objective expressions (factor, turnover, complexity)
+            - List of constraints for the account
+        """
+        # Get account-specific data
+        account_tickers = self.getAccountTickers()
+        tickers = account_tickers.xs(account, level='Account').index
+
+        current_ticker_allocations = self.getMetrics('Ticker', filters={'Account': account})['Allocation']
+
+        factor_weights = self.getFactorWeights()
+        factors = target_factor_allocations.index
+
+        # Create factor weights matrix F
+        F = pd.pivot_table(
+            factor_weights,
+            values='Weight',
+            index='Factor',
+            columns='Ticker',
+            fill_value=0
+        )
+
+        # Reindex F to match exactly:
+        # - rows (factors):
+        #   1. Keep only factors that are in target_factor_allocations
+        #   2. Add rows with zeros for any target factors not in factor_weights
+        #   3. Ensure factors are in same order as target_factor_allocations
+        # - columns (tickers):
+        #   1. Keep only tickers that are in our account_tickers DataFrame
+        #   2. Ensure tickers are in same order as the unique tickers list
+        #
+        # This is crucial for the optimization to work correctly because:
+        # 1. Allows element-wise comparison in the objective function:
+        #    portfolio_factor_allocations = F @ x
+        #    minimize: sum_squares(portfolio_factor_allocations - target_factor_allocations)
+        # 2. Ensures matrix dimensions are compatible for optimization
+        F = F.reindex(index=factors, columns=tickers, fill_value=0)
+
+        if verbose:
+            print(f"\nAccount: {account}")
+            print(f"Number of tickers: {len(tickers)}")
+            print("\nFactor weights matrix F:")
+            print(F)
+
+        # Create variables
+        variables = {
+            'x': cp.Variable(len(tickers), name=f"{account}_ticker_allocations"),  # Allocation percentages
+            'z': cp.Variable(len(tickers), boolean=True, name=f"{account}_ticker_selection")  # Binary selection variables
+        }
+
+        # Create objective components
+        account_factor_allocations = F.to_numpy() @ variables['x']
+        objectives = {
+            # factor objective: minimize difference between account factor allocations and target factor allocations
+            'factor': cp.sum_squares(account_factor_allocations - target_factor_allocations.to_numpy()),
+            # turnover objective: minimize difference between current and new ticker allocations
+            'turnover': cp.sum_squares(variables['x'] - current_ticker_allocations.to_numpy()),
+            # complexity objective: minimize number of funds used
+            'complexity': cp.sum(variables['z'])
+        }
+
+        # Create constraints
+        constraints = [
+            cp.sum(variables['x']) == 1,                         # Allocations sum to 100%
+            variables['x'] >= 0,                                 # No negative allocations
+            variables['x'] <= variables['z'],                    # Link x and z
+            variables['x'] >= min_ticker_alloc * variables['z']  # Minimum allocation
+        ]
+
+        return variables, objectives, constraints
