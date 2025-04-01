@@ -260,10 +260,19 @@ class RebalanceMixin:
         account_tickers = self.getAccountTickers()
         tickers = account_tickers.xs(account, level='Account').index
 
+        if verbose:
+            print(f"\nAccount: {account}")
+            print(f"Number of tickers: {len(tickers)}")
+            print("Tickers:", tickers.tolist())
+
         current_ticker_allocations = self.getMetrics('Ticker', filters={'Account': account})['Allocation']
 
         factor_weights = self.getFactorWeights()
         factors = target_factor_allocations.index
+
+        if verbose:
+            print(f"Number of factors: {len(factors)}")
+            print("Factors:", factors.tolist())
 
         # Create factor weights matrix F
         F = pd.pivot_table(
@@ -291,9 +300,6 @@ class RebalanceMixin:
         F = F.reindex(index=factors, columns=tickers, fill_value=0)
 
         if verbose:
-            print(f"\nAccount: {account}")
-            print(f"Number of tickers: {len(tickers)}")
-            print("Tickers:", tickers.tolist())
             print("\nFactor weights matrix F:")
             print(F)
 
@@ -304,12 +310,38 @@ class RebalanceMixin:
         variables = {
             'x': cp.vstack(x_vars),  # Stack into column vector
             'z': cp.vstack(z_vars),  # Stack into column vector
-            'x_dict': {var.name: var for var in x_vars},  # For easier lookup
-            'z_dict': {var.name: var for var in z_vars}   # For easier lookup
         }
+
+        if verbose:
+            print("\nCreated variables:")
+            print("Allocation variables (x):", [var.name() for var in x_vars])
+            print("Selection variables (z):", [var.name() for var in z_vars])
 
         # Calculate account's factor allocations
         account_factor_allocations = F.to_numpy() @ variables['x']
+
+        if verbose:
+            print("\nF.to_numpy() @ variables['x']:")
+            print("=============================")
+            # Get the coefficient matrix and variables from the MulExpression
+            coeff_matrix = account_factor_allocations.args[0].value  # numpy array
+            variables_stack = account_factor_allocations.args[1]  # Vstack
+            var_names = [v.name() for v in variables_stack.args]
+
+            # Create DataFrame showing the multiplication
+            alloc_df = pd.DataFrame(
+                data=coeff_matrix,
+                columns=var_names,
+                index=F.index
+            )
+
+            # Add target allocations for comparison
+            alloc_df = pd.concat([
+                pd.Series(target_factor_allocations, name='Target'),
+                alloc_df
+            ], axis=1)
+
+            print(alloc_df.to_string(float_format=lambda x: f"{x:.4f}"))
 
         # Create objective components
         objectives = {
@@ -328,13 +360,6 @@ class RebalanceMixin:
             variables['x'] <= variables['z'],                    # Link x and z
             variables['x'] >= min_ticker_alloc * variables['z']  # Minimum allocation
         ]
-
-        if verbose:
-            print("\nCreated variables:")
-            print("Allocation variables (x):", [var.name for var in x_vars])
-            print("Selection variables (z):", [var.name for var in z_vars])
-            print("\nFactor alignment:")
-            print("Factors:", factors.tolist())
 
         return {
             'variables': variables,
