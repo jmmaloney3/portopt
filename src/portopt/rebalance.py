@@ -232,6 +232,68 @@ class RebalanceMixin:
 
         return ticker_results, factor_results
 
+    def getCanonicalFactorWeightsMatrix(self, verbose: bool = False) -> pd.DataFrame:
+        """Create a factor weights matrix with canonically ordered rows (factors)
+           and columns (tickers).
+
+        The matrix will:
+        1. Include all possible factors and tickers from factor weights
+        2. Sort factors (rows) and tickers (columns) lexicographically
+        3. Fill any missing values with 0
+        4. Include 'Factor' as a named index (to facillitate debugging), when converting
+           the matrix to a NumPy array, the index will be dropped
+
+        Args:
+            verbose: If True, print information about the matrix construction
+
+        Returns:
+            DataFrame with factors as rows and tickers as columns, sorted in canonical order
+        """
+        if verbose:
+            print("\nCreating canonical factor weights matrix...")
+
+        # Get raw factor weights
+        factor_weights = self.getFactorWeights()
+
+        # Get unique factors and tickers in sorted order
+        factors = sorted(factor_weights.index.get_level_values('Factor').unique())
+        tickers = sorted(factor_weights.index.get_level_values('Ticker').unique())
+
+        if verbose:
+            print(f"Number of factors: {len(factors)}")
+            print(f"Number of tickers: {len(tickers)}")
+
+        # Create pivot table with canonical ordering
+        F = pd.pivot_table(
+            factor_weights,
+            values='Weight',
+            index='Factor',
+            columns='Ticker',
+            fill_value=0
+        )
+
+        # Reindex to ensure all factors and tickers are included in sorted order
+        F = F.reindex(index=factors, columns=tickers, fill_value=0)
+
+        # Explicitly name the index
+        F.index.name = 'Factor'
+
+        if verbose:
+            print("\nCanonical factor weights matrix F:")
+            print(f"Shape: {F.shape}")
+            print(F)
+
+            # Verify ordering
+            print("\nVerifying canonical ordering:")
+            print("Factors are sorted:", list(F.index) == sorted(F.index))
+            print("Tickers are sorted:", list(F.columns) == sorted(F.columns))
+
+            # Demonstrate NumPy conversion
+            print("\nShape of NumPy array (excludes Factor index):")
+            print(F.to_numpy().shape)
+
+        return F
+
     def _create_account_optimization_components(
         self,
         account: str,
