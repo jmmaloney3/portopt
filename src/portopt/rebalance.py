@@ -247,7 +247,10 @@ class RebalanceMixin:
             verbose: If True, print information about the matrix construction
 
         Returns:
-            DataFrame with factors as rows and tickers as columns, sorted in canonical order
+            DataFrame with factors as rows (indexed by 'Factor') and tickers as columns, sorted in canonical order
+
+        Raises:
+            AssertionError: If factors or tickers are not in lexicographical order
         """
         if verbose:
             print("\nCreating canonical factor weights matrix...")
@@ -278,21 +281,73 @@ class RebalanceMixin:
         # Explicitly name the index
         F.index.name = 'Factor'
 
+        # Validate ordering
+        assert list(F.index) == sorted(F.index), "Factors are not in lexicographical order"
+        assert list(F.columns) == sorted(F.columns), "Tickers are not in lexicographical order"
+
         if verbose:
             print("\nCanonical factor weights matrix F:")
             print(f"Shape: {F.shape}")
             print(F)
-
-            # Verify ordering
-            print("\nVerifying canonical ordering:")
-            print("Factors are sorted:", list(F.index) == sorted(F.index))
-            print("Tickers are sorted:", list(F.columns) == sorted(F.columns))
 
             # Demonstrate NumPy conversion
             print("\nShape of NumPy array (excludes Factor index):")
             print(F.to_numpy().shape)
 
         return F
+
+    def _create_variable_vectors(self, canonical_matrix: pd.DataFrame, account: str = None, verbose: bool = False) -> Dict[str, cp.Variable]:
+        """Create variable vectors compatible with the canonical factor weights matrix.
+
+        Args:
+            canonical_matrix: Factor weights matrix from getCanonicalFactorWeightsMatrix()
+            account: Optional account name to include in variable names
+            verbose: If True, print information about the variables created
+
+        Returns:
+            Dictionary containing:
+                'x': Vstack of allocation variables
+                'z': Vstack of binary selection variables
+            Variables are ordered to match columns of canonical_matrix
+
+        Raises:
+            AssertionError: If variable ordering doesn't match canonical matrix columns
+        """
+        # Get tickers from canonical matrix columns
+        tickers = canonical_matrix.columns
+
+        # Create variable name pattern based on whether account is provided
+        if account:
+            x_pattern = lambda ticker: f"x_{account}_{ticker}"
+            z_pattern = lambda ticker: f"z_{account}_{ticker}"
+        else:
+            x_pattern = lambda ticker: f"x_{ticker}"
+            z_pattern = lambda ticker: f"z_{ticker}"
+
+        # Create variables with appropriate names
+        x_vars = [cp.Variable(name=x_pattern(ticker)) for ticker in tickers]
+        z_vars = [cp.Variable(boolean=True, name=z_pattern(ticker)) for ticker in tickers]
+
+        # Validate variable alignment with canonical matrix
+        assert all(x_vars[i].name().split('_')[-1] == ticker
+                  for i, ticker in enumerate(canonical_matrix.columns)), \
+            "Variable order does not match canonical matrix columns"
+
+        # Stack variables into vectors
+        variables = {
+            'x': cp.vstack(x_vars),  # Allocation percentages
+            'z': cp.vstack(z_vars)   # Binary selection variables
+        }
+
+        if verbose:
+            print("\nCreated variable vectors:")
+            print(f"Number of variables: {len(tickers)}")
+            print("\nAllocation variables (x):")
+            print([var.name() for var in x_vars])
+            print("\nSelection variables (z):")
+            print([var.name() for var in z_vars])
+
+        return variables
 
     def _create_account_optimization_components(
         self,
