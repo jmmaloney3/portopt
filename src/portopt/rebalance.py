@@ -443,105 +443,57 @@ class RebalanceMixin:
             - objectives: Dict of objective expressions (factor, turnover, complexity)
             - constraints: List of account-level constraints
             - factor_allocations: Expression for account's factor allocations (F @ x)
-            - tickers: List of tickers for this account
-            - factors: List of factors for this account
+
+        Raises:
+            ValueError: If account is not found in portfolio
         """
-        # Get account-specific data
-        account_tickers = self.getAccountTickers()
-        tickers = account_tickers.xs(account, level='Account').index
-
         if verbose:
-            print(f"\nAccount: {account}")
-            print(f"Number of tickers: {len(tickers)}")
-            print("Tickers:", tickers.tolist())
+            print(f"\nCreating optimization components for account: {account}")
 
+        # Verify account exists
+        account_tickers = self.getAccountTickers()
+        if account not in account_tickers.index.get_level_values('Account').unique():
+            raise ValueError(f"Account '{account}' not found in portfolio. Available accounts: "
+                            f"{account_tickers.index.get_level_values('Account').unique().tolist()}")
+
+        # Get current ticker allocations for this account
         current_ticker_allocations = self.getMetrics('Ticker', filters={'Account': account})['Allocation']
 
-        factor_weights = self.getFactorWeights()
-        factors = target_factor_allocations.index
+        # Get canonical factor weights matrix
+        F = self.getCanonicalFactorWeightsMatrix(verbose=verbose)
 
-        if verbose:
-            print(f"Number of factors: {len(factors)}")
-            print("Factors:", factors.tolist())
-
-        # Create factor weights matrix F
-        F = pd.pivot_table(
-            factor_weights,
-            values='Weight',
-            index='Factor',
-            columns='Ticker',
-            fill_value=0
+        # Create target allocations vector aligned with canonical matrix
+        target_vector = self._create_target_factor_allocations_vector(
+            target_allocations=target_factor_allocations,
+            canonical_matrix=F,
+            verbose=verbose
         )
 
-        # Reindex F to match exactly:
-        # - rows (factors):
-        #   1. Keep only factors that are in target_factor_allocations
-        #   2. Add rows with zeros for any target factors not in factor_weights
-        #   3. Ensure factors are in same order as target_factor_allocations
-        # - columns (tickers):
-        #   1. Keep only tickers that are in our account_tickers DataFrame
-        #   2. Ensure tickers are in same order as the unique tickers list
-        #
-        # This is crucial for the optimization to work correctly because:
-        # 1. Allows element-wise comparison in the objective function:
-        #    portfolio_factor_allocations = F @ x
-        #    minimize: sum_squares(portfolio_factor_allocations - target_factor_allocations)
-        # 2. Ensures matrix dimensions are compatible for optimization
-        F = F.reindex(index=factors, columns=tickers, fill_value=0)
+        # Create variable vectors aligned with canonical matrix
+        variables = self._create_variable_vectors(
+            canonical_matrix=F,
+            account=account,
+            verbose=verbose
+        )
 
-        if verbose:
-            print("\nFactor weights matrix F:")
-            print(F)
-
-        # Create variables with meaningful names
-        x_vars = [cp.Variable(name=f"x_{account}_{ticker}") for ticker in tickers]
-        z_vars = [cp.Variable(boolean=True, name=f"z_{account}_{ticker}") for ticker in tickers]
-
-        variables = {
-            'x': cp.vstack(x_vars),  # Stack into column vector
-            'z': cp.vstack(z_vars),  # Stack into column vector
-        }
-
-        if verbose:
-            print("\nCreated variables:")
-            print("Allocation variables (x):", [var.name() for var in x_vars])
-            print("Selection variables (z):", [var.name() for var in z_vars])
-
-        # Calculate account's factor allocations
+        # Calculate account's factor allocations using canonical matrix
         account_factor_allocations = F.to_numpy() @ variables['x']
 
         if verbose:
-            print("\nF.to_numpy() @ variables['x']:")
-            print("=============================")
-            # Get the coefficient matrix and variables from the MulExpression
-            coeff_matrix = account_factor_allocations.args[0].value  # numpy array
-            variables_stack = account_factor_allocations.args[1]  # Vstack
-            var_names = [v.name() for v in variables_stack.args]
-
-            # Create DataFrame showing the multiplication
-            alloc_df = pd.DataFrame(
-                data=coeff_matrix,
-                columns=var_names,
-                index=F.index
-            )
-
-            # Add target allocations for comparison
-            alloc_df = pd.concat([
-                pd.Series(target_factor_allocations, name='Target'),
-                alloc_df
-            ], axis=1)
-
-            print(alloc_df.to_string(float_format=lambda x: f"{x:.4f}"))
+            print("\nCreating objective components...")
 
         # Create objective components
         objectives = {
             # factor objective: minimize difference between account factor allocations and target factor allocations
-            'factor': cp.sum_squares(account_factor_allocations - target_factor_allocations.to_numpy()),
+            'factor': cp.sum_squares(account_factor_allocations - target_vector.to_numpy()),
             # turnover objective: minimize difference between current and new ticker allocations
             'turnover': cp.sum_squares(variables['x'] - current_ticker_allocations.to_numpy()),
             # complexity objective: minimize number of funds used
             'complexity': cp.sum(variables['z'])
         }
+
+        if verbose:
+            print("\nCreating constraints...")
 
         # Create constraints
         constraints = [
@@ -556,6 +508,4 @@ class RebalanceMixin:
             'objectives': objectives,
             'constraints': constraints,
             'factor_allocations': account_factor_allocations,
-            'tickers': tickers,
-            'factors': factors
         }
