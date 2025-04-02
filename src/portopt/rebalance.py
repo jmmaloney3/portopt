@@ -349,6 +349,79 @@ class RebalanceMixin:
 
         return variables
 
+    def _create_target_factor_allocations_vector(
+        self,
+        target_allocations: pd.Series,
+        canonical_matrix: pd.DataFrame,
+        verbose: bool = False
+    ) -> pd.Series:
+        """Create a target factor allocations vector compatible with the canonical
+           factor weights matrix.
+
+        Args:
+            target_allocations: Series indexed by Factor containing target allocation percentages
+            canonical_matrix: Factor weights matrix from getCanonicalFactorWeightsMatrix()
+            verbose: If True, print information about the vector creation
+
+        Returns:
+            Series indexed by Factor containing target allocations, aligned with canonical matrix rows
+
+        Raises:
+            ValueError: If target allocations don't sum to 100%
+            ValueError: If target allocations contain factors not present in canonical matrix
+            AssertionError: If resulting series is not aligned with canonical matrix
+        """
+        if verbose:
+            print("\nCreating target factor vector...")
+            print(f"Original target allocations shape: {target_allocations.shape}")
+
+        # Validate original allocations sum to 100%
+        total_allocation = target_allocations.sum()
+        if not np.isclose(total_allocation, 1.0, rtol=1e-5):
+            raise ValueError(
+                f"Target allocations must sum to 100%, got {total_allocation:.2%}"
+            )
+
+        # Check for extra factors in target allocations
+        extra_factors = set(target_allocations.index) - set(canonical_matrix.index)
+        if extra_factors:
+            raise ValueError(
+                f"Target allocations contain factors not present in canonical matrix: {extra_factors}"
+            )
+
+        # Create new series with all factors from canonical matrix
+        canonical_factors = canonical_matrix.index
+        result = pd.Series(0.0, index=canonical_factors, name=target_allocations.name)
+
+        # Fill in provided target allocations
+        result.update(target_allocations)
+
+        # Validate resulting allocations sum to 100%
+        total_allocation = result.sum()
+        if not np.isclose(total_allocation, 1.0, rtol=1e-5):
+            raise ValueError(
+                f"Resulting allocations must sum to 100%, got {total_allocation:.2%}"
+            )
+
+        # Validate alignment with canonical matrix
+        assert result.index.equals(canonical_matrix.index), \
+            "Result factors not aligned with canonical matrix"
+        assert list(result.index) == list(canonical_matrix.index), \
+            "Result factors not in same order as canonical matrix"
+
+        if verbose:
+            print(f"Resulting target allocations shape: {result.shape}")
+            print("\nTarget allocations:")
+            print(result.to_string(float_format=lambda x: f"{x:.2%}"))
+
+            # Show added factors
+            added_factors = set(result.index) - set(target_allocations.index)
+            if added_factors:
+                print("\nFactors added with zero allocation:")
+                print(added_factors)
+
+        return result
+
     def _create_account_optimization_components(
         self,
         account: str,
