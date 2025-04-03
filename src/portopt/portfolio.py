@@ -218,6 +218,7 @@ class Portfolio(RebalanceMixin):
     def getMetrics(
         self,
         *dimensions,
+        metrics: list[str] | None = None,
         filters: Dict[str, str] = None,
         portfolio_allocation: bool = False,
         verbose: bool = False,
@@ -226,6 +227,8 @@ class Portfolio(RebalanceMixin):
 
         Args:
             *dimensions: Variable number of dimension names ('Ticker', 'Factor', 'Level_0', etc.)
+            metrics: List of metrics to include ('Quantity', 'Total Value', 'Allocation').
+                    If None, includes all metrics.
             filters: Dictionary of filters to apply. Keys are dimension names, values are
                     lists of values to include (single values should be in a list).
                     Example: {'Account': ['IRA', '401k'], 'Level_0': ['Equity']}
@@ -234,8 +237,7 @@ class Portfolio(RebalanceMixin):
                                 If False, calculate relative to filtered portfolio value (default)
 
         Returns:
-            DataFrame: Portfolio metrics including Total Value and Allocation %,
-                      grouped by the requested dimensions.
+            DataFrame indexed by the specified dimensions with requested metrics as columns
 
         Example:
             # Get metrics by account for specific accounts
@@ -246,6 +248,9 @@ class Portfolio(RebalanceMixin):
 
             # Get metrics by ticker including security information
             metrics = portfolio.getMetrics('Ticker')  # Includes Name and Type columns
+
+            # Get subset of metrics
+            metrics = portfolio.getMetrics('Ticker', metrics=['Quantity', 'Allocation'])
         """
         import duckdb
 
@@ -360,6 +365,12 @@ class Portfolio(RebalanceMixin):
             # Set index based on dimensions
             if dimensions:
                 result.set_index(list(dimensions), inplace=True)
+
+            # Filter metrics before returning
+            if metrics is not None:
+                # Only include metrics that exist in the result
+                available_metrics = [m for m in metrics if m in result.columns]
+                result = result[available_metrics]
 
             return result
 
