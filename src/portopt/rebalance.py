@@ -353,18 +353,25 @@ class RebalanceMixin:
         self,
         target_allocations: pd.Series,
         canonical_matrix: pd.DataFrame,
+        account: str = None,
         verbose: bool = False
     ) -> pd.Series:
         """Create a target factor allocations vector compatible with the canonical
-           factor weights matrix.
+           factor weights matrix and, when requested, scaled by the account's
+           proportion of the total portfolio.
 
         Args:
-            target_allocations: Series indexed by Factor containing target allocation percentages
+            target_allocations: Series indexed by Factor containing target allocation
+                percentages for the entire portfolio
             canonical_matrix: Factor weights matrix from getCanonicalFactorWeightsMatrix()
+            account: If provided, scale target allocations by account's proportion
+                of portfolio
             verbose: If True, print information about the vector creation
 
         Returns:
-            Series indexed by Factor containing target allocations, aligned with canonical matrix rows
+            Series indexed by Factor containing target allocations, aligned with canonical
+            matrix rows. If account is provided, values are scaled to represent that
+            account's portion of the total portfolio.
 
         Raises:
             ValueError: If target allocations don't sum to 100%
@@ -396,11 +403,25 @@ class RebalanceMixin:
         # Fill in provided target allocations
         result.update(target_allocations)
 
-        # Validate resulting allocations sum to 100%
+        # If account is provided, scale allocations by account's proportion of portfolio
+        if account is not None:
+            # Get account's current allocation as percentage of total portfolio
+            account_metrics = self.getMetrics('Account', portfolio_allocation=True)
+            account_proportion = account_metrics.loc[account, 'Allocation']
+
+            if verbose:
+                print(f"\nScaling target allocations for account: {account}")
+                print(f"Account proportion of portfolio: {account_proportion:.2%}")
+
+            # Scale all allocations by account proportion
+            result *= account_proportion
+
+        # Validate resulting allocations sum appropriately
         total_allocation = result.sum()
-        if not np.isclose(total_allocation, 1.0, rtol=1e-5):
+        expected_total = 1.0 if account is None else account_metrics.loc[account, 'Allocation']
+        if not np.isclose(total_allocation, expected_total, rtol=1e-5):
             raise ValueError(
-                f"Resulting allocations must sum to 100%, got {total_allocation:.2%}"
+                f"Resulting allocations must sum to {expected_total:.2%}, got {total_allocation:.2%}"
             )
 
         # Validate alignment with canonical matrix
@@ -413,6 +434,7 @@ class RebalanceMixin:
             print(f"Resulting target allocations shape: {result.shape}")
             print("\nTarget allocations:")
             print(result.to_string(float_format=lambda x: f"{x:.2%}"))
+            print(f"Target allocations sum: {result.sum():.2%}")
 
             # Show added factors
             added_factors = set(result.index) - set(target_allocations.index)
@@ -429,11 +451,18 @@ class RebalanceMixin:
         min_ticker_alloc: float = 0.0,
         verbose: bool = False
     ) -> Dict[str, any]:
-        """Create optimization components (variables, objectives, constraints) for a single account.
+        """Create optimization components (variables, objectives, constraints) for
+        a single account.
+
+        This creates components that will be used to define an optimization problem
+        that finds the ticker allocations for each account-ticker pair that achieves
+        the optimization goals.  The resulting optimized values are percentages of
+        the entire portfolio, not just the account.
 
         Args:
             account: Account identifier
-            target_factor_allocations: Series indexed by Factor containing target allocation percentages
+            target_factor_allocations: Series indexed by Factor containing target
+                allocation percentages
             min_ticker_alloc: Minimum non-zero allocation for any fund
             verbose: If True, print optimization details
 
@@ -457,19 +486,36 @@ class RebalanceMixin:
                             f"{account_tickers.index.get_level_values('Account').unique().tolist()}")
 
         # Get current ticker allocations for this account
-        current_ticker_allocations = self.getMetrics('Ticker', filters={'Account': account})['Allocation']
+        # - this is the current allocation of each ticker in the context of
+        #   the entire portfolio - not just the account
+        current_ticker_allocations = self.getMetrics('Ticker',
+                                                     filters={'Account': account},
+                                                     portfolio_allocation=True
+                                                     )['Allocation']
+
+        if verbose:
+            print("\nCurrent ticker allocations:")
+            print(current_ticker_allocations)
+            print(f"Current ticker allocations sum: {current_ticker_allocations.sum():.2%}")
 
         # Get canonical factor weights matrix
         F = self.getCanonicalFactorWeightsMatrix(verbose=verbose)
 
         # Create target allocations vector aligned with canonical matrix
+        # - this is the target allocation for each factor in the context of the
+        #   entire portfolio - not just the account
         target_vector = self._create_target_factor_allocations_vector(
             target_allocations=target_factor_allocations,
             canonical_matrix=F,
+            account=account,
             verbose=verbose
         )
 
         # Create variable vectors aligned with canonical matrix
+        # - these variables represent the allocation percentages for each
+        #   ticker in the context of the entire portfolio - not just the
+        #   account
+        # - they will be optimized to achieve the target factor allocations
         variables = self._create_variable_vectors(
             canonical_matrix=F,
             account=account,
