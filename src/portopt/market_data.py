@@ -97,6 +97,47 @@ def is_money_market_ticker(ticker: str, verbose: bool = False) -> bool:
         return True
     return False
 
+def parse_option_symbol(option_symbol: str) -> dict:
+    """
+    Parse an option symbol in OCC format into its components.
+
+    Args:
+        option_symbol: Option symbol in OCC format (e.g., 'SPY250321P580')
+                      Format: {SYMBOL}{YY}{MM}{DD}{C/P}{STRIKE}
+
+    Returns:
+        Dictionary containing parsed components:
+        - symbol: Underlying security symbol
+        - expiry_date: Pandas Timestamp of expiration date
+        - opt_type: 'P' for put or 'C' for call
+        - opt_type_name: 'Put' or 'Call'
+        - strike: Strike price as float
+        - description: Human-readable description of the option
+
+    Raises:
+        ValueError: If the option symbol format is invalid
+    """
+    match = re.match(r'^([A-Z]{1,5})(\d{2})(\d{2})(\d{2})([CP])(\d+)$', str(option_symbol).upper())
+    if not match:
+        raise ValueError(f"Invalid option symbol format: {option_symbol}")
+
+    symbol, yy, mm, dd, opt_type, strike = match.groups()
+    expiry_date = pd.Timestamp(f"20{yy}-{mm}-{dd}")
+    opt_type_name = 'Put' if opt_type == 'P' else 'Call'
+    strike_price = float(strike)
+
+    description = (f"{symbol} ${strike_price} {opt_type_name} "
+                  f"expiring {expiry_date.strftime('%Y-%m-%d')}")
+
+    return {
+        'symbol': symbol,
+        'expiry_date': expiry_date,
+        'opt_type': opt_type,
+        'opt_type_name': opt_type_name,
+        'strike': strike_price,
+        'description': description
+    }
+
 def get_tickers_date_ranges(tickers: set[str] | list[str],
                      price_type: str = "Adj Close",
                      verbose: bool = False) -> pd.DataFrame:
@@ -468,42 +509,34 @@ def get_latest_option_price(option_symbol: str, verbose: bool = False) -> float:
         price = get_latest_option_price('SPY250321P580')
     """
     try:
-        # Parse OCC symbol components
-        match = re.match(r'^([A-Z]{1,5})(\d{2})(\d{2})(\d{2})([CP])(\d+)$', option_symbol)
-        if not match:
-            raise ValueError(f"Invalid option symbol format: {option_symbol}")
-
-        symbol, yy, mm, dd, opt_type, strike = match.groups()
-
-        # Convert to full year (assuming 20xx)
-        year = f"20{yy}"
-
-        # Create date object to format properly for Yahoo
-        expiry_date = pd.Timestamp(f"20{yy}-{mm}-{dd}")
-
-        # Convert strike price to proper format (multiply by 1000 for Yahoo's format)
-        yahoo_strike = float(strike) * 1000
+        # Parse the option symbol
+        try:
+            option_info = parse_option_symbol(option_symbol)
+        except ValueError as e:
+            if verbose:
+                print(str(e))
+            return np.nan
 
         # Get option chain for the underlying stock
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(option_info['symbol'])
 
         # Get all options for the expiration date
         try:
-            options = ticker.option_chain(expiry_date.strftime('%Y-%m-%d'))
+            options = ticker.option_chain(option_info['expiry_date'].strftime('%Y-%m-%d'))
         except ValueError as e:
             if verbose:
-                print(f"No options chain found for {symbol} on {expiry_date.date()}")
+                print(f"No options chain found for {option_info['symbol']} on {option_info['expiry_date'].date()}")
             return np.nan
 
         # Select puts or calls based on option type
-        chain = options.puts if opt_type == 'P' else options.calls
+        chain = options.puts if option_info['opt_type'] == 'P' else options.calls
 
         # Find the specific contract
-        contract = chain[chain['strike'] == float(strike)]
+        contract = chain[chain['strike'] == option_info['strike']]
 
         if len(contract) == 0:
             if verbose:
-                print(f"No contract found for strike ${strike} in {symbol} {opt_type} options")
+                print(f"No contract found for strike ${option_info['strike']} in {option_info['symbol']} {option_info['opt_type_name']} options")
             return np.nan
 
         # Get the last price & multiply by 100 since contracts are for 100 shares
@@ -522,6 +555,7 @@ def get_latest_option_price(option_symbol: str, verbose: bool = False) -> float:
 def get_tickers_info(tickers: pd.Index | set[str] | list[str], verbose: bool = False) -> pd.DataFrame:
     """
     Retrieve basic information for multiple tickers from Yahoo Finance.
+    Handles both securities (stocks, ETFs, mutual funds) and options.
 
     Args:
         tickers: Index, set, or list of ticker symbols
@@ -529,16 +563,16 @@ def get_tickers_info(tickers: pd.Index | set[str] | list[str], verbose: bool = F
 
     Returns:
         DataFrame indexed by ticker symbols containing:
-        - Name: Short name of the security
-        - Long Name: Full name of the security
-        - Type: Security type (ETF, MUTUALFUND, EQUITY, etc.)
-        - Category: Fund category/investment strategy
-        - Family: Fund family/provider name
+        - Name: Short name of the security or option description
+        - Short Name: Short name or option symbol
+        - Type: Security type (ETF, MUTUALFUND, EQUITY, OPTION)
+        - Category: Fund category/investment strategy (securities only)
+        - Family: Fund family/provider name (securities only)
         Note: Some fields may be NaN if not available for a particular security
 
     Example:
-        # Get info for a mix of securities
-        info = get_tickers_info(['VTSAX', 'SPY', 'AAPL'])
+        # Get info for a mix of securities and options
+        info = get_tickers_info(['VTSAX', 'SPY', 'SPY250321P580'])
     """
     # Convert input to set of tickers if it isn't already
     if isinstance(tickers, set):
@@ -551,7 +585,7 @@ def get_tickers_info(tickers: pd.Index | set[str] | list[str], verbose: bool = F
     if not tickers_set:
         raise ValueError("No tickers provided")
 
-    # Define the fields we want to retrieve
+    # Define the fields we want to retrieve for securities
     fields = {
         'Name': 'longName',
         'Short Name': 'shortName',
@@ -571,16 +605,47 @@ def get_tickers_info(tickers: pd.Index | set[str] | list[str], verbose: bool = F
     # Process each ticker
     for ticker in tickers_set:
         try:
-            if verbose:
-                print(f"Retrieving info for {ticker}")
+            ticker_str = str(ticker).upper()
 
-            # Get ticker info from Yahoo Finance
-            yf_ticker = yf.Ticker(ticker)
-            info = yf_ticker.info
+            if is_option_ticker(ticker_str, verbose=verbose):
+                # Handle option ticker
+                try:
+                    option_info = parse_option_symbol(ticker_str)
 
-            # Extract desired fields
-            for col, field in fields.items():
-                result.at[ticker, col] = info.get(field, pd.NA)
+                    # Set option information using parsed data
+                    result.at[ticker, 'Name'] = option_info['description']
+                    result.at[ticker, 'Short Name'] = ticker_str
+                    result.at[ticker, 'Type'] = 'OPTION'
+                    result.at[ticker, 'Category'] = pd.NA
+                    result.at[ticker, 'Family'] = pd.NA
+
+                    if verbose:
+                        print(f"Processed option ticker: {ticker}")
+                except ValueError as e:
+                    if verbose:
+                        print(str(e))
+                    # Set all fields to NA for invalid option ticker
+                    for col in fields.keys():
+                        result.at[ticker, col] = pd.NA
+
+            elif is_security_ticker(ticker_str, verbose=verbose):
+                # Handle security ticker
+                if verbose:
+                    print(f"Retrieving info for security: {ticker}")
+
+                # Get ticker info from Yahoo Finance
+                yf_ticker = yf.Ticker(ticker)
+                info = yf_ticker.info
+
+                # Extract desired fields
+                for col, field in fields.items():
+                    result.at[ticker, col] = info.get(field, pd.NA)
+            else:
+                if verbose:
+                    print(f"Invalid ticker format: {ticker}")
+                # Set all fields to NA for invalid ticker
+                for col in fields.keys():
+                    result.at[ticker, col] = pd.NA
 
         except Exception as e:
             if verbose:
