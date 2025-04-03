@@ -541,13 +541,22 @@ class RebalanceMixin:
         if verbose:
             print("\nCreating constraints...")
 
-        # Create constraints
+        # Get account's current allocation as percentage of total portfolio
+        account_metrics = self.getMetrics('Account', portfolio_allocation=True)
+        account_proportion = account_metrics.loc[account, 'Allocation']
+
+        # Create the constraints list
         constraints = [
-            cp.sum(variables['x']) == 1,                         # Allocations sum to 100%
+            # Sum of allocations equals account's proportion of portfolio
+            cp.sum(variables['x']) == account_proportion,
             variables['x'] >= 0,                                 # No negative allocations
             variables['x'] <= variables['z'],                    # Link x and z
             variables['x'] >= min_ticker_alloc * variables['z']  # Minimum allocation
         ]
+
+        if verbose:
+            print(f"\nAccount constraints:")
+            print(f"- Sum of allocations = {account_proportion:.2%} (account's portfolio proportion)")
 
         return {
             'variables': variables,
