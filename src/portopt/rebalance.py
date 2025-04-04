@@ -18,7 +18,7 @@ Dependencies:
 import pandas as pd
 import numpy as np
 import cvxpy as cp
-from typing import Dict
+from typing import Dict, Union
 from .utils import write_table
 
 class RebalanceMixin:
@@ -288,11 +288,7 @@ class RebalanceMixin:
         if verbose:
             print("\nCanonical factor weights matrix F:")
             print(f"Shape: {F.shape}")
-            print(F)
-
-            # Demonstrate NumPy conversion
-            print("\nShape of NumPy array (excludes Factor index):")
-            print(F.to_numpy().shape)
+            self._write_weights(F)
 
         return F
 
@@ -381,6 +377,7 @@ class RebalanceMixin:
         if verbose:
             print("\nCreating target factor vector...")
             print(f"Original target allocations shape: {target_allocations.shape}")
+            self._write_weights(target_allocations, "Original target allocations:")
 
         # Validate original allocations sum to 100%
         total_allocation = target_allocations.sum()
@@ -398,7 +395,12 @@ class RebalanceMixin:
 
         # Create new series with all factors from canonical matrix
         canonical_factors = canonical_matrix.index
-        result = pd.Series(0.0, index=canonical_factors, name=target_allocations.name)
+        result = pd.Series(
+            0.0, 
+            index=canonical_factors,
+            name=target_allocations.name  # Preserve original Series name
+        )
+        result.index.name = 'Factor'  # Set name for the index
 
         # Fill in provided target allocations
         result.update(target_allocations)
@@ -431,10 +433,8 @@ class RebalanceMixin:
             "Result factors not in same order as canonical matrix"
 
         if verbose:
-            print(f"Resulting target allocations shape: {result.shape}")
-            print("\nTarget allocations:")
-            print(result.to_string(float_format=lambda x: f"{x:.2%}"))
-            print(f"Target allocations sum: {result.sum():.2%}")
+            print(f"\nResulting target allocations shape: {result.shape}")
+            self._write_weights(result, "Resulting target allocations:")
 
             # Show added factors
             added_factors = set(result.index) - set(target_allocations.index)
@@ -603,6 +603,9 @@ class RebalanceMixin:
         if any(p < 0 for p in [turnover_penalty, complexity_penalty, account_align_penalty]):
             raise ValueError("Penalty parameters must be non-negative")
 
+        if verbose:
+            self._write_weights(target_factor_allocations, "Input target allocations:")
+
         # Get canonical factor weights matrix (will be used for all accounts)
         F = self.getCanonicalFactorWeightsMatrix(verbose=verbose)
 
@@ -618,6 +621,16 @@ class RebalanceMixin:
         accounts = self.getAccountTickers().index.get_level_values('Account').unique()
         if verbose:
             print(f"\nOptimizing allocations for {len(accounts)} accounts")
+
+        # Find tickers with non-zero allocations
+        # TODO: use this to simplify the optimization problem
+        active_tickers = self.getMetrics('Ticker')['Allocation']
+        active_tickers = active_tickers[active_tickers > 0].index
+
+        if verbose:
+            print("\nActive tickers:")
+            print(f"Found {len(active_tickers)} tickers with non-zero allocations")
+            print("\n".join(sorted(active_tickers)))
 
         # Create optimization components for each account
         account_components = {}
@@ -730,3 +743,31 @@ class RebalanceMixin:
             print(f"Status: {problem.status}")
 
         return ticker_results, factor_results
+
+    def _write_weights(self, weights: Union[pd.DataFrame, pd.Series], title: str = None):
+        """Display weights (factor matrix or allocation vector) in a formatted table.
+
+        Args:
+            weights: Either a factor weights DataFrame from getCanonicalFactorWeightsMatrix()
+                    or an allocation Series
+            title: Optional title to display above the table
+        """
+        if title:
+            print(f"\n{title}")
+
+        # Create column formats dictionary
+        column_formats = {
+            'Factor': {'width': 30}  # Format for index column
+        }
+
+        # Get columns to format (either DataFrame columns or Series name)
+        value_columns = weights.columns if isinstance(weights, pd.DataFrame) else [weights.name]
+
+        # Add formats for all value columns
+        column_formats.update({
+            col: {'width': 8, 'type': '%', 'decimal': 2}
+            for col in value_columns
+        })
+
+        # Write the formatted table
+        write_table(weights, columns=column_formats)
