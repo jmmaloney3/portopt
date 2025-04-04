@@ -564,3 +564,169 @@ class RebalanceMixin:
             'constraints': constraints,
             'factor_allocations': account_factor_allocations,
         }
+
+    def rebalance_portfolio(
+        self,
+        target_factor_allocations: pd.Series,
+        turnover_penalty: float = 1.0,
+        complexity_penalty: float = 0.0,
+        account_align_penalty: float = 1.0,
+        min_ticker_alloc: float = 0.0,
+        verbose: bool = False
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Rebalance a multi-account portfolio to match target factor allocations as
+        closely as possible.
+
+        NOTE: This method is a work in progress and is not yet ready for use.
+
+        Args:
+            target_factor_allocations: Series indexed by Factor containing target
+                allocation percentages
+            turnover_penalty: Weight for penalizing changes from current allocations
+                (default: 1.0)
+            complexity_penalty: Weight for penalizing the number of funds used
+                (default: 0.0)
+            account_align_penalty: Weight for penalizing account-level factor
+                misalignment (default: 1.0)
+            min_ticker_alloc: Minimum non-zero allocation for any fund (default: 0.0)
+            verbose: If True, print optimization details
+
+        Returns:
+            Tuple containing:
+            - DataFrame with ticker-level details (original and new allocations)
+            - DataFrame with factor-level details (original, new, and target allocations)
+        """
+        # Validate inputs
+        if not np.isclose(target_factor_allocations.sum(), 1.0, rtol=1e-5):
+            raise ValueError(f"Target factor allocations must sum to 100%, sum is {target_factor_allocations.sum():.2%}")
+        if any(p < 0 for p in [turnover_penalty, complexity_penalty, account_align_penalty]):
+            raise ValueError("Penalty parameters must be non-negative")
+
+        # Get canonical factor weights matrix (will be used for all accounts)
+        F = self.getCanonicalFactorWeightsMatrix(verbose=verbose)
+
+        # Align target allocations with canonical matrix
+        target_factor_allocations = self._create_target_factor_allocations_vector(
+            target_allocations=target_factor_allocations,
+            canonical_matrix=F,
+            account=None,  # No account scaling needed here
+            verbose=verbose
+        )
+
+        # Get list of accounts
+        accounts = self.getAccountTickers().index.get_level_values('Account').unique()
+        if verbose:
+            print(f"\nOptimizing allocations for {len(accounts)} accounts")
+
+        # Create optimization components for each account
+        account_components = {}
+        for account in accounts:
+            try:
+                components = self._create_account_optimization_components(
+                    account=account,
+                    target_factor_allocations=target_factor_allocations,
+                    min_ticker_alloc=min_ticker_alloc,
+                    verbose=verbose
+                )
+                account_components[account] = components
+            except Exception as e:
+                raise RuntimeError(f"Failed to create optimization components for account {account}: {str(e)}")
+
+        # Create sub-objectives
+        account_factor_objective = sum(
+            components['objectives']['factor']
+            for components in account_components.values()
+        )
+        account_turnover_objective = sum(
+            components['objectives']['turnover']
+            for components in account_components.values()
+        )
+        account_complexity_objective = sum(
+            components['objectives']['complexity']
+            for components in account_components.values()
+        )
+
+        # Create portfolio-level factor objective
+        portfolio_factor_allocations = sum(
+            components['factor_allocations']
+            for components in account_components.values()
+        )
+        portfolio_factor_objective = cp.sum_squares(
+            portfolio_factor_allocations - target_factor_allocations.to_numpy()
+        )
+
+        # Combine objectives with penalties
+        objective = cp.Minimize(
+            portfolio_factor_objective +
+            account_align_penalty * account_factor_objective +
+            turnover_penalty * account_turnover_objective +
+            complexity_penalty * account_complexity_objective
+        )
+
+        # Combine all account constraints
+        constraints = []
+        for components in account_components.values():
+            constraints.extend(components['constraints'])
+
+        # Add portfolio-level constraint: sum of all allocations equals 100%
+        portfolio_sum = sum(
+            cp.sum(components['variables']['x'])
+            for components in account_components.values()
+        )
+        constraints.append(portfolio_sum == 1.0)
+
+        # Create and solve the optimization problem
+        problem = cp.Problem(objective, constraints)
+        try:
+            problem.solve(solver=cp.SCIP, verbose=verbose)
+        except Exception as e:
+            raise RuntimeError(f"Optimization failed: {str(e)}")
+
+        if problem.status != 'optimal':
+            raise RuntimeError(f"Optimization failed with status: {problem.status}")
+
+        # Extract results and create DataFrames
+
+        # Sum allocations across accounts using pandas concat
+        account_allocations = pd.concat([
+            pd.Series(components['variables']['x'].value.flatten(), index=F.columns)
+            for components in account_components.values()
+        ], axis=1, keys=account_components.keys())
+
+        if verbose:
+            print("\nAccount allocations:")
+            # Add a totals row and column properly
+            with_totals = account_allocations.copy()
+            # Add totals column
+            with_totals['Total'] = with_totals.sum(axis=1)
+            # Add totals row
+            with_totals.loc['Total'] = with_totals.sum()
+            print(with_totals.to_string(float_format=lambda x: f"{x:.2%}"))
+
+        # Sum account allocations (columns) to get portfolio allocations
+        new_allocations = account_allocations.sum(axis=1)
+
+        # Create ticker results DataFrame aligned with canonical matrix
+        ticker_results = pd.DataFrame(index=F.columns)
+        ticker_results['Original Allocation'] = pd.Series(
+            self.getMetrics('Ticker', portfolio_allocation=True)['Allocation']
+        ).reindex(index=F.columns, fill_value=0.0)
+        ticker_results['New Allocation'] = new_allocations
+        ticker_results['Allocation Diff'] = ticker_results['New Allocation'] - ticker_results['Original Allocation']
+
+        # Create factor results DataFrame aligned with canonical matrix
+        factor_results = pd.DataFrame(index=F.index)
+        factor_results['Original Allocation'] = pd.Series(
+            self.getMetrics('Factor')['Allocation']
+        ).reindex(index=F.index, fill_value=0.0)
+        factor_results['New Allocation'] = F @ new_allocations
+        factor_results['Target Allocation'] = target_factor_allocations
+        factor_results['Allocation Diff'] = factor_results['New Allocation'] - factor_results['Target Allocation']
+
+        if verbose:
+            print("\nOptimization complete")
+            print(f"Objective value: {problem.value:.6f}")
+            print(f"Status: {problem.status}")
+
+        return ticker_results, factor_results
