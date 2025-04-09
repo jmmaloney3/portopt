@@ -232,7 +232,7 @@ class RebalanceMixin:
 
         return ticker_results, factor_results
 
-    def getCanonicalFactorWeightsMatrix(self, verbose: bool = False) -> pd.DataFrame:
+    def _create_factor_weights_matrix(self, verbose: bool = False) -> pd.DataFrame:
         """Create a factor weights matrix with canonically ordered rows (factors)
            and columns (tickers).
 
@@ -253,7 +253,7 @@ class RebalanceMixin:
             AssertionError: If factors or tickers are not in lexicographical order
         """
         if verbose:
-            print("\nCreating canonical factor weights matrix...")
+            print("\n==> _create_factor_weights_matrix()")
 
         # Get raw factor weights
         factor_weights = self.getFactorWeights()
@@ -263,8 +263,8 @@ class RebalanceMixin:
         tickers = sorted(factor_weights.index.get_level_values('Ticker').unique())
 
         if verbose:
-            print(f"Number of factors: {len(factors)}")
-            print(f"Number of tickers: {len(tickers)}")
+            print(f" - Number of factors: {len(factors)}")
+            print(f" - Number of tickers: {len(tickers)}")
 
         # Create pivot table with canonical ordering
         F = pd.pivot_table(
@@ -287,8 +287,9 @@ class RebalanceMixin:
 
         if verbose:
             print("\nCanonical factor weights matrix F:")
-            print(f"Shape: {F.shape}")
+            print(f" - Shape: {F.shape}")
             self._write_weights(F)
+            print("\n<== _create_factor_weights_matrix()")
 
         return F
 
@@ -309,6 +310,9 @@ class RebalanceMixin:
         Raises:
             AssertionError: If variable ordering doesn't match canonical matrix columns
         """
+        if verbose:
+            print("\n==> _create_variable_vectors()")
+
         # Get tickers from canonical matrix columns
         tickers = canonical_matrix.columns
 
@@ -336,12 +340,22 @@ class RebalanceMixin:
         }
 
         if verbose:
-            print("\nCreated variable vectors:")
-            print(f"Number of variables: {len(tickers)}")
-            print("\nAllocation variables (x):")
-            print([var.name() for var in x_vars])
-            print("\nSelection variables (z):")
-            print([var.name() for var in z_vars])
+            # Create a DataFrame with two columns for allocation and selection variables
+            variable_df = pd.DataFrame({
+                'Allocation Variables (x)': [var.name() for var in x_vars],
+                'Selection Variables (z)': [var.name() for var in z_vars]
+            })
+
+            # Define column formats for write_table
+            column_formats = {
+                'Allocation Variables (x)': {'width': 30},
+                'Selection Variables (z)': {'width': 30}
+            }
+
+            # Print the table using write_table
+            print("\nVariables:")
+            write_table(variable_df, columns=column_formats)
+            print("\n<== _create_variable_vectors()")
 
         return variables
 
@@ -375,9 +389,7 @@ class RebalanceMixin:
             AssertionError: If resulting series is not aligned with canonical matrix
         """
         if verbose:
-            print("\nCreating target factor vector...")
-            print(f"Original target allocations shape: {target_allocations.shape}")
-            self._write_weights(target_allocations, "Original target allocations:")
+            print("\n==> _create_target_factor_allocations_vector()")
 
         # Validate original allocations sum to 100%
         total_allocation = target_allocations.sum()
@@ -412,8 +424,9 @@ class RebalanceMixin:
             account_proportion = account_metrics.loc[account, 'Allocation']
 
             if verbose:
-                print(f"\nScaling target allocations for account: {account}")
-                print(f"Account proportion of portfolio: {account_proportion:.2%}")
+                print(f"\nScaling target allocations")
+                print(f" - Account: {account}")
+                print(f" - Account proportion of portfolio: {account_proportion:.2%}")
 
             # Scale all allocations by account proportion
             result *= account_proportion
@@ -433,14 +446,30 @@ class RebalanceMixin:
             "Result factors not in same order as canonical matrix"
 
         if verbose:
-            print(f"\nResulting target allocations shape: {result.shape}")
-            self._write_weights(result, "Resulting target allocations:")
+            # Identify factors added from the canonical matrix
+            added_factors = set(canonical_factors) - set(target_allocations.index)
 
-            # Show added factors
-            added_factors = set(result.index) - set(target_allocations.index)
-            if added_factors:
-                print("\nFactors added with zero allocation:")
-                print(added_factors)
+            # Create DataFrame to display allocations
+            allocation_df = pd.DataFrame({
+                'Factor': result.index,
+                'Orig Alloc': target_allocations.reindex(result.index, fill_value=np.nan),
+                'New Alloc': result,
+                'Diff': result - target_allocations.reindex(result.index, fill_value=np.nan),
+            })
+            allocation_df.set_index('Factor', inplace=True)
+
+            # Define column formats for write_table
+            column_formats = {
+                'Factor': {'width': 30},
+                'Orig Alloc': {'width': 10, 'type': '%', 'decimal': 2},
+                'New Alloc': {'width': 10, 'type': '%', 'decimal': 2},
+                'Diff': {'width': 10, 'type': '%', 'decimal': 2},
+            }
+
+            print("\nTarget Allocation Changes:")
+            write_table(allocation_df, columns=column_formats)
+
+            print("\n<== _create_target_factor_allocations_vector()")
 
         return result
 
@@ -477,7 +506,8 @@ class RebalanceMixin:
             ValueError: If account is not found in portfolio
         """
         if verbose:
-            print(f"\nCreating optimization components for account: {account}")
+            print(f"\n==> _create_account_optimization_components()")
+            print(f" - Account: {account}")
 
         # Verify account exists
         account_tickers = self.getAccountTickers()
@@ -499,7 +529,7 @@ class RebalanceMixin:
             print(f"Current ticker allocations sum: {current_ticker_allocations.sum():.2%}")
 
         # Get canonical factor weights matrix
-        F = self.getCanonicalFactorWeightsMatrix(verbose=verbose)
+        F = self._create_factor_weights_matrix(verbose=verbose)
 
         # Create target allocations vector aligned with canonical matrix
         # - this is the target allocation for each factor in the context of the
@@ -526,7 +556,7 @@ class RebalanceMixin:
         account_factor_allocations = F.to_numpy() @ variables['x']
 
         if verbose:
-            print("\nCreating objective components...")
+            print("\nCreating objectives...")
 
         # Create objective components
         objectives = {
@@ -539,7 +569,18 @@ class RebalanceMixin:
         }
 
         if verbose:
-            print("\nCreating constraints...")
+            print(f"\nFactor objective for account {account}:")
+            self._write_objective(objectives['factor'], target_factor_allocations=target_vector)
+
+            # For turnover objective, just print the expression
+            print(f"\nTurnover objective for account {account}:")
+            print(" - Minimize difference between current and new ticker allocations")
+            # - this verbose output does not yet work
+            # self._write_turnover_objective(objectives['turnover'], current_allocations=current_ticker_allocations)
+
+            # For complexity objective, just print the expression
+            print(f"\nComplexity objective for account {account}:")
+            print(" - Minimize number of funds used")
 
         # Get account's current allocation as percentage of total portfolio
         account_metrics = self.getMetrics('Account', portfolio_allocation=True)
@@ -557,6 +598,7 @@ class RebalanceMixin:
         if verbose:
             print(f"\nAccount constraints:")
             print(f"- Sum of allocations = {account_proportion:.2%} (account's portfolio proportion)")
+            print(f"<== _create_account_optimization_components()")
 
         return {
             'variables': variables,
@@ -607,7 +649,7 @@ class RebalanceMixin:
             self._write_weights(target_factor_allocations, "Input target allocations:")
 
         # Get canonical factor weights matrix (will be used for all accounts)
-        F = self.getCanonicalFactorWeightsMatrix(verbose=verbose)
+        F = self._create_factor_weights_matrix(verbose=verbose)
 
         # Align target allocations with canonical matrix
         target_factor_allocations = self._create_target_factor_allocations_vector(
@@ -668,6 +710,13 @@ class RebalanceMixin:
         portfolio_factor_objective = cp.sum_squares(
             portfolio_factor_allocations - target_factor_allocations.to_numpy()
         )
+
+        if verbose:
+            self._write_objective(
+                portfolio_factor_objective,
+                target_factor_allocations=target_factor_allocations,
+                title="Portfolio-level factor objective:"
+            )
 
         # Combine objectives with penalties
         objective = cp.Minimize(
@@ -753,7 +802,11 @@ class RebalanceMixin:
             title: Optional title to display above the table
         """
         if title:
-            print(f"\n{title}")
+            print(f"\n{title}:")
+        else:
+            print("\nWeights Matrix:")
+
+        print(f" - Shape: {weights.shape}")
 
         # Create column formats dictionary
         column_formats = {
@@ -771,3 +824,107 @@ class RebalanceMixin:
 
         # Write the formatted table
         write_table(weights, columns=column_formats)
+
+    def _write_objective(self, objective: cp.atoms.quad_over_lin, target_factor_allocations: pd.Series = None, title: str = None):
+        """Display components of a sum_squares objective function in a table.
+
+        Args:
+            objective: CVXPY sum_squares expression (typically F @ x - target)
+            target_factor_allocations: Series containing target allocations with factor names as index
+            title: Optional title to display above the table
+
+        Example output for F @ x - target:
+        Factor                           AAPL     MSFT     GOOGL    Target
+        US Large Cap Growth             0.95%    0.92%    0.88%    25.00%
+        Technology                      0.85%    0.90%    0.75%    30.00%
+        Momentum                        0.45%    0.38%    0.42%    15.00%
+        """
+        if title:
+            print(f"\n{title}")
+
+        # Extract the expression inside sum_squares
+        expr = objective.args[0]  # This is the AddExpression (F @ x - target)
+
+        # Get components from matrix multiplication
+        matrix_mult = expr.args[0].args[0]
+        F = matrix_mult.args[0]  # Get F matrix
+        x = matrix_mult.args[1]  # Get x vector (Vstack of variables)
+
+        # Extract variable names from the Vstack
+        var_names = [v.name().split('_')[-1] for v in x.args]
+
+        # Create DataFrame with factor weights, using factor names from target allocations
+        df = pd.DataFrame(
+            F.value,
+            columns=var_names,
+            index=target_factor_allocations.index
+        )
+        df.index.name = 'Factor'
+
+        # Second argument contains -target (broadcast_to)
+        target = -expr.args[1].args[0]  # Get target vector and negate it
+        df['Target'] = target.value
+
+        # Create column formats
+        column_formats = {
+            'Factor': {'width': 30},  # Index column
+            **{col: {'width': 8, 'type': '%', 'decimal': 2}
+               for col in df.columns}  # All value columns as percentages
+        }
+
+        # Write the table
+        write_table(df, columns=column_formats)
+
+    def _write_turnover_objective(self, objective: cp.atoms.quad_over_lin, current_allocations: pd.Series, title: str = None):
+        """Display components of a turnover objective function in a table.
+
+        NOTE: This method is a work in progress and is not yet ready for use.
+
+        Args:
+            objective: CVXPY sum_squares expression (typically x - current_allocations)
+            current_allocations: Series containing current allocations with ticker names as index
+            title: Optional title to display above the table
+
+        Example output:
+        Ticker    Variable Ticker    Current Allocation
+        ACWX     ACWX              18.54%
+        AMAXX    AMAXX             25.83%
+        FSMDX    FSMDX              2.92%
+        """
+        if title:
+            print(f"\n{title}")
+
+        # Extract the expression inside sum_squares
+        expr = objective.args[0]  # This is the AddExpression
+
+        # Get components
+        x = expr.args[0].args[0]  # Variable vector (Vstack inside broadcast_to)
+        current = expr.args[1].args[0]  # Current allocations vector (NegExpression inside broadcast_to)
+
+        # Extract variable tickers from the Vstack
+        var_tickers = [v.name().split('_')[-1] for v in x.args]
+
+        # Get current values (negated because it's a NegExpression)
+        current_values = -current.value
+
+        # Validate length matches
+        if len(current_values) != len(current_allocations):
+            raise ValueError(f"Mismatch between number of current values ({len(current_values)}) "
+                           f"and current allocations ({len(current_allocations)})")
+
+        # Create DataFrame showing alignment
+        df = pd.DataFrame({
+            'Variable Ticker': var_tickers,
+            'Current Allocation': current_values
+        }, index=current_allocations.index)
+        df.index.name = 'Ticker'
+
+        # Define column formats
+        column_formats = {
+            'Ticker': {'width': 20, 'type': 's'},  # Index column
+            'Variable Ticker': {'width': 20, 'type': 's'},
+            'Current Allocation': {'width': 15, 'type': '%', 'decimal': 2}
+        }
+
+        # Write the table
+        write_table(df, columns=column_formats)
