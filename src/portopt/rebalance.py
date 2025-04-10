@@ -19,7 +19,7 @@ import pandas as pd
 import numpy as np
 import cvxpy as cp
 from typing import Dict, Union
-from .utils import write_table
+from .utils import write_table, write_weights
 
 class RebalanceMixin:
     """
@@ -1017,37 +1017,6 @@ class RebalanceMixin:
 
         return result
 
-def write_weights(weights: Union[pd.DataFrame, pd.Series], title: str = None):
-    """Display weights (factor matrix or allocation vector) in a formatted table.
-
-    Args:
-        weights: Either a factor weights DataFrame or an allocation Series
-        title: Optional title to display above the table
-    """
-    if title:
-        print(f"\n{title}:")
-    else:
-        print("\nWeights Matrix:")
-
-    print(f" - Shape: {weights.shape}")
-
-    # Create column formats dictionary
-    column_formats = {
-        'Factor': {'width': 30}  # Format for index column
-    }
-
-    # Get columns to format (either DataFrame columns or Series name)
-    value_columns = weights.columns if isinstance(weights, pd.DataFrame) else [weights.name]
-
-    # Add formats for all value columns
-    column_formats.update({
-        col: {'width': 8, 'type': '%', 'decimal': 2}
-        for col in value_columns
-    })
-
-    # Write the formatted table
-    write_table(weights, columns=column_formats)
-
 class PortfolioRebalancer:
     """
     Helper class for managing portfolio rebalancing optimization components.
@@ -1098,8 +1067,7 @@ class PortfolioRebalancer:
         self.min_ticker_alloc = min_ticker_alloc
 
         if verbose:
-            print("\nTarget Factor Allocations:")
-            write_weights(target_factor_allocations)
+            write_weights(target_factor_allocations, title="Target Factor Allocations")
             print(f"\nMinimum Ticker Allocation: {min_ticker_alloc:.2%}")
 
         # Create master factor weights matrix:
@@ -1131,8 +1099,7 @@ class PortfolioRebalancer:
         )
 
         if verbose:
-            print("\nFactor Weights Matrix:")
-            write_weights(self.factor_weights)
+            write_weights(self.factor_weights, title="Factor Weights Matrix")
 
         # Validate matrix shape
         assert self.factor_weights.shape[0] == len(target_factor_allocations), \

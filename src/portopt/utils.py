@@ -161,6 +161,37 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
                 data_strs.append(formats[col]['data_fmt'].format(str(row[col])))
         print(' '.join(data_strs), file=stream)
 
+def write_weights(weights: Union[pd.DataFrame, pd.Series], title: str = None):
+    """Display weights (factor matrix or allocation vector) in a formatted table.
+
+    Args:
+        weights: Either a factor weights DataFrame or an allocation Series
+        title: Optional title to display above the table
+    """
+    if title:
+        print(f"\n{title}:")
+    else:
+        print("\nWeights Matrix:")
+
+    print(f" - Shape: {weights.shape}")
+
+    # Create column formats dictionary
+    column_formats = {
+        'Factor': {'width': 30}  # Format for index column
+    }
+
+    # Get columns to format (either DataFrame columns or Series name)
+    value_columns = weights.columns if isinstance(weights, pd.DataFrame) else [weights.name]
+
+    # Add formats for all value columns
+    column_formats.update({
+        col: {'width': 8, 'type': '%', 'decimal': 2}
+        for col in value_columns
+    })
+
+    # Write the formatted table
+    write_table(weights, columns=column_formats)
+
 def test_stationarity(df):
     """
     Use ADF and KPSS tests to determine if each column in the dataframe
