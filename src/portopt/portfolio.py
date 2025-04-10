@@ -381,20 +381,43 @@ class Portfolio(RebalanceMixin):
             # Ensure connection is closed
             con.close()
 
-    def getAccountTickers(self, verbose: bool = False) -> pd.DataFrame:
+    def getAccountTickers(self, accounts: list[str] | None = None, verbose: bool = False) -> pd.DataFrame:
         """
         Get mapping of valid Account-Ticker pairs.
 
         Args:
+            accounts: Optional list of accounts to include. If None, includes all accounts.
             verbose: If True, print status messages. Default is False.
 
         Returns:
             DataFrame with hierarchical index [Account, Ticker]
+
+        Example:
+            # Get all account-ticker pairs
+            all_pairs = portfolio.getAccountTickers()
+
+            # Get pairs for specific accounts
+            ira_pairs = portfolio.getAccountTickers(accounts=['IRA', 'Roth IRA'])
         """
         # Get holdings to extract Account-Ticker pairs
         holdings = self.getHoldings(verbose=verbose)
 
+        # Filter by accounts if specified
+        if accounts is not None:
+            # Convert single account to list if needed
+            if isinstance(accounts, str):
+                accounts = [accounts]
+
+            # Filter holdings to only include specified accounts
+            holdings = holdings[holdings.index.get_level_values('Account').isin(accounts)]
+
+            if verbose:
+                print(f"Filtered to {len(accounts)} accounts: {', '.join(accounts)}")
+
         # Create DataFrame with Account-Ticker pairs from holdings index
         account_tickers = pd.DataFrame(index=holdings.index)
+
+        if verbose:
+            print(f"Found {len(account_tickers)} account-ticker pairs")
 
         return account_tickers
