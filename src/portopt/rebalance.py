@@ -1016,3 +1016,129 @@ class RebalanceMixin:
             print("\n<== _create_current_allocations_vector()")
 
         return result
+
+def write_weights(weights: Union[pd.DataFrame, pd.Series], title: str = None):
+    """Display weights (factor matrix or allocation vector) in a formatted table.
+
+    Args:
+        weights: Either a factor weights DataFrame or an allocation Series
+        title: Optional title to display above the table
+    """
+    if title:
+        print(f"\n{title}:")
+    else:
+        print("\nWeights Matrix:")
+
+    print(f" - Shape: {weights.shape}")
+
+    # Create column formats dictionary
+    column_formats = {
+        'Factor': {'width': 30}  # Format for index column
+    }
+
+    # Get columns to format (either DataFrame columns or Series name)
+    value_columns = weights.columns if isinstance(weights, pd.DataFrame) else [weights.name]
+
+    # Add formats for all value columns
+    column_formats.update({
+        col: {'width': 8, 'type': '%', 'decimal': 2}
+        for col in value_columns
+    })
+
+    # Write the formatted table
+    write_table(weights, columns=column_formats)
+
+class PortfolioRebalancer:
+    """
+    Helper class for managing portfolio rebalancing optimization components.
+
+    This class maintains the portfolio-level components needed for rebalancing,
+    including the factor weights matrix and target allocations. It ensures
+    consistent ordering of factors and tickers across all operations.
+
+    Attributes:
+        target_factor_allocations: Series containing target factor allocations
+        factor_weights: DataFrame containing factor weights for all tickers
+        min_ticker_alloc: Minimum allocation for any ticker (default: 0.0)
+    """
+
+    def __init__(
+        self,
+        target_factor_allocations: pd.Series,
+        factor_weights: pd.DataFrame,
+        min_ticker_alloc: float = 0.0,
+        verbose: bool = False
+    ):
+        """
+        Initialize the PortfolioRebalancer.
+
+        Args:
+            target_factor_allocations: Series indexed by Factor containing target
+                allocation percentages - defines the canonical order of factors
+            factor_weights: DataFrame with hierarchical index [Ticker, Factor]
+                containing factor weights for each ticker
+            min_ticker_alloc: Minimum non-zero allocation for any fund (default: 0.0)
+            verbose: If True, print detailed information about initialization
+
+        Raises:
+            ValueError: If target allocations don't sum to 100%
+            ValueError: If any target factors are missing from factor weights
+        """
+        if verbose:
+            print("\n==> PortfolioRebalancer.__init__()")
+
+        # Validate target allocations sum to 100%
+        if not np.isclose(target_factor_allocations.sum(), 1.0, rtol=1e-5):
+            raise ValueError(
+                f"Target factor allocations must sum to 100%, got {target_factor_allocations.sum():.2%}"
+            )
+
+        # Store inputs
+        self.target_factor_allocations = target_factor_allocations
+        self.min_ticker_alloc = min_ticker_alloc
+
+        if verbose:
+            print("\nTarget Factor Allocations:")
+            write_weights(target_factor_allocations)
+            print(f"\nMinimum Ticker Allocation: {min_ticker_alloc:.2%}")
+
+        # Create master factor weights matrix:
+        # 1. Pivot factor weights to get matrix form (factors x tickers)
+        # 2. Reindex to match target factor order and include all tickers
+        # 3. Fill missing values with 0
+        self.factor_weights = pd.pivot_table(
+            factor_weights,
+            values='Weight',
+            index='Factor',
+            columns='Ticker',
+            fill_value=0
+        )
+
+        # Verify all target factors exist in factor weights
+        missing_factors = set(target_factor_allocations.index) - set(self.factor_weights.index)
+        if missing_factors:
+            raise ValueError(
+                f"Target factors not found in factor weights: {sorted(missing_factors)}"
+            )
+
+        # Reindex to ensure:
+        # - rows (factors): match target_factor_allocations order exactly
+        # - columns (tickers): include all tickers from factor_weights
+        self.factor_weights = self.factor_weights.reindex(
+            index=target_factor_allocations.index,  # Use target factor order
+            columns=factor_weights.index.get_level_values('Ticker').unique(),
+            fill_value=0
+        )
+
+        if verbose:
+            print("\nFactor Weights Matrix:")
+            write_weights(self.factor_weights)
+
+        # Validate matrix shape
+        assert self.factor_weights.shape[0] == len(target_factor_allocations), \
+            "Factor weights matrix rows don't match target factor count"
+        assert self.factor_weights.shape[1] > 0, \
+            "Factor weights matrix has no tickers"
+
+        if verbose:
+            print("\n<== PortfolioRebalancer.__init__()")
