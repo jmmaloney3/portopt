@@ -232,41 +232,47 @@ class RebalanceMixin:
 
         return ticker_results, factor_results
 
-    def _create_factor_weights_matrix(self, verbose: bool = False) -> pd.DataFrame:
-        """Create a factor weights matrix with canonically ordered rows (factors)
-           and columns (tickers).
+    def _create_factor_weights_matrix(
+        self,
+        factors: pd.Index,
+        tickers: Union[list, pd.Index],
+        verbose: bool = False
+    ) -> pd.DataFrame:
+        """Create a factor weights matrix for a specific account using reference lists.
 
         The matrix will:
-        1. Include all possible factors and tickers from factor weights
-        2. Sort factors (rows) and tickers (columns) lexicographically
+        1. Include only the specified factors and tickers
+        2. Sort factors and tickers according to the reference lists
         3. Fill any missing values with 0
-        4. Include 'Factor' as a named index (to facillitate debugging), when converting
-           the matrix to a NumPy array, the index will be dropped
+        4. Include 'Factor' as a named index
 
         Args:
+            factors: Index of factors to include in canonical order (must be pre-sorted)
+            tickers: List or Index of tickers to include in canonical order (must be pre-sorted)
             verbose: If True, print information about the matrix construction
 
         Returns:
-            DataFrame with factors as rows (indexed by 'Factor') and tickers as columns, sorted in canonical order
+            DataFrame with factors as rows (indexed by 'Factor') and tickers as columns,
+            ordered according to the reference lists
 
         Raises:
-            AssertionError: If factors or tickers are not in lexicographical order
+            AssertionError: If factors or tickers are not in the specified order
         """
         if verbose:
             print("\n==> _create_factor_weights_matrix()")
-
-        # Get raw factor weights
-        factor_weights = self.getFactorWeights()
-
-        # Get unique factors and tickers in sorted order
-        factors = sorted(factor_weights.index.get_level_values('Factor').unique())
-        tickers = sorted(factor_weights.index.get_level_values('Ticker').unique())
 
         if verbose:
             print(f" - Number of factors: {len(factors)}")
             print(f" - Number of tickers: {len(tickers)}")
 
-        # Create pivot table with canonical ordering
+        # Convert tickers to Index if it's a list
+        if isinstance(tickers, list):
+            tickers = pd.Index(tickers)
+
+        # Get raw factor weights
+        factor_weights = self.getFactorWeights()
+
+        # Create pivot table with specified ordering
         F = pd.pivot_table(
             factor_weights,
             values='Weight',
@@ -275,29 +281,34 @@ class RebalanceMixin:
             fill_value=0
         )
 
-        # Reindex to ensure all factors and tickers are included in sorted order
+        # Reindex to include only specified factors and tickers in specified order
         F = F.reindex(index=factors, columns=tickers, fill_value=0)
 
         # Explicitly name the index
         F.index.name = 'Factor'
 
         # Validate ordering
-        assert list(F.index) == sorted(F.index), "Factors are not in lexicographical order"
-        assert list(F.columns) == sorted(F.columns), "Tickers are not in lexicographical order"
+        assert F.index.equals(factors), "Factors are not in specified order"
+        assert F.columns.equals(tickers), "Tickers are not in specified order"
 
         if verbose:
-            print("\nCanonical factor weights matrix F:")
+            print("\nAccount-specific factor weights matrix F:")
             print(f" - Shape: {F.shape}")
             self._write_weights(F)
             print("\n<== _create_factor_weights_matrix()")
 
         return F
 
-    def _create_variable_vectors(self, canonical_matrix: pd.DataFrame, account: str = None, verbose: bool = False) -> Dict[str, cp.Variable]:
-        """Create variable vectors compatible with the canonical factor weights matrix.
+    def _create_variable_vectors(
+        self,
+        tickers: list,
+        account: str = None,
+        verbose: bool = False
+    ) -> Dict[str, cp.Variable]:
+        """Create variable vectors for a specific account.
 
         Args:
-            canonical_matrix: Factor weights matrix from getCanonicalFactorWeightsMatrix()
+            tickers: List of tickers in canonical order
             account: Optional account name to include in variable names
             verbose: If True, print information about the variables created
 
@@ -305,16 +316,13 @@ class RebalanceMixin:
             Dictionary containing:
                 'x': Vstack of allocation variables
                 'z': Vstack of binary selection variables
-            Variables are ordered to match columns of canonical_matrix
+            Variables are ordered to match the reference ticker list
 
         Raises:
-            AssertionError: If variable ordering doesn't match canonical matrix columns
+            AssertionError: If variable ordering doesn't match reference ticker list
         """
         if verbose:
             print("\n==> _create_variable_vectors()")
-
-        # Get tickers from canonical matrix columns
-        tickers = canonical_matrix.columns
 
         # Create variable name pattern based on whether account is provided
         if account:
@@ -328,10 +336,10 @@ class RebalanceMixin:
         x_vars = [cp.Variable(name=x_pattern(ticker)) for ticker in tickers]
         z_vars = [cp.Variable(boolean=True, name=z_pattern(ticker)) for ticker in tickers]
 
-        # Validate variable alignment with canonical matrix
+        # Validate variable alignment with reference ticker list
         assert all(x_vars[i].name().split('_')[-1] == ticker
-                  for i, ticker in enumerate(canonical_matrix.columns)), \
-            "Variable order does not match canonical matrix columns"
+                  for i, ticker in enumerate(tickers)), \
+            "Variable order does not match reference ticker list"
 
         # Stack variables into vectors
         variables = {
@@ -362,31 +370,25 @@ class RebalanceMixin:
     def _create_target_factor_allocations_vector(
         self,
         target_allocations: pd.Series,
-        canonical_matrix: pd.DataFrame,
-        account: str = None,
+        account_proportion: float = 1.0,
         verbose: bool = False
     ) -> pd.Series:
-        """Create a target factor allocations vector compatible with the canonical
-           factor weights matrix and, when requested, scaled by the account's
-           proportion of the total portfolio.
+        """Create a target factor allocations vector aligned with the reference factor list.
 
         Args:
             target_allocations: Series indexed by Factor containing target allocation
                 percentages for the entire portfolio
-            canonical_matrix: Factor weights matrix from getCanonicalFactorWeightsMatrix()
-            account: If provided, scale target allocations by account's proportion
-                of portfolio
+            account_proportion: The proportion of the portfolio that the account represents
             verbose: If True, print information about the vector creation
 
         Returns:
-            Series indexed by Factor containing target allocations, aligned with canonical
-            matrix rows. If account is provided, values are scaled to represent that
-            account's portion of the total portfolio.
+            Series indexed by Factor containing target allocations, aligned with
+            reference factor list. Values are scaled to represent the account's
+            portion of the total portfolio.
 
         Raises:
             ValueError: If target allocations don't sum to 100%
-            ValueError: If target allocations contain factors not present in canonical matrix
-            AssertionError: If resulting series is not aligned with canonical matrix
+            AssertionError: If resulting series is not aligned with reference list
         """
         if verbose:
             print("\n==> _create_target_factor_allocations_vector()")
@@ -398,18 +400,10 @@ class RebalanceMixin:
                 f"Target allocations must sum to 100%, got {total_allocation:.2%}"
             )
 
-        # Check for extra factors in target allocations
-        extra_factors = set(target_allocations.index) - set(canonical_matrix.index)
-        if extra_factors:
-            raise ValueError(
-                f"Target allocations contain factors not present in canonical matrix: {extra_factors}"
-            )
-
-        # Create new series with all factors from canonical matrix
-        canonical_factors = canonical_matrix.index
+        # Create new series with all factors from reference list
         result = pd.Series(
             0.0, 
-            index=canonical_factors,
+            index=target_allocations.index,
             name=target_allocations.name  # Preserve original Series name
         )
         result.index.name = 'Factor'  # Set name for the index
@@ -417,15 +411,10 @@ class RebalanceMixin:
         # Fill in provided target allocations
         result.update(target_allocations)
 
-        # If account is provided, scale allocations by account's proportion of portfolio
-        if account is not None:
-            # Get account's current allocation as percentage of total portfolio
-            account_metrics = self.getMetrics('Account', portfolio_allocation=True)
-            account_proportion = account_metrics.loc[account, 'Allocation']
-
+        # Scale allocations by account proportion
+        if account_proportion != 1.0:
             if verbose:
                 print(f"\nScaling target allocations")
-                print(f" - Account: {account}")
                 print(f" - Account proportion of portfolio: {account_proportion:.2%}")
 
             # Scale all allocations by account proportion
@@ -433,28 +422,24 @@ class RebalanceMixin:
 
         # Validate resulting allocations sum appropriately
         total_allocation = result.sum()
-        expected_total = 1.0 if account is None else account_metrics.loc[account, 'Allocation']
-        if not np.isclose(total_allocation, expected_total, rtol=1e-5):
+        if not np.isclose(total_allocation, account_proportion, rtol=1e-5):
             raise ValueError(
-                f"Resulting allocations must sum to {expected_total:.2%}, got {total_allocation:.2%}"
+                f"Resulting allocations must sum to {account_proportion:.2%}, got {total_allocation:.2%}"
             )
 
-        # Validate alignment with canonical matrix
-        assert result.index.equals(canonical_matrix.index), \
-            "Result factors not aligned with canonical matrix"
-        assert list(result.index) == list(canonical_matrix.index), \
-            "Result factors not in same order as canonical matrix"
+        # Validate alignment with reference list
+        assert result.index.equals(target_allocations.index), \
+            "Result factors not aligned with reference list"
+        assert list(result.index) == list(target_allocations.index), \
+            "Result factors not in same order as reference list"
 
         if verbose:
-            # Identify factors added from the canonical matrix
-            added_factors = set(canonical_factors) - set(target_allocations.index)
-
             # Create DataFrame to display allocations
             allocation_df = pd.DataFrame({
                 'Factor': result.index,
-                'Orig Alloc': target_allocations.reindex(result.index, fill_value=np.nan),
+                'Orig Alloc': target_allocations,
                 'New Alloc': result,
-                'Diff': result - target_allocations.reindex(result.index, fill_value=np.nan),
+                'Diff': result - target_allocations,
             })
             allocation_df.set_index('Factor', inplace=True)
 
@@ -491,7 +476,7 @@ class RebalanceMixin:
         Args:
             account: Account identifier
             target_factor_allocations: Series indexed by Factor containing target
-                allocation percentages
+                allocation percentages - defines the canonical order of factors
             min_ticker_alloc: Minimum non-zero allocation for any fund
             verbose: If True, print optimization details
 
@@ -515,44 +500,44 @@ class RebalanceMixin:
             raise ValueError(f"Account '{account}' not found in portfolio. Available accounts: "
                             f"{account_tickers.index.get_level_values('Account').unique().tolist()}")
 
-        # Get current ticker allocations for this account
-        # - this is the current allocation of each ticker in the context of
-        #   the entire portfolio - not just the account
-        current_ticker_allocations = self.getMetrics('Ticker',
-                                                     filters={'Account': account},
-                                                     portfolio_allocation=True
-                                                     )['Allocation']
+        # Get account-specific tickers in canonical order
+        account_tickers = account_tickers[account_tickers.index.get_level_values('Account') == account]
+        account_tickers = account_tickers.index.get_level_values('Ticker').unique()
+        account_tickers = pd.Index(sorted(account_tickers))
 
-        if verbose:
-            print("\nCurrent ticker allocations:")
-            print(current_ticker_allocations)
-            print(f"Current ticker allocations sum: {current_ticker_allocations.sum():.2%}")
+        # Get current ticker allocations aligned with account tickers
+        current_ticker_allocations = self._create_current_allocations_vector(
+            account=account,
+            tickers=account_tickers,
+            verbose=verbose
+        )
 
-        # Get canonical factor weights matrix
-        F = self._create_factor_weights_matrix(verbose=verbose)
+        # Create account-specific factor weights matrix
+        F = self._create_factor_weights_matrix(
+            factors=target_factor_allocations.index,
+            tickers=account_tickers,
+            verbose=verbose
+        )
 
-        # Create target allocations vector aligned with canonical matrix
-        # - this is the target allocation for each factor in the context of the
-        #   entire portfolio - not just the account
-        target_vector = self._create_target_factor_allocations_vector(
+        # Get account's current allocation as percentage of total portfolio
+        account_metrics = self.getMetrics('Account', portfolio_allocation=True)
+        account_proportion = account_metrics.loc[account, 'Allocation']
+
+        # Create target allocations vector aligned with factors
+        target_factor_allocations = self._create_target_factor_allocations_vector(
             target_allocations=target_factor_allocations,
-            canonical_matrix=F,
-            account=account,
+            account_proportion=account_proportion,
             verbose=verbose
         )
 
-        # Create variable vectors aligned with canonical matrix
-        # - these variables represent the allocation percentages for each
-        #   ticker in the context of the entire portfolio - not just the
-        #   account
-        # - they will be optimized to achieve the target factor allocations
+        # Create variable vectors
         variables = self._create_variable_vectors(
-            canonical_matrix=F,
             account=account,
+            tickers=account_tickers,
             verbose=verbose
         )
 
-        # Calculate account's factor allocations using canonical matrix
+        # Calculate account's factor allocations using factor weights matrix
         account_factor_allocations = F.to_numpy() @ variables['x']
 
         if verbose:
@@ -561,7 +546,7 @@ class RebalanceMixin:
         # Create objective components
         objectives = {
             # factor objective: minimize difference between account factor allocations and target factor allocations
-            'factor': cp.sum_squares(account_factor_allocations - target_vector.to_numpy()),
+            'factor': cp.sum_squares(account_factor_allocations - target_factor_allocations.to_numpy()),
             # turnover objective: minimize difference between current and new ticker allocations
             'turnover': cp.sum_squares(variables['x'] - current_ticker_allocations.to_numpy()),
             # complexity objective: minimize number of funds used
@@ -570,7 +555,7 @@ class RebalanceMixin:
 
         if verbose:
             print(f"\nFactor objective for account {account}:")
-            self._write_objective(objectives['factor'], target_factor_allocations=target_vector)
+            self._write_objective(objectives['factor'], target_factor_allocations=target_factor_allocations)
 
             # For turnover objective, just print the expression
             print(f"\nTurnover objective for account {account}:")
@@ -581,10 +566,6 @@ class RebalanceMixin:
             # For complexity objective, just print the expression
             print(f"\nComplexity objective for account {account}:")
             print(" - Minimize number of funds used")
-
-        # Get account's current allocation as percentage of total portfolio
-        account_metrics = self.getMetrics('Account', portfolio_allocation=True)
-        account_proportion = account_metrics.loc[account, 'Allocation']
 
         # Create the constraints list
         constraints = [
@@ -624,7 +605,7 @@ class RebalanceMixin:
 
         Args:
             target_factor_allocations: Series indexed by Factor containing target
-                allocation percentages
+                allocation percentages - defines the canonical order of factors
             turnover_penalty: Weight for penalizing changes from current allocations
                 (default: 1.0)
             complexity_penalty: Weight for penalizing the number of funds used
@@ -648,31 +629,10 @@ class RebalanceMixin:
         if verbose:
             self._write_weights(target_factor_allocations, "Input target allocations:")
 
-        # Get canonical factor weights matrix (will be used for all accounts)
-        F = self._create_factor_weights_matrix(verbose=verbose)
-
-        # Align target allocations with canonical matrix
-        target_factor_allocations = self._create_target_factor_allocations_vector(
-            target_allocations=target_factor_allocations,
-            canonical_matrix=F,
-            account=None,  # No account scaling needed here
-            verbose=verbose
-        )
-
         # Get list of accounts
         accounts = self.getAccountTickers().index.get_level_values('Account').unique()
         if verbose:
             print(f"\nOptimizing allocations for {len(accounts)} accounts")
-
-        # Find tickers with non-zero allocations
-        # TODO: use this to simplify the optimization problem
-        active_tickers = self.getMetrics('Ticker')['Allocation']
-        active_tickers = active_tickers[active_tickers > 0].index
-
-        if verbose:
-            print("\nActive tickers:")
-            print(f"Found {len(active_tickers)} tickers with non-zero allocations")
-            print("\n".join(sorted(active_tickers)))
 
         # Create optimization components for each account
         account_components = {}
@@ -750,43 +710,100 @@ class RebalanceMixin:
 
         # Extract results and create DataFrames
 
-        # Sum allocations across accounts using pandas concat
-        account_allocations = pd.concat([
-            pd.Series(components['variables']['x'].value.flatten(), index=F.columns)
-            for components in account_components.values()
-        ], axis=1, keys=account_components.keys())
+        # Get original ticker allocations by account
+        original_ticker_allocations = self.getMetrics(
+            'Account', 'Ticker',
+            metrics=['Allocation'],
+            portfolio_allocation=True
+        )['Allocation']
+
+        # Get original factor allocations by account
+        original_factor_allocations = self.getMetrics(
+            'Account', 'Factor',
+            metrics=['Allocation'],
+            portfolio_allocation=True
+        )['Allocation']
+
+        # Create ticker results DataFrame
+        ticker_results = []
+        for account, components in account_components.items():
+            # Get account-specific tickers in canonical order
+            account_tickers = components['variables']['x'].name().split('_')[1:]
+
+            # Get original allocations for this account's tickers
+            # - reindex with account_tickers so that the original allocations
+            #   are in the same order as the variables
+            account_original_allocations = original_ticker_allocations.loc[account].reindex(account_tickers, fill_value=0.0)
+
+            # Get new allocations from optimizer
+            # - account_tickers were extracted from the variable names and therefore
+            #   the tickers and variables values are in the same order
+            account_new_allocations = pd.Series(
+                components['variables']['x'].value.flatten(),
+                index=account_tickers
+            )
+
+            # Create DataFrame for this account's tickers
+            account_df = pd.DataFrame({
+                'Account': account,
+                'Ticker': account_tickers,
+                'Original Allocation': account_original_allocations,
+                'New Allocation': account_new_allocations,
+            })
+            ticker_results.append(account_df)
+
+        # Combine all account ticker results
+        ticker_results = pd.concat(ticker_results, ignore_index=True)
+        ticker_results['Difference'] = ticker_results['New Allocation'] - ticker_results['Original Allocation']
+
+        # Create factor results DataFrame
+        factor_results = []
+        for account, components in account_components.items():
+            # Get original allocations for this account's factors
+            account_original_allocations = original_factor_allocations.loc[account].reindex(
+                target_factor_allocations.index,
+                fill_value=0.0
+            )
+
+            # Get new allocations from optimizer
+            # - target_factor_allocations.index was used to create the factor weights matrix
+            #   that was used to create the factor allocations, therefore the factor allocations
+            #   are in the same order as the target_factor_allocations index
+            account_new_allocations = pd.Series(
+                components['factor_allocations'].value.flatten(),
+                index=target_factor_allocations.index
+            )
+
+            # Create DataFrame for this account's factors
+            account_df = pd.DataFrame({
+                'Account': account,
+                'Factor': target_factor_allocations.index,
+                'Original Allocation': account_original_allocations,
+                'New Allocation': account_new_allocations,
+            })
+            factor_results.append(account_df)
+
+        # Combine all account factor results
+        factor_results = pd.concat(factor_results, ignore_index=True)
+        factor_results['Difference'] = factor_results['New Allocation'] - factor_results['Original Allocation']
 
         if verbose:
-            print("\nAccount allocations:")
-            # Add a totals row and column properly
-            with_totals = account_allocations.copy()
-            # Add totals column
-            with_totals['Total'] = with_totals.sum(axis=1)
-            # Add totals row
-            with_totals.loc['Total'] = with_totals.sum()
-            print(with_totals.to_string(float_format=lambda x: f"{x:.2%}"))
+            # Define column formats for both DataFrames
+            column_formats = {
+                'Account': {'width': 20},
+                'Ticker': {'width': 20},
+                'Factor': {'width': 30},
+                'Original Allocation': {'width': 15, 'type': '%', 'decimal': 2},
+                'New Allocation': {'width': 15, 'type': '%', 'decimal': 2},
+                'Difference': {'width': 15, 'type': '%', 'decimal': 2}
+            }
 
-        # Sum account allocations (columns) to get portfolio allocations
-        new_allocations = account_allocations.sum(axis=1)
+            print("\nTicker Allocations:")
+            write_table(ticker_results, columns=column_formats)
 
-        # Create ticker results DataFrame aligned with canonical matrix
-        ticker_results = pd.DataFrame(index=F.columns)
-        ticker_results['Original Allocation'] = pd.Series(
-            self.getMetrics('Ticker', portfolio_allocation=True)['Allocation']
-        ).reindex(index=F.columns, fill_value=0.0)
-        ticker_results['New Allocation'] = new_allocations
-        ticker_results['Allocation Diff'] = ticker_results['New Allocation'] - ticker_results['Original Allocation']
+            print("\nFactor Allocations:")
+            write_table(factor_results, columns=column_formats)
 
-        # Create factor results DataFrame aligned with canonical matrix
-        factor_results = pd.DataFrame(index=F.index)
-        factor_results['Original Allocation'] = pd.Series(
-            self.getMetrics('Factor')['Allocation']
-        ).reindex(index=F.index, fill_value=0.0)
-        factor_results['New Allocation'] = F @ new_allocations
-        factor_results['Target Allocation'] = target_factor_allocations
-        factor_results['Allocation Diff'] = factor_results['New Allocation'] - factor_results['Target Allocation']
-
-        if verbose:
             print("\nOptimization complete")
             print(f"Objective value: {problem.value:.6f}")
             print(f"Status: {problem.status}")
@@ -928,3 +945,74 @@ class RebalanceMixin:
 
         # Write the table
         write_table(df, columns=column_formats)
+
+    def _create_current_allocations_vector(
+        self,
+        account: str,
+        tickers: list,
+        verbose: bool = False
+    ) -> pd.Series:
+        """Create a current allocations vector aligned with the reference ticker list.
+
+        Args:
+            account: Account identifier
+            tickers: List of tickers in canonical order
+            verbose: If True, print information about the vector creation
+
+        Returns:
+            Series indexed by Ticker containing current allocations, aligned with
+            the reference ticker list. Missing tickers are filled with 0.
+
+        Raises:
+            ValueError: If account is not found in portfolio
+        """
+        if verbose:
+            print("\n==> _create_current_allocations_vector()")
+
+        # Verify account exists
+        account_tickers = self.getAccountTickers()
+        if account not in account_tickers.index.get_level_values('Account').unique():
+            raise ValueError(f"Account '{account}' not found in portfolio. Available accounts: "
+                            f"{account_tickers.index.get_level_values('Account').unique().tolist()}")
+
+        # Get current ticker allocations for this account
+        current_allocations = self.getMetrics('Ticker',
+                                            filters={'Account': account},
+                                            portfolio_allocation=True
+                                            )['Allocation']
+
+        # Create new series with all tickers from reference list
+        result = pd.Series(
+            0.0,
+            index=tickers,
+            name=current_allocations.name  # Preserve original Series name
+        )
+        result.index.name = 'Ticker'  # Set name for the index
+
+        # Fill in current allocations
+        result.update(current_allocations)
+
+        if verbose:
+            print("\nCurrent allocations:")
+            print(f" - Number of tickers: {len(tickers)}")
+            print(f" - Number of non-zero allocations: {(result > 0).sum()}")
+            print(f" - Total allocation: {result.sum():.2%}")
+
+            # Create DataFrame to display allocations
+            allocation_df = pd.DataFrame({
+                'Ticker': result.index,
+                'Current Allocation': result,
+            })
+            allocation_df.set_index('Ticker', inplace=True)
+
+            # Define column formats for write_table
+            column_formats = {
+                'Ticker': {'width': 20},
+                'Current Allocation': {'width': 15, 'type': '%', 'decimal': 2},
+            }
+
+            print("\nCurrent Allocations:")
+            write_table(allocation_df, columns=column_formats)
+            print("\n<== _create_current_allocations_vector()")
+
+        return result
