@@ -1214,6 +1214,29 @@ class PortfolioRebalancer:
         # This preserves the canonical order while only including relevant tickers
         return pd.Index([ticker for ticker in canonical_tickers if ticker in account_tickers])
 
+    def getAccountTickerResults(self, account: str) -> pd.DataFrame:
+        """Get the ticker allocation results for a specific account.
+
+        Delegates to the AccountRebalancer instance for the specified account.
+
+        Args:
+            account: Name of the account to get results for
+
+        Returns:
+            pd.DataFrame: DataFrame indexed by ticker (in canonical order) containing:
+                - Original Allocation: Current allocation percentages
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        if account not in self.account_rebalancers:
+            raise ValueError(
+                f"Account '{account}' not found in portfolio. Available accounts: "
+                f"{list(self.account_rebalancers.keys())}"
+            )
+
+        return self.account_rebalancers[account].getTickerResults()
+
     def getAccountTickerAllocation(self, account: str) -> pd.Series:
         """Get the current ticker allocations for an account in canonical order.
 
@@ -1324,3 +1347,29 @@ class AccountRebalancer:
             ValueError: If the account is not found in the portfolio
         """
         return self.port_rebalancer.getAccountTickerAllocation(self.account)
+
+    def getTickerResults(self) -> pd.DataFrame:
+        """Get the ticker allocation results for this account.
+
+        Currently returns a DataFrame with original allocations. This will be extended
+        to include optimized/rebalanced allocations in the future.
+
+        Returns:
+            pd.DataFrame: DataFrame indexed by ticker (in canonical order) containing:
+                - Original Allocation: Current allocation percentages
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        # Get original allocations
+        original_allocations = self.getTickerAllocations()
+
+        # Create DataFrame with original allocations
+        results = pd.DataFrame({
+            'Original Allocation': original_allocations
+        })
+
+        # Set index name
+        results.index.name = 'Ticker'
+
+        return results
