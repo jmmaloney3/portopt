@@ -294,7 +294,7 @@ class RebalanceMixin:
         if verbose:
             print("\nAccount-specific factor weights matrix F:")
             print(f" - Shape: {F.shape}")
-            self._write_weights(F)
+            write_weights(F)
             print("\n<== _create_factor_weights_matrix()")
 
         return F
@@ -627,7 +627,8 @@ class RebalanceMixin:
             raise ValueError("Penalty parameters must be non-negative")
 
         if verbose:
-            self._write_weights(target_factor_allocations, "Input target allocations:")
+            write_weights(target_factor_allocations, "Input target allocations:")
+            print(f"\nOptimizing allocations for {len(accounts)} accounts")
 
         # Get list of accounts
         accounts = self.getAccountTickers().index.get_level_values('Account').unique()
@@ -809,38 +810,6 @@ class RebalanceMixin:
             print(f"Status: {problem.status}")
 
         return ticker_results, factor_results
-
-    def _write_weights(self, weights: Union[pd.DataFrame, pd.Series], title: str = None):
-        """Display weights (factor matrix or allocation vector) in a formatted table.
-
-        Args:
-            weights: Either a factor weights DataFrame from getCanonicalFactorWeightsMatrix()
-                    or an allocation Series
-            title: Optional title to display above the table
-        """
-        if title:
-            print(f"\n{title}:")
-        else:
-            print("\nWeights Matrix:")
-
-        print(f" - Shape: {weights.shape}")
-
-        # Create column formats dictionary
-        column_formats = {
-            'Factor': {'width': 30}  # Format for index column
-        }
-
-        # Get columns to format (either DataFrame columns or Series name)
-        value_columns = weights.columns if isinstance(weights, pd.DataFrame) else [weights.name]
-
-        # Add formats for all value columns
-        column_formats.update({
-            col: {'width': 8, 'type': '%', 'decimal': 2}
-            for col in value_columns
-        })
-
-        # Write the formatted table
-        write_table(weights, columns=column_formats)
 
     def _write_objective(self, objective: cp.atoms.quad_over_lin, target_factor_allocations: pd.Series = None, title: str = None):
         """Display components of a sum_squares objective function in a table.
