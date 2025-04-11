@@ -1178,7 +1178,7 @@ class PortfolioRebalancer:
         """
         return self.account_proportions.index.tolist()
 
-    def getAccountTickers(self, account: str) -> list[str]:
+    def getAccountTickers(self, account: str) -> pd.Index:
         """Get the tickers for a specific account in canonical order.
 
         The canonical order is determined by the order of tickers in the factor weights
@@ -1191,7 +1191,7 @@ class PortfolioRebalancer:
             account: Name of the account to get tickers for
 
         Returns:
-            list[str]: List of tickers in canonical order that exist in the account
+            pd.Index: Index containing tickers in canonical order that exist in the account
 
         Raises:
             ValueError: If the account is not found in the portfolio
@@ -1203,16 +1203,55 @@ class PortfolioRebalancer:
             )
 
         # Get all tickers in canonical order from factor weights matrix
-        canonical_tickers = self.factor_weights.columns.tolist()
+        canonical_tickers = self.factor_weights.columns
 
         # Get tickers that exist in this account
         account_tickers = self.account_ticker_allocations.xs(
             account, level='Account'
-        ).index.tolist()
+        ).index
 
         # Filter canonical tickers to only include those in the account
         # This preserves the canonical order while only including relevant tickers
-        return [ticker for ticker in canonical_tickers if ticker in account_tickers]
+        return pd.Index([ticker for ticker in canonical_tickers if ticker in account_tickers])
+
+    def getAccountTickerAllocation(self, account: str) -> pd.Series:
+        """Get the current ticker allocations for an account in canonical order.
+
+        Args:
+            account: Name of the account to get allocations for
+
+        Returns:
+            pd.Series: Series indexed by ticker containing current allocation percentages,
+                      ordered according to the canonical ticker order
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        if account not in self.account_proportions.index:
+            raise ValueError(
+                f"Account '{account}' not found in portfolio. Available accounts: "
+                f"{self.account_proportions.index.tolist()}"
+            )
+
+        # Get current allocations for this account
+        account_allocations = self.account_ticker_allocations.xs(
+            account, level='Account'
+        )['Allocation']  # Extract the Allocation column as a Series
+
+        # Get tickers in canonical order
+        canonical_tickers = self.getAccountTickers(account)
+
+        # Create new series with canonical ordering
+        result = pd.Series(
+            0.0,  # Default to 0 for any missing tickers
+            index=canonical_tickers,
+            name='Allocation'  # Use consistent name for the allocation column
+        )
+
+        # Fill in current allocations
+        result.update(account_allocations)
+
+        return result
 
 class AccountRebalancer:
     """
@@ -1263,13 +1302,25 @@ class AccountRebalancer:
         """
         return self.port_rebalancer.getAccountProportion(self.account)
 
-    def getTickers(self) -> list[str]:
+    def getTickers(self) -> pd.Index:
         """Get the tickers for this account in canonical order.
 
         Returns:
-            list[str]: List of tickers in canonical order that exist in this account
+            pd.Index: Index containing tickers in canonical order that exist in this account
 
         Raises:
             ValueError: If the account is not found in the portfolio
         """
         return self.port_rebalancer.getAccountTickers(self.account)
+
+    def getTickerAllocations(self) -> pd.Series:
+        """Get the current ticker allocations for this account in canonical order.
+
+        Returns:
+            pd.Series: Series indexed by ticker containing current allocation percentages,
+                      ordered according to the canonical ticker order
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        return self.port_rebalancer.getAccountTickerAllocation(self.account)
