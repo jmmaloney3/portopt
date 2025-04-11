@@ -1302,6 +1302,32 @@ class PortfolioRebalancer:
 
         return self.account_rebalancers[account].getVariables(verbose=verbose)
 
+    def getAccountFactorWeights(self, account: str, verbose: bool = False) -> pd.DataFrame:
+        """Get the factor weights matrix for a specific account.
+
+        Delegates to the AccountRebalancer instance for the specified account.
+
+        Args:
+            account: Name of the account to get factor weights for
+            verbose: If True, print detailed information about the matrix
+
+        Returns:
+            pd.DataFrame: Factor weights matrix with:
+                - Rows: Factors (in same order as parent portfolio)
+                - Columns: Tickers (in canonical order for this account)
+                - Values: Factor weights
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        if account not in self.account_rebalancers:
+            raise ValueError(
+                f"Account '{account}' not found in portfolio. Available accounts: "
+                f"{list(self.account_rebalancers.keys())}"
+            )
+
+        return self.account_rebalancers[account].getFactorWeights(verbose=verbose)
+
 class AccountRebalancer:
     """
     Helper class for managing account-level rebalancing optimization components.
@@ -1457,3 +1483,41 @@ class AccountRebalancer:
         }
 
         return variables
+
+    def getFactorWeights(self, verbose: bool = False) -> pd.DataFrame:
+        """Get the factor weights matrix for this account.
+
+        Returns a factor weights matrix that:
+        1. Contains only columns for tickers that are valid for this account
+        2. Orders tickers according to the canonical order (from getTickers)
+        3. Maintains the same factor ordering as the parent portfolio
+
+        Args:
+            verbose: If True, print detailed information about the matrix
+
+        Returns:
+            pd.DataFrame: Factor weights matrix with:
+                - Rows: Factors (in same order as parent portfolio)
+                - Columns: Tickers (in canonical order for this account)
+                - Values: Factor weights
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        # Get tickers in canonical order
+        tickers = self.getTickers()
+
+        # Get factor weights matrix from parent portfolio
+        F = self.port_rebalancer.factor_weights
+
+        # Filter and reorder columns to match account's tickers
+        F_account = F[tickers]
+
+        if verbose:
+            print(f"\nFactor weights matrix for account {self.account}:")
+            print(f" - Shape: {F_account.shape}")
+            print(f" - Factors: {len(F_account.index)}")
+            print(f" - Tickers: {len(F_account.columns)}")
+            write_weights(F_account)
+
+        return F_account
