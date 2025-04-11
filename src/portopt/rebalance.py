@@ -1276,6 +1276,32 @@ class PortfolioRebalancer:
 
         return result
 
+    def getAccountVariables(self, account: str, verbose: bool = False) -> Dict[str, cp.Variable]:
+        """Get optimization variables for a specific account.
+
+        Delegates to the AccountRebalancer instance for the specified account.
+
+        Args:
+            account: Name of the account to get variables for
+            verbose: If True, print detailed information about the variables created
+
+        Returns:
+            Dict[str, cp.Variable]: Dictionary containing:
+                'x': Vstack of allocation variables
+                'z': Vstack of binary selection variables
+            Variables are ordered to match the canonical ticker order
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        if account not in self.account_rebalancers:
+            raise ValueError(
+                f"Account '{account}' not found in portfolio. Available accounts: "
+                f"{list(self.account_rebalancers.keys())}"
+            )
+
+        return self.account_rebalancers[account].getVariables(verbose=verbose)
+
 class AccountRebalancer:
     """
     Helper class for managing account-level rebalancing optimization components.
@@ -1373,3 +1399,61 @@ class AccountRebalancer:
         results.index.name = 'Ticker'
 
         return results
+
+    def getVariables(self, verbose: bool = False) -> Dict[str, cp.Variable]:
+        """Create optimization variables for this account.
+
+        Creates two sets of variables:
+        - x: Allocation percentages for each ticker
+        - z: Binary selection variables for each ticker
+
+        Variables are created in canonical order to ensure consistent ordering with
+        other components (factor weights matrix, current allocations, etc.).
+
+        Args:
+            verbose: If True, print detailed information about the variables created
+
+        Returns:
+            Dict[str, cp.Variable]: Dictionary containing:
+                'x': Vstack of allocation variables
+                'z': Vstack of binary selection variables
+            Variables are ordered to match the canonical ticker order
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        # Get tickers in canonical order
+        tickers = self.getTickers()
+
+        # Create variable name patterns
+        x_pattern = lambda ticker: f"x_{self.account}_{ticker}"
+        z_pattern = lambda ticker: f"z_{self.account}_{ticker}"
+
+        # Create variables with appropriate names
+        x_vars = [cp.Variable(name=x_pattern(ticker)) for ticker in tickers]
+        z_vars = [cp.Variable(boolean=True, name=z_pattern(ticker)) for ticker in tickers]
+
+        if verbose:
+            # Create a DataFrame with two columns for allocation and selection variables
+            variable_df = pd.DataFrame({
+                'Allocation Variables (x)': [var.name() for var in x_vars],
+                'Selection Variables (z)': [var.name() for var in z_vars]
+            })
+
+            # Define column formats for write_table
+            column_formats = {
+                'Allocation Variables (x)': {'width': 30},
+                'Selection Variables (z)': {'width': 30}
+            }
+
+            # Print the table using write_table
+            print(f"\nVariables for account {self.account}:")
+            write_table(variable_df, columns=column_formats)
+
+        # Stack variables into vectors
+        variables = {
+            'x': cp.vstack(x_vars),  # Allocation percentages
+            'z': cp.vstack(z_vars)   # Binary selection variables
+        }
+
+        return variables
