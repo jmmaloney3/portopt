@@ -1363,6 +1363,9 @@ class AccountRebalancer:
         self.port_rebalancer = port_rebalancer
         self.account = account
 
+        # Initialize cache for optimization variables
+        self._variables = None
+
         if verbose:
             print("\n<== AccountRebalancer.__init__()")
 
@@ -1436,6 +1439,9 @@ class AccountRebalancer:
         Variables are created in canonical order to ensure consistent ordering with
         other components (factor weights matrix, current allocations, etc.).
 
+        Variables are cached after first creation to ensure they are not recreated
+        in subsequent calls.
+
         Args:
             verbose: If True, print detailed information about the variables created
 
@@ -1448,6 +1454,12 @@ class AccountRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
+        # Return cached variables if they exist
+        if self._variables is not None:
+            if verbose:
+                print(f"\nUsing cached variables for account {self.account}")
+            return self._variables
+
         # Get tickers in canonical order
         tickers = self.getTickers()
 
@@ -1476,13 +1488,13 @@ class AccountRebalancer:
             print(f"\nVariables for account {self.account}:")
             write_table(variable_df, columns=column_formats)
 
-        # Stack variables into vectors
-        variables = {
+        # Stack variables into vectors and cache them
+        self._variables = {
             'x': cp.vstack(x_vars),  # Allocation percentages
             'z': cp.vstack(z_vars)   # Binary selection variables
         }
 
-        return variables
+        return self._variables
 
     def getFactorWeights(self, verbose: bool = False) -> pd.DataFrame:
         """Get the factor weights matrix for this account.
