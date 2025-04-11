@@ -177,7 +177,7 @@ def write_weights(weights: Union[pd.DataFrame, pd.Series], title: str = None):
 
     # Create column formats dictionary
     column_formats = {
-        'Factor': {'width': 30}  # Format for index column
+        weights.index.name if weights.index.name else 'index': {'width': 30}  # Use index name or default to 'Index'
     }
 
     # Get columns to format (either DataFrame columns or Series name)

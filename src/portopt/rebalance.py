@@ -995,13 +995,18 @@ class PortfolioRebalancer:
     consistent ordering of factors and tickers across all operations.
 
     Attributes:
+        account_ticker_allocations: DataFrame with hierarchical index [Account, Ticker]
+            containing current allocation percentages for each account-ticker pair
         target_factor_allocations: Series containing target factor allocations
         factor_weights: DataFrame containing factor weights for all tickers
         min_ticker_alloc: Minimum allocation for any ticker (default: 0.0)
+        account_proportions: Series containing the proportion of the portfolio
+            held in each account
     """
 
     def __init__(
         self,
+        account_ticker_allocations: pd.DataFrame,
         target_factor_allocations: pd.Series,
         factor_weights: pd.DataFrame,
         min_ticker_alloc: float = 0.0,
@@ -1011,6 +1016,8 @@ class PortfolioRebalancer:
         Initialize the PortfolioRebalancer.
 
         Args:
+            account_ticker_allocations: DataFrame with hierarchical index [Account, Ticker]
+                containing current allocation percentages for each account-ticker pair
             target_factor_allocations: Series indexed by Factor containing target
                 allocation percentages - defines the canonical order of factors
             factor_weights: DataFrame with hierarchical index [Ticker, Factor]
@@ -1021,9 +1028,36 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If target allocations don't sum to 100%
             ValueError: If any target factors are missing from factor weights
+            ValueError: If account_ticker_allocations doesn't have the correct index structure
+            ValueError: If account_ticker_allocations doesn't sum to 100% across all account-ticker pairs
         """
         if verbose:
             print("\n==> PortfolioRebalancer.__init__()")
+
+        # Validate account_ticker_allocations structure
+        if not isinstance(account_ticker_allocations.index, pd.MultiIndex):
+            raise ValueError(
+                "account_ticker_allocations must have a MultiIndex with levels [Account, Ticker]"
+            )
+        if account_ticker_allocations.index.names != ['Account', 'Ticker']:
+            raise ValueError(
+                "account_ticker_allocations index names must be ['Account', 'Ticker']"
+            )
+
+        # Validate account_ticker_allocations sum to 100%
+        total_allocation = account_ticker_allocations.sum()
+        if not np.isclose(total_allocation, 1.0, rtol=1e-5):
+            raise ValueError(
+                f"Account ticker allocations must sum to 100%, got {total_allocation:.2%}"
+            )
+
+        # Calculate account proportions by summing allocations for each account
+        self.account_proportions = account_ticker_allocations.groupby(level='Account').sum()
+        self.account_proportions.name = 'Account Proportion'
+
+        if verbose:
+            print("\nAccount Proportions:")
+            write_weights(self.account_proportions)
 
         # Validate target allocations sum to 100%
         if not np.isclose(target_factor_allocations.sum(), 1.0, rtol=1e-5):
@@ -1032,6 +1066,7 @@ class PortfolioRebalancer:
             )
 
         # Store inputs
+        self.account_ticker_allocations = account_ticker_allocations
         self.target_factor_allocations = target_factor_allocations
         self.min_ticker_alloc = min_ticker_alloc
 
@@ -1076,5 +1111,165 @@ class PortfolioRebalancer:
         assert self.factor_weights.shape[1] > 0, \
             "Factor weights matrix has no tickers"
 
+        # Initialize AccountRebalancer objects for each account
+        self._init_accounts(verbose=verbose)
+
         if verbose:
             print("\n<== PortfolioRebalancer.__init__()")
+
+    def _init_accounts(self, verbose: bool = False) -> None:
+        """Initialize AccountRebalancer objects for each account in the portfolio.
+
+        This method creates an AccountRebalancer object for each account and stores
+        them in a dictionary indexed by account name.
+
+        Args:
+            verbose: If True, print detailed information about initialization
+
+        Returns:
+            None
+        """
+        if verbose:
+            print("\n==> _init_accounts()\n")
+
+        # Create dictionary to store AccountRebalancer objects
+        self.account_rebalancers = {}
+
+        # Create AccountRebalancer for each account
+        for account in self.getAccounts():
+            if verbose:
+                print(f"  Creating AccountRebalancer for {account}")
+
+            # Create and store AccountRebalancer
+            self.account_rebalancers[account] = AccountRebalancer(
+                port_rebalancer=self,
+                account=account,
+                verbose=verbose
+            )
+
+        if verbose:
+            print(f"\n  Created {len(self.account_rebalancers)} AccountRebalancer objects")
+            print("\n<== _init_accounts()")
+
+    def getAccountProportion(self, account: str) -> float:
+        """Get the proportion of the portfolio held in a specific account.
+
+        Args:
+            account: Name of the account to get the proportion for
+
+        Returns:
+            float: The proportion of the portfolio held in the specified account
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        if account not in self.account_proportions.index:
+            raise ValueError(
+                f"Account '{account}' not found in portfolio. Available accounts: "
+                f"{self.account_proportions.index.tolist()}"
+            )
+        return self.account_proportions.loc[account].iloc[0]
+
+    def getAccounts(self) -> list[str]:
+        """Get the list of accounts being rebalanced.
+
+        Returns:
+            list[str]: List of account names in the portfolio
+        """
+        return self.account_proportions.index.tolist()
+
+    def getAccountTickers(self, account: str) -> list[str]:
+        """Get the tickers for a specific account in canonical order.
+
+        The canonical order is determined by the order of tickers in the factor weights
+        matrix. This ensures consistent ordering between:
+        - Factor weights matrix columns
+        - Optimization variables
+        - Current allocation vectors
+
+        Args:
+            account: Name of the account to get tickers for
+
+        Returns:
+            list[str]: List of tickers in canonical order that exist in the account
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        if account not in self.account_proportions.index:
+            raise ValueError(
+                f"Account '{account}' not found in portfolio. Available accounts: "
+                f"{self.account_proportions.index.tolist()}"
+            )
+
+        # Get all tickers in canonical order from factor weights matrix
+        canonical_tickers = self.factor_weights.columns.tolist()
+
+        # Get tickers that exist in this account
+        account_tickers = self.account_ticker_allocations.xs(
+            account, level='Account'
+        ).index.tolist()
+
+        # Filter canonical tickers to only include those in the account
+        # This preserves the canonical order while only including relevant tickers
+        return [ticker for ticker in canonical_tickers if ticker in account_tickers]
+
+class AccountRebalancer:
+    """
+    Helper class for managing account-level rebalancing optimization components.
+
+    This class maintains the account-specific components needed for rebalancing,
+    including the factor weights matrix and target allocations. It ensures
+    consistent ordering of factors and tickers across all operations.
+
+    Attributes:
+        port_rebalancer: Parent PortfolioRebalancer object
+        account: Name of the account being rebalanced
+    """
+
+    def __init__(
+        self,
+        port_rebalancer: PortfolioRebalancer,
+        account: str,
+        verbose: bool = False
+    ):
+        """
+        Initialize the AccountRebalancer.
+
+        Args:
+            port_rebalancer: Parent PortfolioRebalancer object
+            account: Name of the account being rebalanced
+            verbose: If True, print detailed information about initialization
+        """
+        if verbose:
+            print(f"\n==> AccountRebalancer.__init__()")
+            print(f" - Account: {account}")
+
+        # Store inputs
+        self.port_rebalancer = port_rebalancer
+        self.account = account
+
+        if verbose:
+            print("\n<== AccountRebalancer.__init__()")
+
+    def getAccountProportion(self) -> float:
+        """Get the proportion of the portfolio held in this account.
+
+        Returns:
+            float: The proportion of the portfolio held in this account
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        return self.port_rebalancer.getAccountProportion(self.account)
+
+    def getTickers(self) -> list[str]:
+        """Get the tickers for this account in canonical order.
+
+        Returns:
+            list[str]: List of tickers in canonical order that exist in this account
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        return self.port_rebalancer.getAccountTickers(self.account)
