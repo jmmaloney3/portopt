@@ -1663,12 +1663,11 @@ class AccountRebalancer:
     def getTickerResults(self) -> pd.DataFrame:
         """Get the ticker allocation results for this account.
 
-        Currently returns a DataFrame with original allocations. This will be extended
-        to include optimized/rebalanced allocations in the future.
-
         Returns:
             pd.DataFrame: DataFrame indexed by ticker (in canonical order) containing:
                 - Original Allocation: Current allocation percentages
+                - New Allocation: Optimized allocation percentages from the optimization variables (if solved)
+                - Difference: Change in allocation (New - Original) (if solved)
 
         Raises:
             ValueError: If the account is not found in the portfolio
@@ -1676,10 +1675,27 @@ class AccountRebalancer:
         # Get original allocations
         original_allocations = self.getTickerAllocations()
 
-        # Create DataFrame with original allocations
-        results = pd.DataFrame({
-            'Original Allocation': original_allocations
-        })
+        # Get variables and check if optimization has been solved
+        variables = self.getVariables()
+        if variables['x'].value is None:
+            # Optimization not solved yet, return only original allocations
+            results = pd.DataFrame({
+                'Original Allocation': original_allocations
+            })
+        else:
+            # Optimization solved, include new allocations and difference
+            new_allocations = pd.Series(
+                variables['x'].value.flatten(),
+                index=original_allocations.index,
+                name='New Allocation'
+            )
+
+            # Create DataFrame with both original and new allocations
+            results = pd.DataFrame({
+                'Original Allocation': original_allocations,
+                'New Allocation': new_allocations,
+                'Difference': new_allocations - original_allocations
+            })
 
         # Set index name
         results.index.name = 'Ticker'
