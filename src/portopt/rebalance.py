@@ -1010,6 +1010,9 @@ class PortfolioRebalancer:
         target_factor_allocations: pd.Series,
         factor_weights: pd.DataFrame,
         min_ticker_alloc: float = 0.0,
+        turnover_penalty: float = 1.0,
+        complexity_penalty: float = 0.0,
+        account_align_penalty: float = 1.0,
         verbose: bool = False
     ):
         """
@@ -1023,6 +1026,12 @@ class PortfolioRebalancer:
             factor_weights: DataFrame with hierarchical index [Ticker, Factor]
                 containing factor weights for each ticker
             min_ticker_alloc: Minimum non-zero allocation for any fund (default: 0.0)
+            account_align_penalty: Weight for penalizing account-level factor
+                misalignment - applied to factor objective (default: 1.0)
+            turnover_penalty: Weight for penalizing changes from current allocations
+                (default: 1.0)
+            complexity_penalty: Weight for penalizing the number of funds used
+                (default: 0.0)
             verbose: If True, print detailed information about initialization
 
         Raises:
@@ -1061,11 +1070,17 @@ class PortfolioRebalancer:
         self.account_ticker_allocations = account_ticker_allocations
         self._target_factor_allocations = target_factor_allocations
         self.min_ticker_alloc = min_ticker_alloc
+        self._turnover_penalty = turnover_penalty
+        self._complexity_penalty = complexity_penalty
+        self._account_align_penalty = account_align_penalty
 
         if verbose:
             write_weights(self.account_ticker_allocations, title="Account Ticker Allocations")
             write_weights(self._target_factor_allocations, title="Target Factor Allocations")
             print(f"\nMinimum Ticker Allocation: {min_ticker_alloc:.2%}")
+            print(f"Turnover Penalty: {self._turnover_penalty}")
+            print(f"Complexity Penalty: {self._complexity_penalty}")
+            print(f"Account Align Penalty: {self._account_align_penalty}")
 
         # Initialize factor weights matrix
         self._init_factor_weights_matrix(factor_weights=factor_weights, verbose=verbose)
@@ -1532,6 +1547,30 @@ class PortfolioRebalancer:
         """
         return self.getAccountRebalancer(account).getConstraints(verbose=verbose)
 
+    def getTurnoverPenalty(self) -> float:
+        """Get the turnover penalty parameter.
+
+        Returns:
+            float: The weight for penalizing changes from current allocations
+        """
+        return self._turnover_penalty
+
+    def getComplexityPenalty(self) -> float:
+        """Get the complexity penalty parameter.
+
+        Returns:
+            float: The weight for penalizing the number of funds used
+        """
+        return self._complexity_penalty
+
+    def getAccountAlignPenalty(self) -> float:
+        """Get the account alignment penalty parameter.
+
+        Returns:
+            float: The weight for penalizing account-level factor misalignment
+        """
+        return self._account_align_penalty
+
 class AccountRebalancer:
     """
     Helper class for managing account-level rebalancing optimization components.
@@ -1795,7 +1834,7 @@ class AccountRebalancer:
         if verbose:
             print(f"\nOptimized factor allocations for account {self.account}:")
             print(f" - Shape: {self._factor_allocations.shape}")
-            # TODO: fix this (len does't work)
+            # TODO: fix this (len doesn't work)
             #print(f" - Factors: {len(self._factor_allocations)}")
             print(f" - Expression: F @ x")
 
@@ -2020,3 +2059,151 @@ class AccountRebalancer:
             print(f"   4. Minimum allocation when selected: {min_ticker_alloc:.2%}")
 
         return self._constraints
+
+    def validate(self, verbose: bool = False) -> None:
+        """Validate that all ticker-related and factor-related components are properly aligned.
+
+        This method checks that:
+        1. The following components have the same tickers in the exact same order:
+           - Account tickers from getTickers()
+           - Current ticker allocations from getTickerAllocations()
+           - Ticker results index from getTickerResults()
+           - Optimization variables from getVariables()
+           - Factor weights matrix columns from getFactorWeights()
+
+        2. The following components have the same factors in the exact same order:
+           - Target factor allocations from getTargetFactorAllocations()
+           - Factor weights matrix index from getFactorWeights()
+
+        Args:
+            verbose: If True, print detailed information about the validation
+
+        Raises:
+            ValueError: If any components are misaligned
+        """
+        if verbose:
+            print(f"\n==> AccountRebalancer.validate()")
+            print(f" - Account: {self.account}")
+
+        # Get all components to validate
+        tickers = self.getTickers()
+        current_allocations = self.getTickerAllocations()
+        ticker_results = self.getTickerResults()
+        variables = self.getVariables()
+        factor_weights = self.getFactorWeights()
+        target_factor_allocations = self.getTargetFactorAllocations()
+
+        # Create a list of component names and their ticker indices
+        ticker_components = [
+            ("Account Tickers", tickers),
+            ("Current Allocations", current_allocations.index),
+            ("Ticker Results", ticker_results.index),
+            ("Variables", pd.Index([var.name().split('_')[-1] for var in variables['x'].args])),
+            ("Factor Weights", factor_weights.columns)
+        ]
+
+        # Create a list of component names and their factor indices
+        factor_components = [
+            ("Target Factor Allocations", target_factor_allocations.index),
+            ("Factor Weights", factor_weights.index)
+        ]
+
+        # Validate each ticker component against the reference (Account Tickers)
+        reference_name, reference_index = ticker_components[0]
+        for name, index in ticker_components[1:]:
+            if not index.equals(reference_index):
+                raise ValueError(
+                    f"Ticker misalignment detected:\n"
+                    f" - {reference_name} tickers: {list(reference_index)}\n"
+                    f" - {name} tickers: {list(index)}\n"
+                    f" - Mismatch at positions: {[i for i, (t1, t2) in enumerate(zip(reference_index, index)) if t1 != t2]}"
+                )
+
+        # Validate each factor component against the reference (Target Factor Allocations)
+        reference_name, reference_index = factor_components[0]
+        for name, index in factor_components[1:]:
+            if not index.equals(reference_index):
+                raise ValueError(
+                    f"Factor misalignment detected:\n"
+                    f" - {reference_name} factors: {list(reference_index)}\n"
+                    f" - {name} factors: {list(index)}\n"
+                    f" - Mismatch at positions: {[i for i, (t1, t2) in enumerate(zip(reference_index, index)) if t1 != t2]}"
+                )
+
+        if verbose:
+            print("\nValidation complete:")
+            print(f" - All ticker components aligned with {ticker_components[0][0]}")
+            print(f" - Number of tickers: {len(ticker_components[0][1])}")
+            print(f" - Tickers: {list(ticker_components[0][1])}")
+            print(f" - All factor components aligned with {factor_components[0][0]}")
+            print(f" - Number of factors: {len(factor_components[0][1])}")
+            print(f" - Factors: {list(factor_components[0][1])}")
+            print(f"<== AccountRebalancer.validate()")
+
+    def rebalance(self, verbose: bool = False) -> None:
+        """Construct and solve the optimization problem for this account.
+
+        The optimization problem minimizes a weighted sum of:
+        1. Factor misalignment (account_align_penalty * factor_objective)
+        2. Turnover (turnover_penalty * turnover_objective)
+        3. Complexity (complexity_penalty * complexity_objective)
+
+        The constraints are provided by getConstraints().
+
+        Args:
+            verbose: If True, print detailed information about the optimization
+
+        Returns:
+            None
+
+        Raises:
+            RuntimeError: If optimization fails
+        """
+        if verbose:
+            print(f"\n==> AccountRebalancer.rebalance()")
+            print(f" - Account: {self.account}")
+
+        # Validate all components are properly aligned
+        self.validate(verbose=verbose)
+
+        # Get penalty parameters from parent portfolio
+        account_align_penalty = self.port_rebalancer.getAccountAlignPenalty()
+        turnover_penalty = self.port_rebalancer.getTurnoverPenalty()
+        complexity_penalty = self.port_rebalancer.getComplexityPenalty()
+
+        if verbose:
+            print(f"\nPenalty parameters:")
+            print(f" - Account align penalty: {account_align_penalty}")
+            print(f" - Turnover penalty: {turnover_penalty}")
+            print(f" - Complexity penalty: {complexity_penalty}")
+
+        # Get objectives
+        factor_objective = self.getFactorObjective(verbose=verbose)
+        turnover_objective = self.getTurnoverObjective(verbose=verbose)
+        complexity_objective = self.getComplexityObjective(verbose=verbose)
+
+        # Construct the objective function
+        objective = cp.Minimize(
+            account_align_penalty * factor_objective +
+            turnover_penalty * turnover_objective +
+            complexity_penalty * complexity_objective
+        )
+
+        # Get constraints
+        constraints = self.getConstraints(verbose=verbose)
+
+        # Create and solve the optimization problem
+        problem = cp.Problem(objective, constraints)
+        try:
+            problem.solve(solver=cp.SCIP, verbose=verbose)
+        except Exception as e:
+            raise RuntimeError(f"Optimization failed: {str(e)}")
+
+        if problem.status != 'optimal':
+            raise RuntimeError(f"Optimization failed with status: {problem.status}")
+
+        if verbose:
+            print(f"\nOptimization complete:")
+            print(f" - Status: {problem.status}")
+            print(f" - Objective value: {problem.value:.6f}")
+            print(f"<== AccountRebalancer.rebalance()")
