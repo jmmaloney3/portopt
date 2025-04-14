@@ -1486,6 +1486,30 @@ class PortfolioRebalancer:
 
         return self.account_rebalancers[account].getFactorObjective(verbose=verbose)
 
+    def getAccountTurnoverObjective(self, account: str, verbose: bool = False) -> cp.Expression:
+        """Get the turnover objective for a specific account.
+
+        Delegates to the AccountRebalancer instance for the specified account.
+
+        Args:
+            account: Name of the account to get turnover objective for
+            verbose: If True, print detailed information about the objective
+
+        Returns:
+            cp.Expression: CVXPY expression representing the turnover objective
+                for the specified account.
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        if account not in self.account_rebalancers:
+            raise ValueError(
+                f"Account '{account}' not found in portfolio. Available accounts: "
+                f"{list(self.account_rebalancers.keys())}"
+            )
+
+        return self.account_rebalancers[account].getTurnoverObjective(verbose=verbose)
+
 class AccountRebalancer:
     """
     Helper class for managing account-level rebalancing optimization components.
@@ -1529,6 +1553,8 @@ class AccountRebalancer:
         self._factor_weights = None
         # Initialize cache for factor objective
         self._factor_objective = None
+        # Initialize cache for turnover objective
+        self._turnover_objective = None
         # Initialize cache for target factor allocations
         self._target_factor_allocations = None
 
@@ -1749,6 +1775,48 @@ class AccountRebalancer:
 
         return self._factor_allocations
 
+    def getTargetFactorAllocations(self, verbose: bool = False) -> pd.Series:
+        """Get the target factor allocations for this account.
+
+        Returns the target factor allocations scaled to this account's proportion
+        of the portfolio, ensuring they are in canonical order.
+
+        The allocations are cached after first creation to ensure they are not
+        recreated in subsequent calls.
+
+        Args:
+            verbose: If True, print detailed information about the allocations
+
+        Returns:
+            pd.Series: Series indexed by Factor containing target allocation percentages,
+                      ordered according to the canonical factor order and scaled to
+                      this account's proportion of the portfolio
+
+        Raises:
+            ValueError: If target allocations don't sum to 100%
+        """
+        # Return cached allocations if they exist
+        if self._target_factor_allocations is not None:
+            if verbose:
+                print(f"\nUsing cached target factor allocations for account {self.account}")
+            return self._target_factor_allocations
+
+        # Get portfolio target allocations and account proportion
+        portfolio_targets = self.port_rebalancer.getPortfolioTargetFactorAllocations(verbose=verbose)
+        account_proportion = self.getAccountProportion()
+
+        # Scale target allocations by account proportion
+        self._target_factor_allocations = portfolio_targets * account_proportion
+
+        if verbose:
+            print(f"\nTarget factor allocations for account {self.account}:")
+            print(f" - Account proportion: {account_proportion:.2%}")
+            print(f" - Number of factors: {len(self._target_factor_allocations)}")
+            print(f" - Total allocation: {self._target_factor_allocations.sum():.2%}")
+            write_weights(self._target_factor_allocations)
+
+        return self._target_factor_allocations
+
     def getFactorObjective(self, verbose: bool = False) -> cp.Expression:
         """Calculate the factor objective for this account.
 
@@ -1792,44 +1860,45 @@ class AccountRebalancer:
 
         return self._factor_objective
 
-    def getTargetFactorAllocations(self, verbose: bool = False) -> pd.Series:
-        """Get the target factor allocations for this account.
+    def getTurnoverObjective(self, verbose: bool = False) -> cp.Expression:
+        """Calculate the turnover objective for this account.
 
-        Returns the target factor allocations scaled to this account's proportion
-        of the portfolio, ensuring they are in canonical order.
+        This is calculated as the sum of squares of the difference between the
+        current ticker allocations and the new allocation variables:
+        sum_squares(x - current_allocations)
 
-        The allocations are cached after first creation to ensure they are not
-        recreated in subsequent calls.
+        The expression is cached after first creation to ensure it is not recreated
+        in subsequent calls.
 
         Args:
-            verbose: If True, print detailed information about the allocations
+            verbose: If True, print detailed information about the calculation
 
         Returns:
-            pd.Series: Series indexed by Factor containing target allocation percentages,
-                      ordered according to the canonical factor order and scaled to
-                      this account's proportion of the portfolio
+            cp.Expression: CVXPY expression representing the turnover objective
+                for this account.
 
         Raises:
-            ValueError: If target allocations don't sum to 100%
+            ValueError: If the account is not found in the portfolio
         """
-        # Return cached allocations if they exist
-        if self._target_factor_allocations is not None:
+        # Return cached expression if it exists
+        if self._turnover_objective is not None:
             if verbose:
-                print(f"\nUsing cached target factor allocations for account {self.account}")
-            return self._target_factor_allocations
+                print(f"\nUsing cached turnover objective for account {self.account}")
+            return self._turnover_objective
 
-        # Get portfolio target allocations and account proportion
-        portfolio_targets = self.port_rebalancer.getPortfolioTargetFactorAllocations(verbose=verbose)
-        account_proportion = self.getAccountProportion()
+        # Get variables and current allocations
+        variables = self.getVariables(verbose=verbose)
+        current_allocations = self.getTickerAllocations()
 
-        # Scale target allocations by account proportion
-        self._target_factor_allocations = portfolio_targets * account_proportion
+        # Calculate turnover objective: sum_squares(x - current_allocations)
+        self._turnover_objective = cp.sum_squares(
+            variables['x'] - current_allocations.to_numpy()
+        )
 
         if verbose:
-            print(f"\nTarget factor allocations for account {self.account}:")
-            print(f" - Account proportion: {account_proportion:.2%}")
-            print(f" - Number of factors: {len(self._target_factor_allocations)}")
-            print(f" - Total allocation: {self._target_factor_allocations.sum():.2%}")
-            write_weights(self._target_factor_allocations)
+            print(f"\nTurnover objective for account {self.account}:")
+            print(f" - Expression: sum_squares(x - current_allocations)")
+            print(f" - Current allocations:")
+            write_weights(current_allocations)
 
-        return self._target_factor_allocations
+        return self._turnover_objective
