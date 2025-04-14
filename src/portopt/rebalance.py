@@ -1769,6 +1769,28 @@ class AccountRebalancer:
 
         return self._variables
 
+    def getFactors(self, verbose: bool = False) -> pd.Index:
+        """Get the factors in canonical order.
+
+        The canonical order is determined by the order of factors in the target
+        factor allocations. This ensures consistent ordering between:
+        - Factor weights matrix rows
+        - Target factor allocations
+        - Factor allocation vectors
+
+        Args:
+            verbose: If True, print detailed information about the factors
+
+        Returns:
+            pd.Index: Index containing factors in canonical order
+        """
+        if verbose:
+            print(f"\nFactors for account {self.account}:")
+            print(f" - Number of factors: {len(self.port_rebalancer.getPortfolioFactors())}")
+            print(f" - Factors: {sorted(self.port_rebalancer.getPortfolioFactors().tolist())}")
+
+        return self.port_rebalancer.getPortfolioFactors()
+
     def getFactorWeights(self, verbose: bool = False) -> pd.DataFrame:
         """Get the factor weights matrix for this account.
 
