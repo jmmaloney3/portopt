@@ -1051,14 +1051,6 @@ class PortfolioRebalancer:
                 f"Account ticker allocations must sum to 100%, got {total_allocation:.2%}"
             )
 
-        # Generate list of accounts with proportions by summing allocations for each account
-        self._accounts = account_ticker_allocations.groupby(level='Account').sum()
-        self._accounts.name = 'Account Proportion'
-        self._accounts.index.name = 'Account'
-
-        if verbose:
-            write_weights(self._accounts, title="Account Proportions")
-
         # Validate target allocations sum to 100%
         if not np.isclose(target_factor_allocations.sum(), 1.0, rtol=1e-5):
             raise ValueError(
@@ -1071,14 +1063,15 @@ class PortfolioRebalancer:
         self.min_ticker_alloc = min_ticker_alloc
 
         if verbose:
+            write_weights(self.account_ticker_allocations, title="Account Ticker Allocations")
             write_weights(self._target_factor_allocations, title="Target Factor Allocations")
             print(f"\nMinimum Ticker Allocation: {min_ticker_alloc:.2%}")
 
         # Initialize factor weights matrix
         self._init_factor_weights_matrix(factor_weights=factor_weights, verbose=verbose)
 
-        # Initialize AccountRebalancer objects for each account
-        self._init_accounts(verbose=verbose)
+        # Initialize account registry
+        self._init_account_registry(verbose=verbose)
 
         if verbose:
             print("\n<== PortfolioRebalancer.__init__()")
@@ -1129,11 +1122,11 @@ class PortfolioRebalancer:
         assert self._factor_weights.shape[1] > 0, \
             "Factor weights matrix has no tickers"
 
-    def _init_accounts(self, verbose: bool = False) -> None:
-        """Initialize AccountRebalancer objects for each account in the portfolio.
+    def _init_account_registry(self, verbose: bool = False) -> None:
+        """Initialize the account registry.
 
-        This method creates an AccountRebalancer object for each account and stores
-        them in a dictionary indexed by account name.
+        Creates a DataFrame that serves as the master registry for all accounts,
+        containing their proportions and AccountRebalancer instances.
 
         Args:
             verbose: If True, print detailed information about initialization
@@ -1142,26 +1135,35 @@ class PortfolioRebalancer:
             None
         """
         if verbose:
-            print("\n==> _init_accounts()\n")
+            print("\n==> _init_account_registry()\n")
 
-        # Create dictionary to store AccountRebalancer objects
-        self.account_rebalancers = {}
+        # Create DataFrame indexed by Account with account proportions
+        proportions = self.account_ticker_allocations.groupby(level='Account').sum()
+        proportions.name = 'Proportion'
 
-        # Create AccountRebalancer for each account
-        for account in self.getAccounts():
-            if verbose:
-                print(f"  Creating AccountRebalancer for {account}")
+        # Create empty DataFrame with account names as index
+        self._account_registry = pd.DataFrame(index=proportions.index)
+        self._account_registry.index.name = 'Account'
 
-            # Create and store AccountRebalancer
-            self.account_rebalancers[account] = AccountRebalancer(
+        # Add proportion column
+        self._account_registry['Proportion'] = proportions
+
+        # Create AccountRebalancer instances and store them
+        self._account_registry['Rebalancer'] = [
+            AccountRebalancer(
                 port_rebalancer=self,
                 account=account,
                 verbose=verbose
             )
+            for account in self._account_registry.index
+        ]
 
         if verbose:
-            print(f"\n  Created {len(self.account_rebalancers)} AccountRebalancer objects")
-            print("\n<== _init_accounts()")
+            print(f"\nAccount Registry:")
+            print(f" - Number of accounts: {len(self._account_registry)}")
+            print(f" - Total proportion: {self._account_registry['Proportion'].sum():.2%}")
+            write_weights(self._account_registry['Proportion'])
+            print("\n<== _init_account_registry()")
 
     def getAccountProportion(self, account: str) -> float:
         """Get the proportion of the portfolio held in a specific account.
@@ -1180,7 +1182,7 @@ class PortfolioRebalancer:
                 f"Account '{account}' not found in portfolio. Available accounts: "
                 f"{self.getAccounts()}"
             )
-        return self._accounts.loc[account].iloc[0]
+        return self._account_registry.loc[account, 'Proportion']
 
     def getAccounts(self) -> list[str]:
         """Get the list of accounts being rebalanced.
@@ -1188,7 +1190,26 @@ class PortfolioRebalancer:
         Returns:
             list[str]: List of account names in the portfolio
         """
-        return self._accounts.index
+        return self._account_registry.index
+
+    def getAccountRebalancer(self, account: str) -> 'AccountRebalancer':
+        """Get the AccountRebalancer instance for a specific account.
+
+        Args:
+            account: Name of the account to get the rebalancer for
+
+        Returns:
+            AccountRebalancer: The AccountRebalancer instance for the specified account
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        if account not in self.getAccounts():
+            raise ValueError(
+                f"Account '{account}' not found in portfolio. Available accounts: "
+                f"{self.getAccounts()}"
+            )
+        return self._account_registry.loc[account, 'Rebalancer']
 
     def getPortfolioTickers(self, verbose: bool = False) -> pd.Index:
         """Get all tickers in the portfolio in canonical order.
@@ -1265,13 +1286,13 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.account_rebalancers:
+        if account not in self.getAccounts():
             raise ValueError(
                 f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{list(self.account_rebalancers.keys())}"
+                f"{self.getAccounts()}"
             )
 
-        return self.account_rebalancers[account].getTickerResults()
+        return self.getAccountRebalancer(account).getTickerResults()
 
     def getAccountTickerAllocation(self, account: str) -> pd.Series:
         """Get the current ticker allocations for an account in canonical order.
@@ -1330,13 +1351,7 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.account_rebalancers:
-            raise ValueError(
-                f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{list(self.account_rebalancers.keys())}"
-            )
-
-        return self.account_rebalancers[account].getVariables(verbose=verbose)
+        return self.getAccountRebalancer(account).getVariables(verbose=verbose)
 
     def getAccountFactorWeights(self, account: str, verbose: bool = False) -> pd.DataFrame:
         """Get the factor weights matrix for a specific account.
@@ -1356,13 +1371,7 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.account_rebalancers:
-            raise ValueError(
-                f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{list(self.account_rebalancers.keys())}"
-            )
-
-        return self.account_rebalancers[account].getFactorWeights(verbose=verbose)
+        return self.getAccountRebalancer(account).getFactorWeights(verbose=verbose)
 
     def getPortfolioTargetFactorAllocations(self, verbose: bool = False) -> pd.Series:
         """Get the portfolio's target factor allocations.
@@ -1454,13 +1463,7 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.account_rebalancers:
-            raise ValueError(
-                f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{list(self.account_rebalancers.keys())}"
-            )
-
-        return self.account_rebalancers[account].getTargetFactorAllocations(verbose=verbose)
+        return self.getAccountRebalancer(account).getTargetFactorAllocations(verbose=verbose)
 
     def getAccountFactorObjective(self, account: str, verbose: bool = False) -> cp.Expression:
         """Get the factor objective for a specific account.
@@ -1478,13 +1481,7 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.account_rebalancers:
-            raise ValueError(
-                f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{list(self.account_rebalancers.keys())}"
-            )
-
-        return self.account_rebalancers[account].getFactorObjective(verbose=verbose)
+        return self.getAccountRebalancer(account).getFactorObjective(verbose=verbose)
 
     def getAccountTurnoverObjective(self, account: str, verbose: bool = False) -> cp.Expression:
         """Get the turnover objective for a specific account.
@@ -1502,13 +1499,7 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.account_rebalancers:
-            raise ValueError(
-                f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{list(self.account_rebalancers.keys())}"
-            )
-
-        return self.account_rebalancers[account].getTurnoverObjective(verbose=verbose)
+        return self.getAccountRebalancer(account).getTurnoverObjective(verbose=verbose)
 
 class AccountRebalancer:
     """
