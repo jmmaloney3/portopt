@@ -1501,6 +1501,22 @@ class PortfolioRebalancer:
         """
         return self.getAccountRebalancer(account).getTurnoverObjective(verbose=verbose)
 
+    def getAccountComplexityObjective(self, account: str, verbose: bool = False) -> cp.Expression:
+        """Get the complexity objective for a specific account.
+
+        Args:
+            account: Name of the account to get complexity objective for
+            verbose: If True, print detailed information about the objective
+
+        Returns:
+            cp.Expression: CVXPY expression representing the complexity objective
+                for the specified account.
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        return self.getAccountRebalancer(account).getComplexityObjective(verbose=verbose)
+
 class AccountRebalancer:
     """
     Helper class for managing account-level rebalancing optimization components.
@@ -1548,6 +1564,8 @@ class AccountRebalancer:
         self._turnover_objective = None
         # Initialize cache for target factor allocations
         self._target_factor_allocations = None
+        # Initialize cache for complexity objective
+        self._complexity_objective = None
 
         if verbose:
             print("\n<== AccountRebalancer.__init__()")
@@ -1893,3 +1911,41 @@ class AccountRebalancer:
             write_weights(current_allocations)
 
         return self._turnover_objective
+
+    def getComplexityObjective(self, verbose: bool = False) -> cp.Expression:
+        """Calculate the complexity objective for this account.
+
+        This is calculated as the sum of binary selection variables (z), which
+        minimizes the number of funds used in the account.
+
+        The expression is cached after first creation to ensure it is not recreated
+        in subsequent calls.
+
+        Args:
+            verbose: If True, print detailed information about the calculation
+
+        Returns:
+            cp.Expression: CVXPY expression representing the complexity objective
+                for this account.
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        # Return cached expression if it exists
+        if self._complexity_objective is not None:
+            if verbose:
+                print(f"\nUsing cached complexity objective for account {self.account}")
+            return self._complexity_objective
+
+        # Get variables
+        variables = self.getVariables(verbose=verbose)
+
+        # Calculate complexity objective: sum(z)
+        self._complexity_objective = cp.sum(variables['z'])
+
+        if verbose:
+            print(f"\nComplexity objective for account {self.account}:")
+            print(f" - Expression: sum(z)")
+            print(f" - Number of tickers: {variables['z'].size}")
+
+        return self._complexity_objective
