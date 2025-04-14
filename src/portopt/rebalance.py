@@ -1105,7 +1105,7 @@ class PortfolioRebalancer:
         )
 
         # Verify all target factors exist in factor weights
-        missing_factors = set(self.getFactors()) - set(self._factor_weights.index)
+        missing_factors = set(self.getPortfolioFactors()) - set(self._factor_weights.index)
         if missing_factors:
             raise ValueError(
                 f"Target factors not found in factor weights: {sorted(missing_factors)}"
@@ -1115,7 +1115,7 @@ class PortfolioRebalancer:
         # - rows (factors): match self._target_factor_allocations order exactly
         # - columns (tickers): include all tickers from factor_weights
         self._factor_weights = self._factor_weights.reindex(
-            index=self.getFactors(),  # Use target factor order
+            index=self.getPortfolioFactors(),  # Use target factor order
             columns=factor_weights.index.get_level_values('Ticker').unique(),
             fill_value=0
         )
@@ -1397,7 +1397,7 @@ class PortfolioRebalancer:
         # canonical order of the factors.
         return self._target_factor_allocations
 
-    def getFactors(self) -> pd.Index:
+    def getPortfolioFactors(self) -> pd.Index:
         """Get the factors in canonical order.
 
         The canonical order is determined by the order of factors in the target
@@ -1415,7 +1415,7 @@ class PortfolioRebalancer:
         """Get the master factor weights matrix for the entire portfolio.
 
         Returns the complete factor weights matrix that:
-        1. Contains all factors in canonical order (from getFactors)
+        1. Contains all factors in canonical order (from getPortfolioFactors)
         2. Contains all tickers in canonical order
         3. Has zeros for any missing factor-ticker combinations
 
