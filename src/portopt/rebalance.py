@@ -1000,8 +1000,8 @@ class PortfolioRebalancer:
         target_factor_allocations: Series containing target factor allocations
         factor_weights: DataFrame containing factor weights for all tickers
         min_ticker_alloc: Minimum allocation for any ticker (default: 0.0)
-        account_proportions: Series containing the proportion of the portfolio
-            held in each account
+        accounts: DataFrame indexed by Account and containing the proportion
+            of the portfolio held in each account
     """
 
     def __init__(
@@ -1051,13 +1051,13 @@ class PortfolioRebalancer:
                 f"Account ticker allocations must sum to 100%, got {total_allocation:.2%}"
             )
 
-        # Calculate account proportions by summing allocations for each account
-        self.account_proportions = account_ticker_allocations.groupby(level='Account').sum()
-        self.account_proportions.name = 'Account Proportion'
+        # Generate list of accounts with proportions by summing allocations for each account
+        self._accounts = account_ticker_allocations.groupby(level='Account').sum()
+        self._accounts.name = 'Account Proportion'
+        self._accounts.index.name = 'Account'
 
         if verbose:
-            print("\nAccount Proportions:")
-            write_weights(self.account_proportions)
+            write_weights(self._accounts, title="Account Proportions")
 
         # Validate target allocations sum to 100%
         if not np.isclose(target_factor_allocations.sum(), 1.0, rtol=1e-5):
@@ -1175,12 +1175,12 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.account_proportions.index:
+        if account not in self.getAccounts():
             raise ValueError(
                 f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{self.account_proportions.index.tolist()}"
+                f"{self.getAccounts()}"
             )
-        return self.account_proportions.loc[account].iloc[0]
+        return self._accounts.loc[account].iloc[0]
 
     def getAccounts(self) -> list[str]:
         """Get the list of accounts being rebalanced.
@@ -1188,7 +1188,7 @@ class PortfolioRebalancer:
         Returns:
             list[str]: List of account names in the portfolio
         """
-        return self.account_proportions.index.tolist()
+        return self._accounts.index
 
     def getPortfolioTickers(self, verbose: bool = False) -> pd.Index:
         """Get all tickers in the portfolio in canonical order.
@@ -1232,10 +1232,10 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.account_proportions.index:
+        if account not in self.getAccounts():
             raise ValueError(
                 f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{self.account_proportions.index.tolist()}"
+                f"{self.getAccounts()}"
             )
 
         # Get all tickers in canonical order from factor weights matrix
@@ -1286,10 +1286,10 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.account_proportions.index:
+        if account not in self.getAccounts():
             raise ValueError(
                 f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{self.account_proportions.index.tolist()}"
+                f"{self.getAccounts()}"
             )
 
         # Get current allocations for this account
