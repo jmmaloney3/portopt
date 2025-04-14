@@ -176,9 +176,19 @@ def write_weights(weights: Union[pd.DataFrame, pd.Series], title: str = None):
     print(f" - Shape: {weights.shape}")
 
     # Create column formats dictionary
-    column_formats = {
-        weights.index.name if weights.index.name else 'index': {'width': 30}  # Use index name or default to 'Index'
-    }
+    column_formats = {}
+
+    # Handle multi-index
+    if isinstance(weights.index, pd.MultiIndex):
+        # Add format for each index level
+        for level_name in weights.index.names:
+            if level_name is None:
+                level_name = 'index'
+            column_formats[level_name] = {'width': 30}
+    else:
+        # Handle single index
+        index_name = weights.index.name if weights.index.name else 'index'
+        column_formats[index_name] = {'width': 30}
 
     # Get columns to format (either DataFrame columns or Series name)
     value_columns = weights.columns if isinstance(weights, pd.DataFrame) else [weights.name]
