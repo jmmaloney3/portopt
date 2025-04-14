@@ -1517,6 +1517,21 @@ class PortfolioRebalancer:
         """
         return self.getAccountRebalancer(account).getComplexityObjective(verbose=verbose)
 
+    def getAccountConstraints(self, account: str, verbose: bool = False) -> list[cp.Constraint]:
+        """Get the optimization constraints for a specific account.
+
+        Args:
+            account: Name of the account to get constraints for
+            verbose: If True, print detailed information about the constraints
+
+        Returns:
+            list[cp.Constraint]: List of CVXPY constraints for the specified account
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        return self.getAccountRebalancer(account).getConstraints(verbose=verbose)
+
 class AccountRebalancer:
     """
     Helper class for managing account-level rebalancing optimization components.
@@ -1566,6 +1581,8 @@ class AccountRebalancer:
         self._target_factor_allocations = None
         # Initialize cache for complexity objective
         self._complexity_objective = None
+        # Initialize cache for constraints
+        self._constraints = None
 
         if verbose:
             print("\n<== AccountRebalancer.__init__()")
@@ -1949,3 +1966,57 @@ class AccountRebalancer:
             print(f" - Number of tickers: {variables['z'].size}")
 
         return self._complexity_objective
+
+    def getConstraints(self, verbose: bool = False) -> list[cp.Constraint]:
+        """Get the optimization constraints for this account.
+
+        The constraints include:
+        1. Sum of allocations equals account's proportion of portfolio
+        2. No negative allocations
+        3. Link between allocation variables (x) and selection variables (z)
+        4. Minimum allocation when a fund is selected
+
+        The constraints are cached after first creation to ensure they are not
+        recreated in subsequent calls.
+
+        Args:
+            verbose: If True, print detailed information about the constraints
+
+        Returns:
+            list[cp.Constraint]: List of CVXPY constraints for the account
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        # Return cached constraints if they exist
+        if self._constraints is not None:
+            if verbose:
+                print(f"\nUsing cached constraints for account {self.account}")
+            return self._constraints
+
+        # Get variables and account proportion
+        variables = self.getVariables(verbose=verbose)
+        account_proportion = self.getAccountProportion()
+        min_ticker_alloc = self.port_rebalancer.min_ticker_alloc
+
+        # Create the constraints list
+        self._constraints = [
+            # Sum of allocations equals account's proportion of portfolio
+            cp.sum(variables['x']) == account_proportion,
+            variables['x'] >= 0,                                 # No negative allocations
+            variables['x'] <= variables['z'],                    # Link x and z
+            variables['x'] >= min_ticker_alloc * variables['z']  # Minimum allocation
+        ]
+
+        if verbose:
+            print(f"\nConstraints for account {self.account}:")
+            print(f" - Account proportion: {account_proportion:.2%}")
+            print(f" - Minimum ticker allocation: {min_ticker_alloc:.2%}")
+            print(f" - Number of constraints: {len(self._constraints)}")
+            print(f" - Constraint types:")
+            print(f"   1. Sum of allocations = {account_proportion:.2%}")
+            print(f"   2. No negative allocations")
+            print(f"   3. Link x and z variables")
+            print(f"   4. Minimum allocation when selected: {min_ticker_alloc:.2%}")
+
+        return self._constraints
