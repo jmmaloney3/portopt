@@ -1074,11 +1074,29 @@ class PortfolioRebalancer:
             write_weights(self._target_factor_allocations, title="Target Factor Allocations")
             print(f"\nMinimum Ticker Allocation: {min_ticker_alloc:.2%}")
 
+        # Initialize factor weights matrix
+        self._init_factor_weights_matrix(factor_weights=factor_weights, verbose=verbose)
+
+        # Initialize AccountRebalancer objects for each account
+        self._init_accounts(verbose=verbose)
+
+        if verbose:
+            print("\n<== PortfolioRebalancer.__init__()")
+
+    def _init_factor_weights_matrix(self,
+                                    factor_weights: pd.DataFrame,
+                                    verbose: bool = False) -> None:
+        """Initialize the factor weights matrix.
+
+        Creates a master factor weights matrix from the input factor weights DataFrame.
+        This matrix is used to map factor allocations to ticker allocations.  The
+        columns in this matrix provide the canonical order for the tickers.
+        """
         # Create master factor weights matrix:
         # 1. Pivot factor weights to get matrix form (factors x tickers)
         # 2. Reindex to match target factor order and include all tickers
         # 3. Fill missing values with 0
-        self.factor_weights = pd.pivot_table(
+        self._factor_weights = pd.pivot_table(
             factor_weights,
             values='Weight',
             index='Factor',
@@ -1087,7 +1105,7 @@ class PortfolioRebalancer:
         )
 
         # Verify all target factors exist in factor weights
-        missing_factors = set(self._target_factor_allocations.index) - set(self.factor_weights.index)
+        missing_factors = set(self.getFactors()) - set(self._factor_weights.index)
         if missing_factors:
             raise ValueError(
                 f"Target factors not found in factor weights: {sorted(missing_factors)}"
@@ -1096,26 +1114,20 @@ class PortfolioRebalancer:
         # Reindex to ensure:
         # - rows (factors): match self._target_factor_allocations order exactly
         # - columns (tickers): include all tickers from factor_weights
-        self.factor_weights = self.factor_weights.reindex(
-            index=self._target_factor_allocations.index,  # Use target factor order
+        self._factor_weights = self._factor_weights.reindex(
+            index=self.getFactors(),  # Use target factor order
             columns=factor_weights.index.get_level_values('Ticker').unique(),
             fill_value=0
         )
 
         if verbose:
-            write_weights(self.factor_weights, title="Factor Weights Matrix")
+            write_weights(self._factor_weights, title="Factor Weights Matrix")
 
         # Validate matrix shape
-        assert self.factor_weights.shape[0] == len(self._target_factor_allocations), \
+        assert self._factor_weights.shape[0] == len(self._target_factor_allocations), \
             "Factor weights matrix rows don't match target factor count"
-        assert self.factor_weights.shape[1] > 0, \
+        assert self._factor_weights.shape[1] > 0, \
             "Factor weights matrix has no tickers"
-
-        # Initialize AccountRebalancer objects for each account
-        self._init_accounts(verbose=verbose)
-
-        if verbose:
-            print("\n<== PortfolioRebalancer.__init__()")
 
     def _init_accounts(self, verbose: bool = False) -> None:
         """Initialize AccountRebalancer objects for each account in the portfolio.
@@ -1178,6 +1190,30 @@ class PortfolioRebalancer:
         """
         return self.account_proportions.index.tolist()
 
+    def getPortfolioTickers(self, verbose: bool = False) -> pd.Index:
+        """Get all tickers in the portfolio in canonical order.
+
+        The canonical order is determined by the order of tickers in the factor weights
+        matrix. This ensures consistent ordering between:
+        - Factor weights matrix columns
+        - Optimization variables
+        - Current allocation vectors
+
+        Args:
+            verbose: If True, print detailed information about the tickers
+
+        Returns:
+            pd.Index: Index containing all tickers in canonical order
+        """
+        tickers = self.getPortfolioFactorWeights(verbose=verbose).columns
+
+        if verbose:
+            print("\nPortfolio tickers:")
+            print(f" - Number of tickers: {len(tickers)}")
+            print(f" - Tickers: {sorted(tickers.tolist())}")
+
+        return tickers
+
     def getAccountTickers(self, account: str) -> pd.Index:
         """Get the tickers for a specific account in canonical order.
 
@@ -1203,7 +1239,7 @@ class PortfolioRebalancer:
             )
 
         # Get all tickers in canonical order from factor weights matrix
-        canonical_tickers = self.factor_weights.columns
+        canonical_tickers = self.getPortfolioTickers()
 
         # Get tickers that exist in this account
         account_tickers = self.account_ticker_allocations.xs(
@@ -1360,6 +1396,46 @@ class PortfolioRebalancer:
         # The target factor allocations supplied to the constructor defines the
         # canonical order of the factors.
         return self._target_factor_allocations
+
+    def getFactors(self) -> pd.Index:
+        """Get the factors in canonical order.
+
+        The canonical order is determined by the order of factors in the target
+        factor allocations. This ensures consistent ordering between:
+        - Factor weights matrix rows
+        - Target factor allocations
+        - Factor allocation vectors
+
+        Returns:
+            pd.Index: Index containing factors in canonical order
+        """
+        return self._target_factor_allocations.index
+
+    def getPortfolioFactorWeights(self, verbose: bool = False) -> pd.DataFrame:
+        """Get the master factor weights matrix for the entire portfolio.
+
+        Returns the complete factor weights matrix that:
+        1. Contains all factors in canonical order (from getFactors)
+        2. Contains all tickers in canonical order
+        3. Has zeros for any missing factor-ticker combinations
+
+        Args:
+            verbose: If True, print detailed information about the matrix
+
+        Returns:
+            pd.DataFrame: Factor weights matrix with:
+                - Rows: Factors (in canonical order)
+                - Columns: Tickers (in canonical order)
+                - Values: Factor weights
+        """
+        if verbose:
+            print("\nPortfolio factor weights matrix:")
+            print(f" - Shape: {self._factor_weights.shape}")
+            print(f" - Factors: {len(self._factor_weights.index)}")
+            print(f" - Tickers: {len(self._factor_weights.columns)}")
+            write_weights(self._factor_weights)
+
+        return self._factor_weights
 
     def getAccountTargetFactorAllocations(self, account: str, verbose: bool = False) -> pd.Series:
         """Get the target factor allocations for a specific account.
@@ -1618,11 +1694,9 @@ class AccountRebalancer:
         # Get tickers in canonical order
         tickers = self.getTickers()
 
-        # Get factor weights matrix from parent portfolio
-        F = self.port_rebalancer.factor_weights
-
-        # Filter and reorder columns to match account's tickers
-        self._factor_weights = F[tickers]
+        # Get factor weights matrix from parent portfolio and filter
+        # columns to match account's tickers
+        self._factor_weights = self.port_rebalancer.getPortfolioFactorWeights(verbose=verbose)[tickers]
 
         if verbose:
             print(f"\nFactor weights matrix for account {self.account}:")
