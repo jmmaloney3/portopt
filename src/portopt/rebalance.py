@@ -1067,17 +1067,17 @@ class PortfolioRebalancer:
             )
 
         # Store inputs
-        self.account_ticker_allocations = account_ticker_allocations
+        self._account_ticker_allocations = account_ticker_allocations
         self._target_factor_allocations = target_factor_allocations
-        self.min_ticker_alloc = min_ticker_alloc
+        self._min_ticker_alloc = min_ticker_alloc
         self._turnover_penalty = turnover_penalty
         self._complexity_penalty = complexity_penalty
         self._account_align_penalty = account_align_penalty
 
         if verbose:
-            write_weights(self.account_ticker_allocations, title="Account Ticker Allocations")
+            write_weights(self._account_ticker_allocations, title="Account Ticker Allocations")
             write_weights(self._target_factor_allocations, title="Target Factor Allocations")
-            print(f"\nMinimum Ticker Allocation: {min_ticker_alloc:.2%}")
+            print(f"\nMinimum Ticker Allocation: {self._min_ticker_alloc:.2%}")
             print(f"Turnover Penalty: {self._turnover_penalty}")
             print(f"Complexity Penalty: {self._complexity_penalty}")
             print(f"Account Align Penalty: {self._account_align_penalty}")
@@ -1153,7 +1153,7 @@ class PortfolioRebalancer:
             print("\n==> _init_account_registry()\n")
 
         # Create DataFrame indexed by Account with account proportions
-        proportions = self.account_ticker_allocations.groupby(level='Account').sum()
+        proportions = self._account_ticker_allocations.groupby(level='Account').sum()
         proportions.name = 'Proportion'
 
         # Create empty DataFrame with account names as index
@@ -1278,7 +1278,7 @@ class PortfolioRebalancer:
         canonical_tickers = self.getPortfolioTickers()
 
         # Get tickers that exist in this account
-        account_tickers = self.account_ticker_allocations.xs(
+        account_tickers = self._account_ticker_allocations.xs(
             account, level='Account'
         ).index
 
@@ -1303,7 +1303,7 @@ class PortfolioRebalancer:
         """
         return self.getAccountRebalancer(account).getTickerResults()
 
-    def getAccountTickerAllocation(self, account: str) -> pd.Series:
+    def getAccountTickerAllocations(self, account: str) -> pd.Series:
         """Get the current ticker allocations for an account in canonical order.
 
         Args:
@@ -1323,7 +1323,7 @@ class PortfolioRebalancer:
             )
 
         # Get current allocations for this account
-        account_allocations = self.account_ticker_allocations.xs(
+        account_allocations = self._account_ticker_allocations.xs(
             account, level='Account'
         )['Allocation']  # Extract the Allocation column as a Series
 
@@ -1652,7 +1652,7 @@ class AccountRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        return self.port_rebalancer.getAccountTickerAllocation(self.account)
+        return self.port_rebalancer.getAccountTickerAllocations(self.account)
 
     def getTickerResults(self) -> pd.DataFrame:
         """Get the ticker allocation results for this account.
@@ -2068,7 +2068,7 @@ class AccountRebalancer:
         # Get variables and account proportion
         variables = self.getVariables(verbose=verbose)
         account_proportion = self.getAccountProportion()
-        min_ticker_alloc = self.port_rebalancer.min_ticker_alloc
+        min_ticker_alloc = self.port_rebalancer._min_ticker_alloc
 
         # Create the constraints list
         self._constraints = [
