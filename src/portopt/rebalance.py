@@ -1640,6 +1640,10 @@ class AccountRebalancer:
         self._complexity_objective = None
         # Initialize cache for constraints
         self._constraints = None
+        # Initialize cache for new ticker allocations
+        self._new_ticker_allocations = None
+        # Initialize cache for new factor allocations
+        self._new_factor_allocations = None
 
         if verbose:
             print("\n<== AccountRebalancer.__init__()")
@@ -1678,7 +1682,55 @@ class AccountRebalancer:
         """
         return self.port_rebalancer.getAccountTickerAllocations(self.account)
 
-    def getTickerResults(self) -> pd.DataFrame:
+    def getNewTickerAllocations(self, verbose: bool = False) -> pd.Series:
+        """Get the new ticker allocations from the optimization variables.
+
+        The allocations are cached after first calculation to ensure they are not
+        recalculated in subsequent calls.
+
+        Args:
+            verbose: If True, print detailed information about the allocations
+
+        Returns:
+            pd.Series: Series indexed by ticker containing new allocation percentages,
+                      ordered according to the canonical ticker order, or None if
+                      optimization has not been solved
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        # Return cached allocations if they exist
+        if self._new_ticker_allocations is not None:
+            if verbose:
+                print(f"\nUsing cached new ticker allocations for account {self.account}")
+            return self._new_ticker_allocations
+
+        # Get variables and check if optimization has been solved
+        variables = self.getVariables()
+        if variables['x'].value is None:
+            if verbose:
+                print(f"\nNo new ticker allocations available for account {self.account} (optimization not solved)")
+            return None
+
+        # Get tickers in canonical order
+        tickers = self.getTickers()
+
+        # Create new allocations series from optimization variables
+        self._new_ticker_allocations = pd.Series(
+            variables['x'].value.flatten(),
+            index=tickers,
+            name='New Allocation'
+        )
+
+        if verbose:
+            print(f"\nNew ticker allocations for account {self.account}:")
+            print(f" - Number of tickers: {len(self._new_ticker_allocations)}")
+            print(f" - Total allocation: {self._new_ticker_allocations.sum():.2%}")
+            write_weights(self._new_ticker_allocations)
+
+        return self._new_ticker_allocations
+
+    def getTickerResults(self, verbose: bool = False) -> pd.DataFrame:
         """Get the ticker allocation results for this account.
 
         Returns:
@@ -1693,27 +1745,18 @@ class AccountRebalancer:
         # Get original allocations
         original_allocations = self.getTickerAllocations()
 
-        # Get variables and check if optimization has been solved
-        variables = self.getVariables()
-        if variables['x'].value is None:
-            # Optimization not solved yet, return only original allocations
-            results = pd.DataFrame({
-                'Original Allocation': original_allocations
-            })
-        else:
-            # Optimization solved, include new allocations and difference
-            new_allocations = pd.Series(
-                variables['x'].value.flatten(),
-                index=original_allocations.index,
-                name='New Allocation'
-            )
+        # Get new allocations if optimization has been solved
+        new_allocations = self.getNewTickerAllocations(verbose=verbose)
 
-            # Create DataFrame with both original and new allocations
-            results = pd.DataFrame({
-                'Original Allocation': original_allocations,
-                'New Allocation': new_allocations,
-                'Difference': new_allocations - original_allocations
-            })
+        # Create DataFrame with original allocations
+        results = pd.DataFrame({
+            'Original Allocation': original_allocations
+        })
+
+        # Add new allocations and difference if optimization has been solved
+        if new_allocations is not None:
+            results['New Allocation'] = new_allocations
+            results['Difference'] = new_allocations - original_allocations
 
         # Set index name
         results.index.name = 'Ticker'
@@ -1897,6 +1940,94 @@ class AccountRebalancer:
             write_weights(self._factor_allocations)
 
         return self._factor_allocations
+
+    def getNewFactorAllocations(self, verbose: bool = False) -> pd.Series:
+        """Get the new factor allocations from the optimization variables.
+
+        The factor allocations are calculated by multiplying the factor weights matrix
+        by the new ticker allocations: F @ new_ticker_allocations
+
+        The allocations are cached after first calculation to ensure they are not
+        recalculated in subsequent calls.
+
+        Args:
+            verbose: If True, print detailed information about the allocations
+
+        Returns:
+            pd.Series: Series indexed by Factor containing new allocation percentages,
+                      ordered according to the canonical factor order, or None if
+                      optimization has not been solved
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        # Return cached allocations if they exist
+        if self._new_factor_allocations is not None:
+            if verbose:
+                print(f"\nUsing cached new factor allocations for account {self.account}")
+            return self._new_factor_allocations
+
+        # Get new ticker allocations if optimization has been solved
+        new_ticker_allocations = self.getNewTickerAllocations(verbose=verbose)
+        if new_ticker_allocations is None:
+            if verbose:
+                print(f"\nNo new factor allocations available for account {self.account} (optimization not solved)")
+            return None
+
+        # Get factor weights matrix
+        F = self.getFactorWeights(verbose=verbose)
+
+        # Calculate new factor allocations: F @ new_ticker_allocations
+        self._new_factor_allocations = pd.Series(
+            F.to_numpy() @ new_ticker_allocations.to_numpy(),
+            index=F.index,
+            name='New Allocation'
+        )
+
+        if verbose:
+            print(f"\nNew factor allocations for account {self.account}:")
+            print(f" - Number of factors: {len(self._new_factor_allocations)}")
+            print(f" - Total allocation: {self._new_factor_allocations.sum():.2%}")
+            write_weights(self._new_factor_allocations)
+
+        return self._new_factor_allocations
+
+    def getFactorResults(self, verbose: bool = False) -> pd.DataFrame:
+        """Get the factor allocation results for this account.
+
+        Returns:
+            pd.DataFrame: DataFrame indexed by Factor (in canonical order) containing:
+                - Original Allocation: Current factor allocation percentages
+                - Target Allocation: Target factor allocation percentages
+                - New Allocation: Optimized factor allocation percentages (if solved)
+                - Original Difference: Change from original to new allocation (if solved)
+                - Target Difference: Change from target to new allocation (if solved)
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        # Get original and target allocations
+        original_allocations = self.getFactorAllocations(verbose=verbose)
+        target_allocations = self.getTargetFactorAllocations(verbose=verbose)
+
+        # Create DataFrame with original and target allocations
+        results = pd.DataFrame({
+            'Original Allocation': original_allocations,
+            'Target Allocation': target_allocations
+        })
+
+        # Get new factor allocations if optimization has been solved
+        new_allocations = self.getNewFactorAllocations(verbose=verbose)
+        if new_allocations is not None:
+            # Add new allocations and differences
+            results['New Allocation'] = new_allocations
+            results['Original Difference'] = new_allocations - original_allocations
+            results['Target Difference'] = new_allocations - target_allocations
+
+        # Set index name
+        results.index.name = 'Factor'
+
+        return results
 
     def getOptimizedFactorAllocations(self, verbose: bool = False) -> cp.Expression:
         """Calculate the optimized factor allocations for this account.
