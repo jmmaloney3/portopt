@@ -1455,6 +1455,30 @@ class PortfolioRebalancer:
 
         return self._factor_weights
 
+    def getAccountFactorAllocations(self, account: str, verbose: bool = False) -> pd.Series:
+        """Get the current factor allocations for a specific account.
+
+        Delegates to the AccountRebalancer instance for the specified account.
+
+        Args:
+            account: Name of the account to get factor allocations for
+            verbose: If True, print detailed information about the allocations
+
+        Returns:
+            pd.Series: Series indexed by Factor containing current allocation percentages,
+                      ordered according to the canonical factor order
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        if account not in self.getAccounts():
+            raise ValueError(
+                f"Account '{account}' not found in portfolio. Available accounts: "
+                f"{self.getAccounts()}"
+            )
+
+        return self.getAccountRebalancer(account).getFactorAllocations(verbose=verbose)
+
     def getAccountTargetFactorAllocations(self, account: str, verbose: bool = False) -> pd.Series:
         """Get the target factor allocations for a specific account.
 
@@ -1829,6 +1853,50 @@ class AccountRebalancer:
             write_weights(self._factor_weights)
 
         return self._factor_weights
+
+    def getFactorAllocations(self, verbose: bool = False) -> pd.Series:
+        """Get the current factor allocations for this account.
+
+        The factor allocations are calculated by multiplying the factor weights matrix
+        by the current ticker allocations: F @ current_allocations
+
+        The allocations are cached after first calculation to ensure they are not
+        recalculated in subsequent calls.
+
+        Args:
+            verbose: If True, print detailed information about the allocations
+
+        Returns:
+            pd.Series: Series indexed by Factor containing current allocation percentages,
+                      ordered according to the canonical factor order
+
+        Raises:
+            ValueError: If the account is not found in the portfolio
+        """
+        # Return cached allocations if they exist
+        if self._factor_allocations is not None:
+            if verbose:
+                print(f"\nUsing cached factor allocations for account {self.account}")
+            return self._factor_allocations
+
+        # Get factor weights matrix and current ticker allocations
+        F = self.getFactorWeights(verbose=verbose)
+        current_allocations = self.getTickerAllocations()
+
+        # Calculate factor allocations: F @ current_allocations
+        self._factor_allocations = pd.Series(
+            F.to_numpy() @ current_allocations.to_numpy(),
+            index=F.index,
+            name='Allocation'
+        )
+
+        if verbose:
+            print(f"\nCurrent factor allocations for account {self.account}:")
+            print(f" - Number of factors: {len(self._factor_allocations)}")
+            print(f" - Total allocation: {self._factor_allocations.sum():.2%}")
+            write_weights(self._factor_allocations)
+
+        return self._factor_allocations
 
     def getOptimizedFactorAllocations(self, verbose: bool = False) -> cp.Expression:
         """Calculate the optimized factor allocations for this account.
