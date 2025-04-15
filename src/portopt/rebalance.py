@@ -1301,12 +1301,6 @@ class PortfolioRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        if account not in self.getAccounts():
-            raise ValueError(
-                f"Account '{account}' not found in portfolio. Available accounts: "
-                f"{self.getAccounts()}"
-            )
-
         return self.getAccountRebalancer(account).getTickerResults()
 
     def getAccountTickerAllocation(self, account: str) -> pd.Series:
