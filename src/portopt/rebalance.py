@@ -1455,8 +1455,8 @@ class PortfolioRebalancer:
 
         return self._factor_weights
 
-    def getAccountFactorAllocations(self, account: str, verbose: bool = False) -> pd.Series:
-        """Get the current factor allocations for a specific account.
+    def getAccountOriginalFactorAllocations(self, account: str, verbose: bool = False) -> pd.Series:
+        """Get the original (current) factor allocations for a specific account.
 
         Delegates to the AccountRebalancer instance for the specified account.
 
@@ -1477,7 +1477,7 @@ class PortfolioRebalancer:
                 f"{self.getAccounts()}"
             )
 
-        return self.getAccountRebalancer(account).getFactorAllocations(verbose=verbose)
+        return self.getAccountRebalancer(account).getOriginalFactorAllocations(verbose=verbose)
 
     def getAccountTargetFactorAllocations(self, account: str, verbose: bool = False) -> pd.Series:
         """Get the target factor allocations for a specific account.
@@ -1624,26 +1624,27 @@ class AccountRebalancer:
         self.port_rebalancer = port_rebalancer
         self.account = account
 
-        # Initialize cache for optimization variables
-        self._variables = None
-        # Initialize cache for factor allocations expression
-        self._factor_allocations = None
+        # Initialize caches for ticker allocations
+        self._new_ticker_allocations = None
+
         # Initialize cache for factor weights matrix
         self._factor_weights = None
-        # Initialize cache for factor objective
-        self._factor_objective = None
-        # Initialize cache for turnover objective
-        self._turnover_objective = None
-        # Initialize cache for target factor allocations
+
+        # Initialize caches for factor allocations
+        self._original_factor_allocations = None
         self._target_factor_allocations = None
-        # Initialize cache for complexity objective
-        self._complexity_objective = None
-        # Initialize cache for constraints
-        self._constraints = None
-        # Initialize cache for new ticker allocations
-        self._new_ticker_allocations = None
-        # Initialize cache for new factor allocations
         self._new_factor_allocations = None
+
+        # Initialize cache for optimization variables
+        self._variables = None
+
+        # Initialize cache for optimization objectives
+        self._factor_objective = None
+        self._turnover_objective = None
+        self._complexity_objective = None
+
+        # Initialize cache for optimization constraints
+        self._constraints = None
 
         if verbose:
             print("\n<== AccountRebalancer.__init__()")
@@ -1897,11 +1898,11 @@ class AccountRebalancer:
 
         return self._factor_weights
 
-    def getFactorAllocations(self, verbose: bool = False) -> pd.Series:
-        """Get the current factor allocations for this account.
+    def getOriginalFactorAllocations(self, verbose: bool = False) -> pd.Series:
+        """Get the original (current) factor allocations for this account.
 
         The factor allocations are calculated by multiplying the factor weights matrix
-        by the current ticker allocations: F @ current_allocations
+        by the original (current) ticker allocations: F @ current_allocations
 
         The allocations are cached after first calculation to ensure they are not
         recalculated in subsequent calls.
@@ -1917,29 +1918,29 @@ class AccountRebalancer:
             ValueError: If the account is not found in the portfolio
         """
         # Return cached allocations if they exist
-        if self._factor_allocations is not None:
+        if self._original_factor_allocations is not None:
             if verbose:
-                print(f"\nUsing cached factor allocations for account {self.account}")
-            return self._factor_allocations
+                print(f"\nUsing cached original factor allocations for account {self.account}")
+            return self._original_factor_allocations
 
         # Get factor weights matrix and current ticker allocations
         F = self.getFactorWeights(verbose=verbose)
         current_allocations = self.getTickerAllocations()
 
         # Calculate factor allocations: F @ current_allocations
-        self._factor_allocations = pd.Series(
+        self._original_factor_allocations = pd.Series(
             F.to_numpy() @ current_allocations.to_numpy(),
             index=F.index,
             name='Allocation'
         )
 
         if verbose:
-            print(f"\nCurrent factor allocations for account {self.account}:")
-            print(f" - Number of factors: {len(self._factor_allocations)}")
-            print(f" - Total allocation: {self._factor_allocations.sum():.2%}")
-            write_weights(self._factor_allocations)
+            print(f"\nOriginal (current) factor allocations for account {self.account}:")
+            print(f" - Number of factors: {len(self._original_factor_allocations)}")
+            print(f" - Total allocation: {self._original_factor_allocations.sum():.2%}")
+            write_weights(self._original_factor_allocations, "Original Factor Allocations")
 
-        return self._factor_allocations
+        return self._original_factor_allocations
 
     def getNewFactorAllocations(self, verbose: bool = False) -> pd.Series:
         """Get the new factor allocations from the optimization variables.
@@ -1988,7 +1989,7 @@ class AccountRebalancer:
             print(f"\nNew factor allocations for account {self.account}:")
             print(f" - Number of factors: {len(self._new_factor_allocations)}")
             print(f" - Total allocation: {self._new_factor_allocations.sum():.2%}")
-            write_weights(self._new_factor_allocations)
+            write_weights(self._new_factor_allocations, "New Factor Allocations")
 
         return self._new_factor_allocations
 
@@ -2007,8 +2008,8 @@ class AccountRebalancer:
             ValueError: If the account is not found in the portfolio
         """
         # Get original and target allocations
-        original_allocations = self.getFactorAllocations(verbose=verbose)
-        target_allocations = self.getTargetFactorAllocations(verbose=verbose)
+        original_allocations = self.getOriginalFactorAllocations(verbose=verbose)
+        target_allocations   = self.getTargetFactorAllocations(verbose=verbose)
 
         # Create DataFrame with original and target allocations
         results = pd.DataFrame({
@@ -2028,48 +2029,6 @@ class AccountRebalancer:
         results.index.name = 'Factor'
 
         return results
-
-    def getOptimizedFactorAllocations(self, verbose: bool = False) -> cp.Expression:
-        """Calculate the optimized factor allocations for this account.
-
-        This is calculated by multiplying the factor weights matrix by the allocation
-        variables vector: F @ x
-
-        The expression is cached after first creation to ensure it is not recreated
-        in subsequent calls.
-
-        Args:
-            verbose: If True, print detailed information about the calculation
-
-        Returns:
-            cp.Expression: CVXPY expression representing the optimized factor allocations
-                for this account. The expression is a vector with one element per factor,
-                ordered according to the parent portfolio's factor order.
-
-        Raises:
-            ValueError: If the account is not found in the portfolio
-        """
-        # Return cached expression if it exists
-        if self._factor_allocations is not None:
-            if verbose:
-                print(f"\nUsing cached factor allocations expression for account {self.account}")
-            return self._factor_allocations
-
-        # Get factor weights matrix and variables
-        F = self.getFactorWeights(verbose=verbose)
-        variables = self.getVariables(verbose=verbose)
-
-        # Calculate factor allocations: F @ x
-        self._factor_allocations = F.to_numpy() @ variables['x']
-
-        if verbose:
-            print(f"\nOptimized factor allocations for account {self.account}:")
-            print(f" - Shape: {self._factor_allocations.shape}")
-            # TODO: fix this (len doesn't work)
-            #print(f" - Factors: {len(self._factor_allocations)}")
-            print(f" - Expression: F @ x")
-
-        return self._factor_allocations
 
     def getTargetFactorAllocations(self, verbose: bool = False) -> pd.Series:
         """Get the target factor allocations for this account.
@@ -2139,20 +2098,26 @@ class AccountRebalancer:
                 print(f"\nUsing cached factor objective for account {self.account}")
             return self._factor_objective
 
-        # Get factor allocations and target allocations
-        factor_allocations = self.getOptimizedFactorAllocations(verbose=verbose)
-        target_allocations = self.getTargetFactorAllocations(verbose=verbose)
+        # Get factor weights matrix and variables
+        F = self.getFactorWeights(verbose=verbose)
+        variables = self.getVariables(verbose=verbose)
+
+        # Calculate factor allocations: F @ x
+        optimized_factor_allocations = F.to_numpy() @ variables['x']
+
+        # Get target allocations
+        target_factor_allocations = self.getTargetFactorAllocations(verbose=verbose)
 
         # Calculate factor objective: sum_squares(F @ x - target)
         self._factor_objective = cp.sum_squares(
-            factor_allocations - target_allocations.to_numpy()
+            optimized_factor_allocations - target_factor_allocations.to_numpy()
         )
 
         if verbose:
             print(f"\nFactor objective for account {self.account}:")
             print(f" - Expression: sum_squares(F @ x - target)")
             print(f" - Target allocations:")
-            write_weights(target_allocations)
+            write_weights(target_factor_allocations)
 
         return self._factor_objective
 
