@@ -1020,7 +1020,7 @@ class PortfolioRebalancer:
 
         Args:
             account_ticker_allocations: DataFrame with hierarchical index [Account, Ticker]
-                containing current allocation percentages for each account-ticker pair
+                containing original allocation percentages for each account-ticker pair
             target_factor_allocations: Series indexed by Factor containing target
                 allocation percentages - defines the canonical order of factors
             factor_weights: DataFrame with hierarchical index [Ticker, Factor]
@@ -1180,6 +1180,14 @@ class PortfolioRebalancer:
             write_weights(self._account_registry['Proportion'])
             print("\n<== _init_account_registry()")
 
+    def getAccounts(self) -> list[str]:
+        """Get the list of accounts being rebalanced.
+
+        Returns:
+            list[str]: List of account names in the portfolio
+        """
+        return self._account_registry.index
+
     def getAccountProportion(self, account: str) -> float:
         """Get the proportion of the portfolio held in a specific account.
 
@@ -1198,14 +1206,6 @@ class PortfolioRebalancer:
                 f"{self.getAccounts()}"
             )
         return self._account_registry.loc[account, 'Proportion']
-
-    def getAccounts(self) -> list[str]:
-        """Get the list of accounts being rebalanced.
-
-        Returns:
-            list[str]: List of account names in the portfolio
-        """
-        return self._account_registry.index
 
     def getAccountRebalancer(self, account: str) -> 'AccountRebalancer':
         """Get the AccountRebalancer instance for a specific account.
@@ -1303,14 +1303,14 @@ class PortfolioRebalancer:
         """
         return self.getAccountRebalancer(account).getTickerResults()
 
-    def getAccountTickerAllocations(self, account: str) -> pd.Series:
-        """Get the current ticker allocations for an account in canonical order.
+    def getAccountOriginalTickerAllocations(self, account: str) -> pd.Series:
+        """Get the original (current) ticker allocations for an account in canonical order.
 
         Args:
             account: Name of the account to get allocations for
 
         Returns:
-            pd.Series: Series indexed by ticker containing current allocation percentages,
+            pd.Series: Series indexed by ticker containing original allocation percentages,
                       ordered according to the canonical ticker order
 
         Raises:
@@ -1322,7 +1322,7 @@ class PortfolioRebalancer:
                 f"{self.getAccounts()}"
             )
 
-        # Get current allocations for this account
+        # Get original allocations for this account
         account_allocations = self._account_ticker_allocations.xs(
             account, level='Account'
         )['Allocation']  # Extract the Allocation column as a Series
@@ -1621,8 +1621,8 @@ class AccountRebalancer:
             print(f" - Account: {account}")
 
         # Store inputs
-        self.port_rebalancer = port_rebalancer
-        self.account = account
+        self._port_rebalancer = port_rebalancer
+        self._account = account
 
         # Initialize caches for ticker allocations
         self._new_ticker_allocations = None
@@ -1658,7 +1658,7 @@ class AccountRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        return self.port_rebalancer.getAccountProportion(self.account)
+        return self._port_rebalancer.getAccountProportion(self._account)
 
     def getTickers(self) -> pd.Index:
         """Get the tickers for this account in canonical order.
@@ -1669,19 +1669,19 @@ class AccountRebalancer:
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        return self.port_rebalancer.getAccountTickers(self.account)
+        return self._port_rebalancer.getAccountTickers(self._account)
 
-    def getTickerAllocations(self) -> pd.Series:
-        """Get the current ticker allocations for this account in canonical order.
+    def getOriginalTickerAllocations(self) -> pd.Series:
+        """Get the original (current) ticker allocations for this account in canonical order.
 
         Returns:
-            pd.Series: Series indexed by ticker containing current allocation percentages,
+            pd.Series: Series indexed by ticker containing original allocation percentages,
                       ordered according to the canonical ticker order
 
         Raises:
             ValueError: If the account is not found in the portfolio
         """
-        return self.port_rebalancer.getAccountTickerAllocations(self.account)
+        return self._port_rebalancer.getAccountOriginalTickerAllocations(self._account)
 
     def getNewTickerAllocations(self, verbose: bool = False) -> pd.Series:
         """Get the new ticker allocations from the optimization variables.
@@ -1703,14 +1703,14 @@ class AccountRebalancer:
         # Return cached allocations if they exist
         if self._new_ticker_allocations is not None:
             if verbose:
-                print(f"\nUsing cached new ticker allocations for account {self.account}")
+                print(f"\nUsing cached new ticker allocations for account {self._account}")
             return self._new_ticker_allocations
 
         # Get variables and check if optimization has been solved
         variables = self.getVariables()
         if variables['x'].value is None:
             if verbose:
-                print(f"\nNo new ticker allocations available for account {self.account} (optimization not solved)")
+                print(f"\nNo new ticker allocations available for account {self._account} (optimization not solved)")
             return None
 
         # Get tickers in canonical order
@@ -1724,7 +1724,7 @@ class AccountRebalancer:
         )
 
         if verbose:
-            print(f"\nNew ticker allocations for account {self.account}:")
+            print(f"\nNew ticker allocations for account {self._account}:")
             print(f" - Number of tickers: {len(self._new_ticker_allocations)}")
             print(f" - Total allocation: {self._new_ticker_allocations.sum():.2%}")
             write_weights(self._new_ticker_allocations)
@@ -1744,7 +1744,7 @@ class AccountRebalancer:
             ValueError: If the account is not found in the portfolio
         """
         # Get original allocations
-        original_allocations = self.getTickerAllocations()
+        original_allocations = self.getOriginalTickerAllocations()
 
         # Get new allocations if optimization has been solved
         new_allocations = self.getNewTickerAllocations(verbose=verbose)
@@ -1792,15 +1792,15 @@ class AccountRebalancer:
         # Return cached variables if they exist
         if self._variables is not None:
             if verbose:
-                print(f"\nUsing cached variables for account {self.account}")
+                print(f"\nUsing cached variables for account {self._account}")
             return self._variables
 
         # Get tickers in canonical order
         tickers = self.getTickers()
 
         # Create variable name patterns
-        x_pattern = lambda ticker: f"x_{self.account}_{ticker}"
-        z_pattern = lambda ticker: f"z_{self.account}_{ticker}"
+        x_pattern = lambda ticker: f"x_{self._account}_{ticker}"
+        z_pattern = lambda ticker: f"z_{self._account}_{ticker}"
 
         # Create variables with appropriate names
         x_vars = [cp.Variable(name=x_pattern(ticker)) for ticker in tickers]
@@ -1820,7 +1820,7 @@ class AccountRebalancer:
             }
 
             # Print the table using write_table
-            print(f"\nVariables for account {self.account}:")
+            print(f"\nVariables for account {self._account}:")
             write_table(variable_df, columns=column_formats)
 
         # Stack variables into vectors and cache them
@@ -1847,11 +1847,11 @@ class AccountRebalancer:
             pd.Index: Index containing factors in canonical order
         """
         if verbose:
-            print(f"\nFactors for account {self.account}:")
-            print(f" - Number of factors: {len(self.port_rebalancer.getPortfolioFactors())}")
-            print(f" - Factors: {sorted(self.port_rebalancer.getPortfolioFactors().tolist())}")
+            print(f"\nFactors for account {self._account}:")
+            print(f" - Number of factors: {len(self._port_rebalancer.getPortfolioFactors())}")
+            print(f" - Factors: {sorted(self._port_rebalancer.getPortfolioFactors().tolist())}")
 
-        return self.port_rebalancer.getPortfolioFactors()
+        return self._port_rebalancer.getPortfolioFactors()
 
     def getFactorWeights(self, verbose: bool = False) -> pd.DataFrame:
         """Get the factor weights matrix for this account.
@@ -1879,7 +1879,7 @@ class AccountRebalancer:
         # Return cached matrix if it exists
         if self._factor_weights is not None:
             if verbose:
-                print(f"\nUsing cached factor weights matrix for account {self.account}")
+                print(f"\nUsing cached factor weights matrix for account {self._account}")
             return self._factor_weights
 
         # Get tickers in canonical order
@@ -1887,10 +1887,10 @@ class AccountRebalancer:
 
         # Get factor weights matrix from parent portfolio and filter
         # columns to match account's tickers
-        self._factor_weights = self.port_rebalancer.getPortfolioFactorWeights(verbose=verbose)[tickers]
+        self._factor_weights = self._port_rebalancer.getPortfolioFactorWeights(verbose=verbose)[tickers]
 
         if verbose:
-            print(f"\nFactor weights matrix for account {self.account}:")
+            print(f"\nFactor weights matrix for account {self._account}:")
             print(f" - Shape: {self._factor_weights.shape}")
             print(f" - Factors: {len(self._factor_weights.index)}")
             print(f" - Tickers: {len(self._factor_weights.columns)}")
@@ -1902,7 +1902,7 @@ class AccountRebalancer:
         """Get the original (current) factor allocations for this account.
 
         The factor allocations are calculated by multiplying the factor weights matrix
-        by the original (current) ticker allocations: F @ current_allocations
+        by the original (current) ticker allocations: F @ original_ticker_allocations
 
         The allocations are cached after first calculation to ensure they are not
         recalculated in subsequent calls.
@@ -1920,22 +1920,22 @@ class AccountRebalancer:
         # Return cached allocations if they exist
         if self._original_factor_allocations is not None:
             if verbose:
-                print(f"\nUsing cached original factor allocations for account {self.account}")
+                print(f"\nUsing cached original factor allocations for account {self._account}")
             return self._original_factor_allocations
 
-        # Get factor weights matrix and current ticker allocations
+        # Get factor weights matrix and original ticker allocations
         F = self.getFactorWeights(verbose=verbose)
-        current_allocations = self.getTickerAllocations()
+        original_ticker_allocations = self.getOriginalTickerAllocations()
 
-        # Calculate factor allocations: F @ current_allocations
+        # Calculate factor allocations: F @ original_ticker_allocations
         self._original_factor_allocations = pd.Series(
-            F.to_numpy() @ current_allocations.to_numpy(),
+            F.to_numpy() @ original_ticker_allocations.to_numpy(),
             index=F.index,
             name='Allocation'
         )
 
         if verbose:
-            print(f"\nOriginal (current) factor allocations for account {self.account}:")
+            print(f"\nOriginal (current) factor allocations for account {self._account}:")
             print(f" - Number of factors: {len(self._original_factor_allocations)}")
             print(f" - Total allocation: {self._original_factor_allocations.sum():.2%}")
             write_weights(self._original_factor_allocations, "Original Factor Allocations")
@@ -1965,14 +1965,14 @@ class AccountRebalancer:
         # Return cached allocations if they exist
         if self._new_factor_allocations is not None:
             if verbose:
-                print(f"\nUsing cached new factor allocations for account {self.account}")
+                print(f"\nUsing cached new factor allocations for account {self._account}")
             return self._new_factor_allocations
 
         # Get new ticker allocations if optimization has been solved
         new_ticker_allocations = self.getNewTickerAllocations(verbose=verbose)
         if new_ticker_allocations is None:
             if verbose:
-                print(f"\nNo new factor allocations available for account {self.account} (optimization not solved)")
+                print(f"\nNo new factor allocations available for account {self._account} (optimization not solved)")
             return None
 
         # Get factor weights matrix
@@ -1986,7 +1986,7 @@ class AccountRebalancer:
         )
 
         if verbose:
-            print(f"\nNew factor allocations for account {self.account}:")
+            print(f"\nNew factor allocations for account {self._account}:")
             print(f" - Number of factors: {len(self._new_factor_allocations)}")
             print(f" - Total allocation: {self._new_factor_allocations.sum():.2%}")
             write_weights(self._new_factor_allocations, "New Factor Allocations")
@@ -2053,18 +2053,18 @@ class AccountRebalancer:
         # Return cached allocations if they exist
         if self._target_factor_allocations is not None:
             if verbose:
-                print(f"\nUsing cached target factor allocations for account {self.account}")
+                print(f"\nUsing cached target factor allocations for account {self._account}")
             return self._target_factor_allocations
 
         # Get portfolio target allocations and account proportion
-        portfolio_targets = self.port_rebalancer.getPortfolioTargetFactorAllocations(verbose=verbose)
+        portfolio_targets = self._port_rebalancer.getPortfolioTargetFactorAllocations(verbose=verbose)
         account_proportion = self.getAccountProportion()
 
         # Scale target allocations by account proportion
         self._target_factor_allocations = portfolio_targets * account_proportion
 
         if verbose:
-            print(f"\nTarget factor allocations for account {self.account}:")
+            print(f"\nTarget factor allocations for account {self._account}:")
             print(f" - Account proportion: {account_proportion:.2%}")
             print(f" - Number of factors: {len(self._target_factor_allocations)}")
             print(f" - Total allocation: {self._target_factor_allocations.sum():.2%}")
@@ -2095,7 +2095,7 @@ class AccountRebalancer:
         # Return cached expression if it exists
         if self._factor_objective is not None:
             if verbose:
-                print(f"\nUsing cached factor objective for account {self.account}")
+                print(f"\nUsing cached factor objective for account {self._account}")
             return self._factor_objective
 
         # Get factor weights matrix and variables
@@ -2114,7 +2114,7 @@ class AccountRebalancer:
         )
 
         if verbose:
-            print(f"\nFactor objective for account {self.account}:")
+            print(f"\nFactor objective for account {self._account}:")
             print(f" - Expression: sum_squares(F @ x - target)")
             print(f" - Target allocations:")
             write_weights(target_factor_allocations)
@@ -2125,8 +2125,8 @@ class AccountRebalancer:
         """Calculate the turnover objective for this account.
 
         This is calculated as the sum of squares of the difference between the
-        current ticker allocations and the new allocation variables:
-        sum_squares(x - current_allocations)
+        original (current) ticker allocations and the new allocation variables:
+        sum_squares(x - original_ticker_allocations)
 
         The expression is cached after first creation to ensure it is not recreated
         in subsequent calls.
@@ -2144,23 +2144,23 @@ class AccountRebalancer:
         # Return cached expression if it exists
         if self._turnover_objective is not None:
             if verbose:
-                print(f"\nUsing cached turnover objective for account {self.account}")
+                print(f"\nUsing cached turnover objective for account {self._account}")
             return self._turnover_objective
 
-        # Get variables and current allocations
+        # Get variables and original allocations
         variables = self.getVariables(verbose=verbose)
-        current_allocations = self.getTickerAllocations()
+        original_ticker_allocations = self.getOriginalTickerAllocations()
 
-        # Calculate turnover objective: sum_squares(x - current_allocations)
+        # Calculate turnover objective: sum_squares(x - original_ticker_allocations)
         self._turnover_objective = cp.sum_squares(
-            variables['x'] - current_allocations.to_numpy()
+            variables['x'] - original_ticker_allocations.to_numpy()
         )
 
         if verbose:
-            print(f"\nTurnover objective for account {self.account}:")
-            print(f" - Expression: sum_squares(x - current_allocations)")
-            print(f" - Current allocations:")
-            write_weights(current_allocations)
+            print(f"\nTurnover objective for account {self._account}:")
+            print(f" - Expression: sum_squares(x - original_ticker_allocations)")
+            print(f" - Original allocations:")
+            write_weights(original_ticker_allocations)
 
         return self._turnover_objective
 
@@ -2186,7 +2186,7 @@ class AccountRebalancer:
         # Return cached expression if it exists
         if self._complexity_objective is not None:
             if verbose:
-                print(f"\nUsing cached complexity objective for account {self.account}")
+                print(f"\nUsing cached complexity objective for account {self._account}")
             return self._complexity_objective
 
         # Get variables
@@ -2196,7 +2196,7 @@ class AccountRebalancer:
         self._complexity_objective = cp.sum(variables['z'])
 
         if verbose:
-            print(f"\nComplexity objective for account {self.account}:")
+            print(f"\nComplexity objective for account {self._account}:")
             print(f" - Expression: sum(z)")
             print(f" - Number of tickers: {variables['z'].size}")
 
@@ -2226,13 +2226,13 @@ class AccountRebalancer:
         # Return cached constraints if they exist
         if self._constraints is not None:
             if verbose:
-                print(f"\nUsing cached constraints for account {self.account}")
+                print(f"\nUsing cached constraints for account {self._account}")
             return self._constraints
 
         # Get variables and account proportion
         variables = self.getVariables(verbose=verbose)
         account_proportion = self.getAccountProportion()
-        min_ticker_alloc = self.port_rebalancer._min_ticker_alloc
+        min_ticker_alloc = self._port_rebalancer._min_ticker_alloc
 
         # Create the constraints list
         self._constraints = [
@@ -2244,7 +2244,7 @@ class AccountRebalancer:
         ]
 
         if verbose:
-            print(f"\nConstraints for account {self.account}:")
+            print(f"\nConstraints for account {self._account}:")
             print(f" - Account proportion: {account_proportion:.2%}")
             print(f" - Minimum ticker allocation: {min_ticker_alloc:.2%}")
             print(f" - Number of constraints: {len(self._constraints)}")
@@ -2262,7 +2262,7 @@ class AccountRebalancer:
         This method checks that:
         1. The following components have the same tickers in the exact same order:
            - Account tickers from getTickers()
-           - Current ticker allocations from getTickerAllocations()
+           - Current ticker allocations from getOriginalTickerAllocations()
            - Ticker results index from getTickerResults()
            - Optimization variables from getVariables()
            - Factor weights matrix columns from getFactorWeights()
@@ -2279,11 +2279,11 @@ class AccountRebalancer:
         """
         if verbose:
             print(f"\n==> AccountRebalancer.validate()")
-            print(f" - Account: {self.account}")
+            print(f" - Account: {self._account}")
 
         # Get all components to validate
         tickers = self.getTickers()
-        current_allocations = self.getTickerAllocations()
+        original_allocations = self.getOriginalTickerAllocations()
         ticker_results = self.getTickerResults()
         variables = self.getVariables()
         factor_weights = self.getFactorWeights()
@@ -2292,7 +2292,7 @@ class AccountRebalancer:
         # Create a list of component names and their ticker indices
         ticker_components = [
             ("Account Tickers", tickers),
-            ("Current Allocations", current_allocations.index),
+            ("Original Allocations", original_allocations.index),
             ("Ticker Results", ticker_results.index),
             ("Variables", pd.Index([var.name().split('_')[-1] for var in variables['x'].args])),
             ("Factor Weights", factor_weights.columns)
@@ -2357,15 +2357,15 @@ class AccountRebalancer:
         """
         if verbose:
             print(f"\n==> AccountRebalancer.rebalance()")
-            print(f" - Account: {self.account}")
+            print(f" - Account: {self._account}")
 
         # Validate all components are properly aligned
         self.validate(verbose=verbose)
 
         # Get penalty parameters from parent portfolio
-        account_align_penalty = self.port_rebalancer.getAccountAlignPenalty()
-        turnover_penalty = self.port_rebalancer.getTurnoverPenalty()
-        complexity_penalty = self.port_rebalancer.getComplexityPenalty()
+        account_align_penalty = self._port_rebalancer.getAccountAlignPenalty()
+        turnover_penalty = self._port_rebalancer.getTurnoverPenalty()
+        complexity_penalty = self._port_rebalancer.getComplexityPenalty()
 
         if verbose:
             print(f"\nPenalty parameters:")
