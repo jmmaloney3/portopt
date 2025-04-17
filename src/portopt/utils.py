@@ -12,6 +12,7 @@ from statsmodels.stats.stattools import durbin_watson
 from statsmodels.tsa.stattools import adfuller, kpss
 
 def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
+                title: Optional[str] = None,
                 stream: TextIO = sys.stdout,
                 sort_order: Optional[str] = 'asc'):
     """
@@ -23,6 +24,7 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
                 For hierarchical indices, include index level names to display them.
                 If None, all DataFrame columns and index levels are displayed with defaults.
                 Columns specified but not in DataFrame are ignored.
+        title: Optional title to display above the table
         stream: Output stream (defaults to sys.stdout)
         sort_order: Controls table sorting by index (default: 'asc')
                    'asc' - sort ascending
@@ -136,6 +138,10 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
             'sep': fmt['hdr_sep']
         }
 
+    # Print title if provided
+    if title:
+        print(f"\n{title}:", file=stream)
+
     # Create header line
     header_strs = [formats[col]['hdr_fmt'].format(col) for col in columns.keys()]
     print(' '.join(header_strs), file=stream)
@@ -161,19 +167,14 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
                 data_strs.append(formats[col]['data_fmt'].format(str(row[col])))
         print(' '.join(data_strs), file=stream)
 
-def write_weights(weights: Union[pd.DataFrame, pd.Series], title: str = None):
+def write_weights(weights: Union[pd.DataFrame, pd.Series], title: str = "Weights Matrix"):
     """Display weights (factor matrix or allocation vector) in a formatted table.
 
     Args:
         weights: Either a factor weights DataFrame or an allocation Series
         title: Optional title to display above the table
     """
-    if title:
-        print(f"\n{title}:")
-    else:
-        print("\nWeights Matrix:")
-
-    print(f" - Shape: {weights.shape}")
+    print(f"\n - Shape: {weights.shape}")
 
     # Create column formats dictionary
     column_formats = {}
@@ -200,7 +201,7 @@ def write_weights(weights: Union[pd.DataFrame, pd.Series], title: str = None):
     })
 
     # Write the formatted table
-    write_table(weights, columns=column_formats)
+    write_table(weights, columns=column_formats, title=title)
 
 def test_stationarity(df):
     """
