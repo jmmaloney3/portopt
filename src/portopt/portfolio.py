@@ -329,6 +329,14 @@ class Portfolio(RebalanceMixin):
 
             where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
 
+            # Check if filters require additional tables
+            if filters:
+                for dim in filters.keys():
+                    if dim == 'Factor' or dim.startswith('Level_'):
+                        include_weights = True
+                    elif dim == 'Ticker':
+                        include_ticker_info = True
+
             # Build the query
             query = f"""
             WITH portfolio_value AS (
