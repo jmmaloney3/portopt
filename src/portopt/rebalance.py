@@ -1060,6 +1060,12 @@ class PortfolioRebalancer:
                 f"Account ticker allocations must sum to 100%, got {total_allocation:.2%}"
             )
 
+        # Validate target_factor_allocations is a Series
+        if not isinstance(target_factor_allocations, pd.Series):
+            raise ValueError(
+                f"target_factor_allocations must be a pandas Series, got {type(target_factor_allocations)}"
+            )
+
         # Validate target allocations sum to 100%
         if not np.isclose(target_factor_allocations.sum(), 1.0, rtol=1e-5):
             raise ValueError(
