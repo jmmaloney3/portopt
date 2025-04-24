@@ -1010,7 +1010,7 @@ class PortfolioRebalancer:
         target_factor_allocations: pd.Series,
         factor_weights: pd.DataFrame,
         min_ticker_alloc: float = 0.0,
-        turnover_penalty: float = 1.0,
+        turnover_penalty: float = 0.0,
         complexity_penalty: float = 0.0,
         account_align_penalty: float = 1.0,
         verbose: bool = False
@@ -2421,3 +2421,5 @@ class AccountRebalancer:
             print(f" - Status: {problem.status}")
             print(f" - Objective value: {problem.value:.6f}")
             print(f"<== AccountRebalancer.rebalance()")
+
+        return problem
