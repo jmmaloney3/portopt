@@ -43,43 +43,11 @@ def test_simple_rebalance():
     only the factor objective (all penalty factors are zero except the account align
     penalty).
     """
-    # Define original ticker allocations
-    ticker_allocations = {
-        ('TestAccount', 'ABCD'): 0.40,
-        ('TestAccount', 'EFGH'): 0.25,
-        ('TestAccount', 'JKLM'): 0.35
-    }
-
-    # Define target factor allocations
-    #  -- Factor1: 25%, Factor2: 35%, Factor3: 40%
-    target_factor_allocations = {
-        'Factor1': 0.25,
-        'Factor2': 0.35,
-        'Factor3': 0.40
-    }
-    target_factor_allocations_df = rebu.create_target_factor_allocations(target_factor_allocations, verbose=verbose)
-    # Define factor weights TABLE
-    factor_weights_table = {
-            ('ABCD', 'Factor1'): 1.00,
-            ('ABCD', 'Factor2'): 0.00,
-            ('ABCD', 'Factor3'): 0.00,
-            ('EFGH', 'Factor1'): 0.00,
-            ('EFGH', 'Factor2'): 1.00,
-            ('EFGH', 'Factor3'): 0.00,
-            ('JKLM', 'Factor1'): 0.00,
-            ('JKLM', 'Factor2'): 0.00,
-            ('JKLM', 'Factor3'): 1.00
-    }
-
-    # Create account rebalancer
-    # -- the dictionaries are passed to this method
+    # Create simple account rebalancer
     account_name = 'TestAccount'
-    account_rebalancer = rebu.create_account_rebalancer(account_name=account_name,
-                                                        ticker_allocations=ticker_allocations,
-                                                        target_factor_allocations=target_factor_allocations,
-                                                        factor_weights=factor_weights_table,
-                                                        verbose=verbose)
+    account_rebalancer = rebu.create_simple_account_rebalancer(account_name)
 
+    # rebalance the account
     problem = account_rebalancer.rebalance(verbose=verbose)
 
     if verbose:
