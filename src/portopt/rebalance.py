@@ -1831,7 +1831,10 @@ class AccountRebalancer:
 
         # Stack variables into vectors and cache them
         self._variables = {
-            'x': cp.vstack(x_vars),  # Allocation percentages
+            # it seems like x should be a column vector because it is multiplied
+            # by the factor weights matrix, but the optimization does not work
+            # when x is a column vector - so use hstack instead
+            'x': cp.hstack(x_vars),  # Allocation percentages
             'z': cp.vstack(z_vars)   # Binary selection variables
         }
 
@@ -2295,12 +2298,21 @@ class AccountRebalancer:
         factor_weights = self.getFactorWeights()
         target_factor_allocations = self.getTargetFactorAllocations()
 
+        # Helper function to extract ticker from variable name
+        def extract_ticker(var_name):
+            # Handle both direct variable names and reshape expressions
+            if 'reshape(' in var_name:
+                # Extract the variable name from within reshape
+                var_name = var_name.split('(')[1].split(',')[0].strip()
+            # Extract ticker from variable name (last part after last underscore)
+            return var_name.split('_')[-1]
+
         # Create a list of component names and their ticker indices
         ticker_components = [
             ("Account Tickers", tickers),
             ("Original Allocations", original_allocations.index),
             ("Ticker Results", ticker_results.index),
-            ("Variables", pd.Index([var.name().split('_')[-1] for var in variables['x'].args])),
+            ("Variables", pd.Index([extract_ticker(var.name()) for var in variables['x'].args])),
             ("Factor Weights", factor_weights.columns)
         ]
 
