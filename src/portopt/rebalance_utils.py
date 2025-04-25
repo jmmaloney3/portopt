@@ -143,6 +143,10 @@ def create_account_rebalancer(account_name: str,
     return port_rebalancer.getAccountRebalancer(account_name)
 
 def create_simple_account_rebalancer(account_name: str,
+                                     min_ticker_alloc: float = 0.0,
+                                     account_align_penalty: float = 1.0,
+                                     turnover_penalty: float = 0.0,
+                                     complexity_penalty: float = 0.0,
                                      verbose: bool = False) -> AccountRebalancer:
     """
     Create a simple account rebalancer with simple test data.
@@ -178,4 +182,8 @@ def create_simple_account_rebalancer(account_name: str,
                                      ticker_allocations,
                                      target_factor_allocations,
                                      factor_weights,
+                                     min_ticker_alloc = min_ticker_alloc,
+                                     account_align_penalty = account_align_penalty,
+                                     turnover_penalty = turnover_penalty,
+                                     complexity_penalty = complexity_penalty,
                                      verbose=verbose)
