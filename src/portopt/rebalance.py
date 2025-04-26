@@ -1834,8 +1834,9 @@ class AccountRebalancer:
             # it seems like x should be a column vector because it is multiplied
             # by the factor weights matrix, but the optimization does not work
             # when x is a column vector - so use hstack instead
+            # need to make z a row vector to match x for constraints such as x <= z
             'x': cp.hstack(x_vars),  # Allocation percentages
-            'z': cp.vstack(z_vars)   # Binary selection variables
+            'z': cp.hstack(z_vars)   # Binary selection variables
         }
 
         return self._variables

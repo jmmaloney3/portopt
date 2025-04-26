@@ -2,7 +2,6 @@
 This module provides test cases for the rebalance module.
 """
 
-
 import pytest
 import pandas as pd
 import numpy as np
@@ -10,7 +9,7 @@ from portopt.rebalance import PortfolioRebalancer, AccountRebalancer
 import portopt.rebalance_utils as rebu
 from portopt.utils import write_weights
 
-verbose = False
+verbose = True
 
 def test_simple_factor_weights():
     """
@@ -76,6 +75,10 @@ def test_simple_factor_only_rebalance():
     assert np.isclose(factor_results['New Allocation'].sum(), 1.0)
     assert np.allclose(factor_results['New Allocation'], target_factor_allocations_df, atol=0.01)
 
+    # Verify the optimization status is optimal
+    assert problem.status == 'optimal', \
+        f"Expected optimization status 'optimal', got '{problem.status}'"
+
 def test_simple_turnover_only_rebalance():
     """
     Test a simple rebalance scenario that uses a simple set of tickers and factors and
@@ -107,12 +110,65 @@ def test_simple_turnover_only_rebalance():
     # Verify results
     # Check that ticker allocations sum to 100%
     assert np.isclose(ticker_results['New Allocation'].sum(), 1.0)
-    # For this scenario, the ticker  allocations should not changed from the original
+    # For this scenario, the ticker allocations should not change from the original
     original_ticker_allocations_df = account_rebalancer.getOriginalTickerAllocations()
     assert np.allclose(ticker_results['New Allocation'], original_ticker_allocations_df, atol=0.01)
 
     # Check that factor allocations sum to 100%
     assert np.isclose(factor_results['New Allocation'].sum(), 1.0)
-    # For this scenario, the factor allocations should not changed from the original
+    # For this scenario, the factor allocations should not change from the original
     original_factor_allocations_df = account_rebalancer.getOriginalFactorAllocations()
     assert np.allclose(factor_results['New Allocation'], original_factor_allocations_df, atol=0.01)
+
+    # Verify the optimization status is optimal
+    assert problem.status == 'optimal', \
+        f"Expected optimization status 'optimal', got '{problem.status}'"
+
+def test_simple_complexity_only_rebalance():
+    """
+    Test a simple rebalance scenario that uses a simple set of tickers and factors and
+    only the complexity objective (all penalty factors are zero except the complexity
+    penalty).
+    """
+    # Create simple account rebalancer
+    account_name = 'TestAccount'
+    account_rebalancer = rebu.create_simple_account_rebalancer(account_name,
+                                                               account_align_penalty = 0.0,
+                                                               turnover_penalty = 0.0,
+                                                               complexity_penalty = 1.0)
+    # rebalance the account
+    problem = account_rebalancer.rebalance(verbose=verbose)
+
+    if verbose:
+        print(f"\nOptimization complete:")
+        print(f" - Status: {problem.status}")
+        print(f" - Objective value: {problem.value:.12f}")
+        print(f" - Number of iterations: {problem.solver_stats.num_iters}")
+
+    # Get results
+    ticker_results = account_rebalancer.getTickerResults()
+    if verbose:
+        write_weights(ticker_results, title="Ticker Results")
+    factor_results = account_rebalancer.getFactorResults()
+    if verbose:
+        write_weights(factor_results, title="Factor Results")
+
+    # Verify results
+    # Check that ticker allocations sum to 100%
+    assert np.isclose(ticker_results['New Allocation'].sum(), 1.0)
+
+    # For complexity-only scenario, we expect exactly one ticker with 100% allocation
+    # and all others with 0% allocation
+    non_zero_allocations = ticker_results['New Allocation'][ticker_results['New Allocation'] > 0]
+    assert len(non_zero_allocations) == 1, \
+        f"Expected exactly one non-zero allocation, got {len(non_zero_allocations)}"
+    assert np.isclose(non_zero_allocations.iloc[0], 1.0), \
+        f"Expected the non-zero allocation to be 100%, got {non_zero_allocations.iloc[0]:.2%}"
+
+    # Verify the objective value is 1.0 (only one ticker selected)
+    assert np.isclose(problem.value, 1.0), \
+        f"Expected objective value of 1.0, got {problem.value}"
+
+    # Verify the optimization status is optimal
+    assert problem.status == 'optimal', \
+        f"Expected optimization status 'optimal', got '{problem.status}'"
