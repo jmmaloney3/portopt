@@ -59,24 +59,94 @@ def print_cvxpy_object(obj):
     as needed.
     """
     print(f"Type: {type(obj)}")
-    if isinstance(obj, cp.Variable):
-        print(f"  Name: {obj.name()} Shape: {obj.shape}")
-        print(f"  Value: {obj.value}")
-        if (obj.shape): # not empty
-            for i in range(obj.shape[0]):
-                print_cvxpy_object(obj[i])
-    elif isinstance(obj, cp.atoms.affine.index.index):
-        # This is an index into a variable array
-        print(f"  Object: {obj}")
-        print(f"  Name: {obj.name()} Shape: {obj.shape}")
-        print(f"  Value: {obj.value}")
-    elif isinstance(obj, cp.atoms.affine.vstack.Vstack) or \
-         isinstance(obj, cp.atoms.affine.hstack.Hstack):
-        print(f"  Name: {obj.name()} Shape: {obj.shape}")
-        print(f"  Value: {obj.value}")
-        print(f"  Args: {obj.args}")
-        for arg in obj.args:
-            print_cvxpy_object(arg)
-    else:
-        print(f"Unknown object type: {type(obj)}")
-        print_object_info(obj)
+
+    try:
+        # Handle constraints
+        if isinstance(obj, cp.constraints.constraint.Constraint):
+            print(f"  Constraint: {obj}")
+            print(f"  Left hand side:")
+            print_cvxpy_object(obj.args[0])
+            print(f"  Right hand side:")
+            print_cvxpy_object(obj.args[1])
+            return
+
+        # Handle comparison operators
+        if isinstance(obj, (cp.atoms.affine.binary_operators.AddExpression,
+                           cp.atoms.affine.binary_operators.MulExpression)):
+            print(f"  Expression: {obj}")
+            print(f"  Left operand:")
+            print_cvxpy_object(obj.args[0])
+            print(f"  Right operand:")
+            print_cvxpy_object(obj.args[1])
+            return
+
+        # Handle Sum
+        if isinstance(obj, cp.atoms.affine.sum.Sum):
+            print(f"  Sum: {obj}")
+            print(f"  Expression:")
+            print_cvxpy_object(obj.args[0])
+            return
+
+        # Handle Hstack and Vstack
+        if isinstance(obj, (cp.atoms.affine.vstack.Vstack,
+                          cp.atoms.affine.hstack.Hstack)):
+            print(f"  {type(obj).__name__}: {obj}")
+            print(f"  Shape: {obj.shape}")
+            print(f"  Args:")
+            for arg in obj.args:
+                print_cvxpy_object(arg)
+            return
+
+        # Handle Promote
+        if isinstance(obj, cp.atoms.affine.promote.Promote):
+            print(f"  Promote: {obj}")
+            print(f"  Shape: {obj.shape}")
+            print(f"  Value: {obj.value}")
+            print(f"  Expression:")
+            print_cvxpy_object(obj.args[0])
+            return
+
+        # Handle reshape
+        if isinstance(obj, cp.atoms.affine.reshape.reshape):
+            print(f"  Reshape: {obj}")
+            print(f"  Shape: {obj.shape}")
+            print(f"  Expression:")
+            print_cvxpy_object(obj.args[0])
+            return
+
+        # Handle variables
+        if isinstance(obj, cp.Variable):
+            print(f"  Variable: {obj.name()}")
+            print(f"  Shape: {obj.shape}")
+            print(f"  Value: {obj.value}")
+            if (obj.shape): # not empty
+                for i in range(obj.shape[0]):
+                    print_cvxpy_object(obj[i])
+            return
+
+        # Handle index
+        if isinstance(obj, cp.atoms.affine.index.index):
+            print(f"  Index: {obj}")
+            print(f"  Name: {obj.name()}")
+            print(f"  Shape: {obj.shape}")
+            print(f"  Value: {obj.value}")
+            return
+
+        # Handle binary operators (==, <=, >=)
+        if hasattr(obj, 'args') and len(obj.args) == 2:
+            print(f"  Binary operator: {obj}")
+            print(f"  Left operand:")
+            print_cvxpy_object(obj.args[0])
+            print(f"  Right operand:")
+            print_cvxpy_object(obj.args[1])
+            return
+
+        # Default case
+        print(f"  Unknown object type: {type(obj)}")
+        print(f"  String representation: {obj}")
+        if hasattr(obj, 'args'):
+            print(f"  Args: {obj.args}")
+
+    except Exception as e:
+        print(f"  Error processing object: {str(e)}")
+        print(f"  String representation: {obj}")

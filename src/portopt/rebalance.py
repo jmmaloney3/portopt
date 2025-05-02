@@ -2024,7 +2024,8 @@ class AccountRebalancer:
         # Create DataFrame with original and target allocations
         results = pd.DataFrame({
             'Original Allocation': original_allocations,
-            'Target Allocation': target_allocations
+            'Target Allocation': target_allocations,
+            'Original Target Difference': target_allocations - original_allocations
         })
 
         # Get new factor allocations if optimization has been solved
@@ -2377,6 +2378,17 @@ class AccountRebalancer:
         if verbose:
             print(f"\n==> AccountRebalancer.rebalance()")
             print(f" - Account: {self._account}")
+            original_state = self.getFactorResults()
+            write_weights(original_state, "Original State")
+            # print out constraints to be enforced
+            constraints = self.getConstraints(verbose=verbose)
+            print("\nConstraints:")
+            for i, constraint in enumerate(constraints, 1):
+                print(f"\nConstraint {i}:")
+                from portopt.cvxpy_utils import print_cvxpy_object
+                print_cvxpy_object(constraint)
+
+
 
         # Validate all components are properly aligned
         self.validate(verbose=verbose)

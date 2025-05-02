@@ -11,6 +11,49 @@ from portopt.utils import write_weights
 
 verbose = True
 
+def run_factor_only_rebalance_test(account_rebalancer: AccountRebalancer, verbose: bool = False):
+    """
+    Verify that the factor-only rebalance works correctly.
+    """
+    # rebalance the account
+    problem = account_rebalancer.rebalance(verbose=verbose)
+
+    if verbose:
+        print(f"\nOptimization complete:")
+        print(f" - Status: {problem.status}")
+        print(f" - Objective value: {problem.value:.12f}")
+
+    # Get results
+    ticker_results = account_rebalancer.getTickerResults()
+    if verbose:
+        write_weights(ticker_results, title="Ticker Results")
+    factor_results = account_rebalancer.getFactorResults()
+    if verbose:
+        write_weights(factor_results, title="Factor Results")
+
+    # Verify results
+    target_factor_allocations_df = account_rebalancer.getTargetFactorAllocations()
+
+    # Check that ticker allocations sum to the account proportion
+    account_proportion = account_rebalancer.getAccountProportion()
+    if verbose:
+        print(f"Account proportion: {account_proportion:.5%}")
+        print(f"Ticker results sum: {ticker_results['New Allocation'].sum():.5%}")
+    assert np.isclose(ticker_results['New Allocation'].sum(), account_proportion)
+    # Factor weights are constructed such that final ticker allocations
+    # match target factor allocations
+    assert np.allclose(ticker_results['New Allocation'], target_factor_allocations_df, atol=0.01)
+
+    # Check that factor allocations sum to 100% and match targets (account is 100% of portfolio)
+    if verbose:
+        print(f"Factor results sum: {factor_results['New Allocation'].sum():.5%}")
+    assert np.isclose(factor_results['New Allocation'].sum(), account_proportion)
+    assert np.allclose(factor_results['New Allocation'], target_factor_allocations_df, atol=0.01)
+
+    # Verify the optimization status is optimal
+    assert problem.status == 'optimal', \
+        f"Expected optimization status 'optimal', got '{problem.status}'"
+
 def test_simple_factor_weights():
     """
     Test that the AccountRebalancer creates the factor weights matrix correctly
@@ -46,38 +89,8 @@ def test_simple_factor_only_rebalance():
     account_name = 'TestAccount'
     account_rebalancer = rebu.create_simple_account_rebalancer(account_name)
 
-    # rebalance the account
-    problem = account_rebalancer.rebalance(verbose=verbose)
-
-    if verbose:
-        print(f"\nOptimization complete:")
-        print(f" - Status: {problem.status}")
-        print(f" - Objective value: {problem.value:.12f}")
-
-    # Get results
-    ticker_results = account_rebalancer.getTickerResults()
-    if verbose:
-        write_weights(ticker_results, title="Ticker Results")
-    factor_results = account_rebalancer.getFactorResults()
-    if verbose:
-        write_weights(factor_results, title="Factor Results")
-
-    # Verify results
-    target_factor_allocations_df = account_rebalancer.getTargetFactorAllocations()
-
-    # Check that ticker allocations sum to 100%
-    assert np.isclose(ticker_results['New Allocation'].sum(), 1.0)
-    # Factor weights are constructed such that final ticker allocations
-    # match target factor allocations
-    assert np.allclose(ticker_results['New Allocation'], target_factor_allocations_df, atol=0.01)
-
-    # Check that factor allocations sum to 100% and match targets (account is 100% of portfolio)
-    assert np.isclose(factor_results['New Allocation'].sum(), 1.0)
-    assert np.allclose(factor_results['New Allocation'], target_factor_allocations_df, atol=0.01)
-
-    # Verify the optimization status is optimal
-    assert problem.status == 'optimal', \
-        f"Expected optimization status 'optimal', got '{problem.status}'"
+    # run the factor-only rebalance test & validate results
+    run_factor_only_rebalance_test(account_rebalancer, verbose=verbose)
 
 def test_simple_turnover_only_rebalance():
     """
@@ -172,3 +185,16 @@ def test_simple_complexity_only_rebalance():
     # Verify the optimization status is optimal
     assert problem.status == 'optimal', \
         f"Expected optimization status 'optimal', got '{problem.status}'"
+
+def test_random_portfolio_rebalance():
+    """
+    Test a random portfolio rebalance scenario.
+    """
+    # Create random portfolio rebalancer
+    account_names = ['TestAccount1', 'TestAccount2', 'TestAccount3', 'TestAccount4', 'TestAccount5']
+    portfolio_rebalancer = rebu.create_random_portfolio_rebalancer(account_names=account_names)
+
+    for account_name in portfolio_rebalancer.getAccounts():
+        account_rebalancer = portfolio_rebalancer.getAccountRebalancer(account_name)
+        # run the factor-only rebalance test & validate results
+        run_factor_only_rebalance_test(account_rebalancer, verbose=verbose)
