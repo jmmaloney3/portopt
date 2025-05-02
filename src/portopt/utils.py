@@ -140,7 +140,7 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
 
     # Print title if provided
     if title:
-        print(f"\n{title}:", file=stream)
+        print(f"\n{title}: {display_df.shape}", file=stream)
 
     # Create header line
     header_strs = [formats[col]['hdr_fmt'].format(col) for col in columns.keys()]
@@ -174,8 +174,6 @@ def write_weights(weights: Union[pd.DataFrame, pd.Series], title: str = "Weights
         weights: Either a factor weights DataFrame or an allocation Series
         title: Optional title to display above the table
     """
-    print(f"\n - Shape: {weights.shape}")
-
     # Create column formats dictionary
     column_formats = {}
 
