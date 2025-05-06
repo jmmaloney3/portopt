@@ -11,15 +11,56 @@ from statsmodels.stats.diagnostic import het_arch
 from statsmodels.stats.stattools import durbin_watson
 from statsmodels.tsa.stattools import adfuller, kpss
 
+def print_table_schema(df: Union[pd.DataFrame, pd.Series], stream: TextIO = sys.stdout) -> None:
+    """Print schema information for a DataFrame or Series.
+
+    Args:
+        df: pandas DataFrame or Series to display schema for
+        stream: Output stream (defaults to sys.stdout)
+    """
+    print("-" * 50, file=stream)
+
+    print("  Schema Information:", file=stream)
+    print(f"    Type: {type(df)}", file=stream)
+    print(f"    Shape: {df.shape}", file=stream)
+
+    # Display index information
+    if isinstance(df.index, pd.MultiIndex):
+        print("    Index Levels:", file=stream)
+        for i, name in enumerate(df.index.names):
+            level_type = df.index.get_level_values(i).dtype
+            print(f"      Level {i}: {name if name is not None else 'Unnamed'} ({level_type})", file=stream)
+    else:
+        index_type = df.index.dtype
+        print(f"    Index: {df.index.name if df.index.name is not None else 'Unnamed'} ({index_type})", file=stream)
+
+    # Display column/value information
+    print("    Values:", file=stream)
+    if isinstance(df, pd.DataFrame):
+        for col in df.columns:
+            dtype = df[col].dtype
+            non_null = df[col].count()
+            total = len(df)
+            print(f"      {col}: {dtype} ({non_null}/{total} non-null)", file=stream)
+    else:  # Series
+        dtype = df.dtype
+        non_null = df.count()
+        total = len(df)
+        name = df.name if df.name is not None else "Unnamed"
+        print(f"      {name}: {dtype} ({non_null}/{total} non-null)", file=stream)
+
+    print("-" * 50, file=stream)
+
 def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
                 title: Optional[str] = None,
                 stream: TextIO = sys.stdout,
-                sort_order: Optional[str] = 'asc'):
+                sort_order: Optional[str] = 'asc',
+                print_schema: bool = False):
     """
     Write a formatted table to the specified output stream.
 
     Args:
-        df: pandas DataFrame to display (supports hierarchical index)
+        df: pandas DataFrame or Series to display (supports hierarchical index)
         columns: Dictionary of column formats. Keys are column names, values are format specs.
                 For hierarchical indices, include index level names to display them.
                 If None, all DataFrame columns and index levels are displayed with defaults.
@@ -30,6 +71,7 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
                    'asc' - sort ascending
                    'desc' - sort descending
                    None - leave order unchanged
+        print_schema: Whether to print schema information (default: False)
 
     Format dictionary options:
         type: Data type ('s', 'd', 'f', etc). Default: based on column dtype
@@ -42,6 +84,22 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
         prefix: Prefix string for data. Default: omitted
         suffix: Suffix string for data. Default: omitted
     """
+    # Print title
+    if title:
+        print(f"{title}:", file=stream)
+    else:
+        if isinstance(df, pd.DataFrame):
+            objtype = "DataFrame"
+        elif isinstance(df, pd.Series):
+            objtype = "Series"
+        else:
+            objtype = "Unknown"
+        print(f"Unnamed {objtype}:", file=stream)
+
+    # Print schema information if requested
+    if print_schema:
+        print_table_schema(df, stream=stream)
+
     # Map numpy/pandas dtypes to format types
     dtype_to_format = {
         'float64': 'f',
@@ -55,7 +113,7 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
         'bool': 's'
     }
 
-    # Create a copy to avoid modifying the input DataFrame
+    # Create a copy to avoid modifying the input DataFrame/Series
     display_df = df.copy()
 
     # Sort by index first, before Index gets converted to a regular column below
@@ -137,10 +195,6 @@ def write_table(df, columns: Optional[Dict[str, Dict[str, Any]]] = None,
             'width': fmt['width'],
             'sep': fmt['hdr_sep']
         }
-
-    # Print title if provided
-    if title:
-        print(f"\n{title}: {display_df.shape}", file=stream)
 
     # Create header line
     header_strs = [formats[col]['hdr_fmt'].format(col) for col in columns.keys()]
