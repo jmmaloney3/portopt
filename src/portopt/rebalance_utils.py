@@ -7,6 +7,7 @@ import pandas as pd
 import random
 from portopt.utils import write_weights
 from portopt.rebalance import AccountRebalancer, PortfolioRebalancer
+from typing import Union
 
 TICKERS = ['ABCD', 'EFGH', 'JKLM', 'NOPQ', 'RSTU', 'VWXY', 'ZABC']
 FACTORS = ['Factor1', 'Factor2', 'Factor3', 'Factor4', 'Factor5', 'Factor6', 'Factor7']
@@ -107,22 +108,45 @@ def create_target_factor_allocations(target_factor_allocations: dict,
     return target_factor_allocations_df
 
 def create_account_rebalancer(account_name: str,
-                              ticker_allocations: dict,
-                              target_factor_allocations: dict,
-                              factor_weights: dict,
+                              ticker_allocations: Union[dict, pd.DataFrame],
+                              target_factor_allocations: Union[dict, pd.Series],
+                              factor_weights: Union[dict, pd.DataFrame],
                               min_ticker_alloc: float = 0.0,
                               account_align_penalty: float = 1.0,
                               turnover_penalty: float = 0.0,
                               complexity_penalty: float = 0.0,
                               verbose: bool = False) -> AccountRebalancer:
     """
-    Create an account rebalancer based on the provided data.  The account_name
-    needs to be present in the ticker_allocations dictionary.
-    
-    The input dictionaries are in the formats required by the following functions:
-    - create_ticker_allocations_table
-    - create_target_factor_allocations
-    - create_factor_weights_table
+    Create an account rebalancer based on the provided data. The account_name
+    needs to be present in the ticker_allocations dictionary or DataFrame.
+
+    Parameters:
+    -----------
+    account_name : str
+        Name of the account to create a rebalancer for
+    ticker_allocations : Union[dict, pd.DataFrame]
+        Either a dictionary of account-ticker allocations or a DataFrame with MultiIndex
+        ['Account', 'Ticker'] and column 'Allocation'
+    target_factor_allocations : Union[dict, pd.Series]
+        Either a dictionary of factor allocations or a Series with index 'Factor' and name 'Target Allocation'
+    factor_weights : Union[dict, pd.DataFrame]
+        Either a dictionary of factor weights or a DataFrame with MultiIndex ['Ticker', 'Factor']
+        and column 'Weight'
+    min_ticker_alloc : float, optional
+        Minimum ticker allocation, by default 0.0
+    account_align_penalty : float, optional
+        Account alignment penalty, by default 1.0
+    turnover_penalty : float, optional
+        Turnover penalty, by default 0.0
+    complexity_penalty : float, optional
+        Complexity penalty, by default 0.0
+    verbose : bool, optional
+        Whether to print verbose output, by default False
+
+    Returns:
+    --------
+    AccountRebalancer
+        An account rebalancer instance for the specified account
     """
     # Create PortfolioRebalancer
     port_rebalancer = create_portfolio_rebalancer(
@@ -139,9 +163,9 @@ def create_account_rebalancer(account_name: str,
     # Get AccountRebalancer instance
     return port_rebalancer.getAccountRebalancer(account_name)
 
-def create_portfolio_rebalancer(account_ticker_allocations: dict,
-                                target_factor_allocations: dict,
-                                factor_weights: dict,
+def create_portfolio_rebalancer(account_ticker_allocations: Union[dict, pd.DataFrame],
+                                target_factor_allocations: Union[dict, pd.Series],
+                                factor_weights: Union[dict, pd.DataFrame],
                                 min_ticker_alloc: float = 0.0,
                                 account_align_penalty: float = 1.0,
                                 turnover_penalty: float = 0.0,
@@ -150,20 +174,53 @@ def create_portfolio_rebalancer(account_ticker_allocations: dict,
     """
     Create a portfolio rebalancer based on the provided data.
 
-    The input dictionaries are in the formats required by the following functions:
-    - create_ticker_allocations_table
-    - create_target_factor_allocations
-    - create_factor_weights_table
+    Parameters:
+    -----------
+    account_ticker_allocations : Union[dict, pd.DataFrame]
+        Either a dictionary of account-ticker allocations or a DataFrame with MultiIndex
+        ['Account', 'Ticker'] and column 'Allocation'
+    target_factor_allocations : Union[dict, pd.Series]
+        Either a dictionary of factor allocations or a Series with index 'Factor' and name 'Target Allocation'
+    factor_weights : Union[dict, pd.DataFrame]
+        Either a dictionary of factor weights or a DataFrame with MultiIndex ['Ticker', 'Factor']
+        and column 'Weight'
+    min_ticker_alloc : float, optional
+        Minimum ticker allocation, by default 0.0
+    account_align_penalty : float, optional
+        Account alignment penalty, by default 1.0
+    turnover_penalty : float, optional
+        Turnover penalty, by default 0.0
+    complexity_penalty : float, optional
+        Complexity penalty, by default 0.0
+    verbose : bool, optional
+        Whether to print verbose output, by default False
+
+    Returns:
+    --------
+    PortfolioRebalancer
+        A portfolio rebalancer instance
     """
     if verbose:
         print("\n==> create_portfolio_rebalancer()")
 
-    account_ticker_allocations_df = create_ticker_allocations_table(account_ticker_allocations,
-                                                                    verbose=verbose)
-    target_factor_allocations_df = create_target_factor_allocations(target_factor_allocations,
-                                                                    verbose=verbose)
-    factor_weights_df = create_factor_weights_table(factor_weights,
-                                                    verbose=verbose)
+    # Convert inputs to appropriate DataFrame/Series format if they're dictionaries
+    if isinstance(account_ticker_allocations, dict):
+        account_ticker_allocations_df = create_ticker_allocations_table(account_ticker_allocations,
+                                                                        verbose=verbose)
+    else:
+        account_ticker_allocations_df = account_ticker_allocations
+
+    if isinstance(target_factor_allocations, dict):
+        target_factor_allocations_df = create_target_factor_allocations(target_factor_allocations,
+                                                                        verbose=verbose)
+    else:
+        target_factor_allocations_df = target_factor_allocations
+
+    if isinstance(factor_weights, dict):
+        factor_weights_df = create_factor_weights_table(factor_weights,
+                                                        verbose=verbose)
+    else:
+        factor_weights_df = factor_weights
 
     # Create PortfolioRebalancer
     port_rebalancer = PortfolioRebalancer(
@@ -243,6 +300,7 @@ def create_random_portfolio_rebalancer(account_names: list[str],
     # --------------------------------------------------------------------------
     # Define account proportions
     account_proportions = pd.Series(0.0, index=account_names, name='Proportion')
+    account_proportions.index.name = 'Account'
     for account_name in account_names:
         account_proportions[account_name] = round(random.random(), 2)
     # Scale account proportions to sum to 1.0
@@ -298,19 +356,13 @@ def create_random_portfolio_rebalancer(account_names: list[str],
         total_allocations = ticker_allocations.sum()
         print(f"\nTotal allocations: {total_allocations:.2%}")
 
-    # Convert Series to dictionary format
-    ticker_allocations = {
-        (idx[0], idx[1]): val
-        for idx, val in ticker_allocations.items()
-    }
-
     # --------------------------------------------------------------------------
     # Define target factor allocations
     # Generate random allocations for each factor
     original_target_factor_allocations = pd.Series({factor: round(random.random(), 2) for factor in FACTORS})
+    original_target_factor_allocations.index.name = 'Factor'
     original_target_factor_allocations.name = 'Allocation'
 
-    # Normalize allocations to sum to 1.0
     normalized_target_factor_allocations = original_target_factor_allocations
     if original_target_factor_allocations.sum() > 0:
         normalized_target_factor_allocations = original_target_factor_allocations / original_target_factor_allocations.sum()
@@ -332,8 +384,8 @@ def create_random_portfolio_rebalancer(account_names: list[str],
         print(f"\nFinal total allocations: {total_allocations:.2%}")
 
         write_weights(normalized_target_factor_allocations, title="Final Target Factor Allocations")
-    # Convert Series to dictionary format
-    target_factor_allocations = normalized_target_factor_allocations.to_dict()
+    # Use normalized target factor allocations as the target factor allocations
+    target_factor_allocations = normalized_target_factor_allocations
 
     # --------------------------------------------------------------------------
     # Define factor weights in long format with MultiIndex
@@ -350,11 +402,8 @@ def create_random_portfolio_rebalancer(account_names: list[str],
     if verbose:
         write_weights(factor_weights_series, title="Final Factor Weights")
 
-    # Convert Series to dictionary format
-    factor_weights = {
-        (idx[0], idx[1]): val
-        for idx, val in factor_weights_series.items()
-    }
+    # Use Series as the factor weights
+    factor_weights = factor_weights_series
 
     # --------------------------------------------------------------------------
     # Create the rebalancer
