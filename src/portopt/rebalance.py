@@ -1089,6 +1089,8 @@ class PortfolioRebalancer:
             print(f"Account Align Penalty: {self._account_align_penalty}")
 
         # Initialize factor weights matrix
+        if verbose:
+            write_weights(factor_weights, title="Factor Weights Table")
         self._init_factor_weights_matrix(factor_weights=factor_weights, verbose=verbose)
 
         # Initialize account registry
@@ -1106,6 +1108,12 @@ class PortfolioRebalancer:
         This matrix is used to map factor allocations to ticker allocations.  The
         columns in this matrix provide the canonical order for the tickers.
         """
+        # Convert Series to DataFrame if needed
+        # - pivot method used below requires a DataFrame
+        # - with a 'Weight' column
+        if isinstance(factor_weights, pd.Series):
+            factor_weights = factor_weights.to_frame('Weight')
+
         # Create master factor weights matrix:
         # 1. Pivot factor weights to get matrix form (factors x tickers)
         # 2. Reindex to match target factor order and include all tickers
@@ -1183,7 +1191,7 @@ class PortfolioRebalancer:
             print(f"\nAccount Registry:")
             print(f" - Number of accounts: {len(self._account_registry)}")
             print(f" - Total proportion: {self._account_registry['Proportion'].sum():.2%}")
-            write_weights(self._account_registry['Proportion'])
+            write_weights(self._account_registry['Proportion'], title="Account Proportions")
             print("\n<== _init_account_registry()")
 
     def getAccounts(self) -> list[str]:
