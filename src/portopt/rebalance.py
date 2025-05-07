@@ -995,20 +995,21 @@ class PortfolioRebalancer:
     consistent ordering of factors and tickers across all operations.
 
     Attributes:
-        account_ticker_allocations: DataFrame with hierarchical index [Account, Ticker]
+        account_ticker_allocations: Series with hierarchical index [Account, Ticker]
             containing current allocation percentages for each account-ticker pair
         target_factor_allocations: Series containing target factor allocations
-        factor_weights: DataFrame containing factor weights for all tickers
+        factor_weights: Series with hierarchical index [Ticker, Factor] containing
+            factor weights for all tickers
         min_ticker_alloc: Minimum allocation for any ticker (default: 0.0)
-        accounts: DataFrame indexed by Account and containing the proportion
+        accounts: Series indexed by Account containing the proportion
             of the portfolio held in each account
     """
 
     def __init__(
         self,
-        account_ticker_allocations: pd.DataFrame,
-        target_factor_allocations: pd.Series,
-        factor_weights: pd.DataFrame,
+        account_ticker_allocations: Union[pd.DataFrame, pd.Series],
+        target_factor_allocations: Union[pd.DataFrame, pd.Series],
+        factor_weights: Union[pd.DataFrame, pd.Series],
         min_ticker_alloc: float = 0.0,
         turnover_penalty: float = 0.0,
         complexity_penalty: float = 0.0,
@@ -1019,12 +1020,15 @@ class PortfolioRebalancer:
         Initialize the PortfolioRebalancer.
 
         Args:
-            account_ticker_allocations: DataFrame with hierarchical index [Account, Ticker]
-                containing original allocation percentages for each account-ticker pair
-            target_factor_allocations: Series indexed by Factor containing target
-                allocation percentages - defines the canonical order of factors
-            factor_weights: DataFrame with hierarchical index [Ticker, Factor]
-                containing factor weights for each ticker
+            account_ticker_allocations: DataFrame or Series with hierarchical index [Account, Ticker]
+                containing original allocation percentages for each account-ticker pair.
+                If DataFrame, must have 'Allocation' column.
+            target_factor_allocations: DataFrame or Series indexed by Factor containing target
+                allocation percentages - defines the canonical order of factors.
+                If DataFrame, must have 'Allocation' column.
+            factor_weights: DataFrame or Series with hierarchical index [Ticker, Factor]
+                containing factor weights for each ticker.
+                If DataFrame, must have 'Weight' column.
             min_ticker_alloc: Minimum non-zero allocation for any fund (default: 0.0)
             account_align_penalty: Weight for penalizing account-level factor
                 misalignment - applied to factor objective (default: 1.0)
@@ -1043,6 +1047,36 @@ class PortfolioRebalancer:
         if verbose:
             print("\n==> PortfolioRebalancer.__init__()")
 
+        # Convert DataFrames to Series if needed
+        if isinstance(account_ticker_allocations, pd.DataFrame):
+            if 'Allocation' not in account_ticker_allocations.columns:
+                raise ValueError("account_ticker_allocations DataFrame must have 'Allocation' column")
+            account_ticker_allocations = account_ticker_allocations['Allocation']
+
+        if isinstance(target_factor_allocations, pd.DataFrame):
+            if 'Allocation' not in target_factor_allocations.columns:
+                raise ValueError("target_factor_allocations DataFrame must have 'Allocation' column")
+            target_factor_allocations = target_factor_allocations['Allocation']
+
+        if isinstance(factor_weights, pd.DataFrame):
+            if 'Weight' not in factor_weights.columns:
+                raise ValueError("factor_weights DataFrame must have 'Weight' column")
+            factor_weights = factor_weights['Weight']
+
+        # Validate input types
+        if not isinstance(account_ticker_allocations, pd.Series):
+            raise ValueError(
+                f"account_ticker_allocations must be a pandas Series or DataFrame, got {type(account_ticker_allocations)}"
+            )
+        if not isinstance(target_factor_allocations, pd.Series):
+            raise ValueError(
+                f"target_factor_allocations must be a pandas Series or DataFrame, got {type(target_factor_allocations)}"
+            )
+        if not isinstance(factor_weights, pd.Series):
+            raise ValueError(
+                f"factor_weights must be a pandas Series or DataFrame, got {type(factor_weights)}"
+            )
+
         # Validate account_ticker_allocations structure
         if not isinstance(account_ticker_allocations.index, pd.MultiIndex):
             raise ValueError(
@@ -1053,23 +1087,46 @@ class PortfolioRebalancer:
                 "account_ticker_allocations index names must be ['Account', 'Ticker']"
             )
 
-        # Validate account_ticker_allocations sum to 100%
-        total_allocation = account_ticker_allocations.sum()
-        if not np.isclose(total_allocation, 1.0, rtol=1e-5):
+        # Validate target_factor_allocations structure
+        if not isinstance(target_factor_allocations.index, pd.Index):
             raise ValueError(
-                f"Account ticker allocations must sum to 100%, got {total_allocation:.2%}"
+                "target_factor_allocations must have an Index with Factor names"
+            )
+        if target_factor_allocations.index.name != 'Factor':
+            raise ValueError(
+                "target_factor_allocations index name must be 'Factor'"
             )
 
-        # Validate target_factor_allocations is a Series
-        if not isinstance(target_factor_allocations, pd.Series):
+        # Validate factor_weights structure
+        if not isinstance(factor_weights.index, pd.MultiIndex):
             raise ValueError(
-                f"target_factor_allocations must be a pandas Series, got {type(target_factor_allocations)}"
+                "factor_weights must have a MultiIndex with levels [Ticker, Factor]"
+            )
+        if factor_weights.index.names != ['Ticker', 'Factor']:
+            raise ValueError(
+                "factor_weights index names must be ['Ticker', 'Factor']"
             )
 
-        # Validate target allocations sum to 100%
-        if not np.isclose(target_factor_allocations.sum(), 1.0, rtol=1e-5):
+        # Validate factor weights sum to 100% for each ticker
+        ticker_factor_sums = factor_weights.groupby(level='Ticker').sum()
+        invalid_tickers = ticker_factor_sums[~np.isclose(ticker_factor_sums, 1.0, rtol=1e-5)]
+        if not invalid_tickers.empty:
             raise ValueError(
-                f"Target factor allocations must sum to 100%, got {target_factor_allocations.sum():.2%}"
+                f"Factor weights must sum to 100% for each ticker. Found invalid sums for tickers:\n"
+                f"{invalid_tickers.to_string()}"
+            )
+
+        # Validate allocation sums
+        ticker_total = account_ticker_allocations.sum()
+        if not np.isclose(ticker_total, 1.0, rtol=1e-5):
+            raise ValueError(
+                f"Account ticker allocations must sum to 100%, got {ticker_total:.2%}"
+            )
+
+        factor_total = target_factor_allocations.sum()
+        if not np.isclose(factor_total, 1.0, rtol=1e-5):
+            raise ValueError(
+                f"Target factor allocations must sum to 100%, got {factor_total:.2%}"
             )
 
         # Store inputs
@@ -1100,19 +1157,28 @@ class PortfolioRebalancer:
             print("\n<== PortfolioRebalancer.__init__()")
 
     def _init_factor_weights_matrix(self,
-                                    factor_weights: pd.DataFrame,
+                                    factor_weights: Union[pd.DataFrame, pd.Series],
                                     verbose: bool = False) -> None:
         """Initialize the factor weights matrix.
 
-        Creates a master factor weights matrix from the input factor weights DataFrame.
+        Creates a master factor weights matrix from the input factor weights Series.
         This matrix is used to map factor allocations to ticker allocations.  The
         columns in this matrix provide the canonical order for the tickers.
+
+        Args:
+            factor_weights: DataFrame or Series with hierarchical index [Ticker, Factor]
+                containing factor weights for each ticker.
+                If DataFrame, must have 'Weight' column.
+            verbose: If True, print detailed information about initialization
         """
         # Convert Series to DataFrame if needed
         # - pivot method used below requires a DataFrame
         # - with a 'Weight' column
         if isinstance(factor_weights, pd.Series):
             factor_weights = factor_weights.to_frame('Weight')
+        elif isinstance(factor_weights, pd.DataFrame):
+            if 'Weight' not in factor_weights.columns:
+                raise ValueError("factor_weights DataFrame must have 'Weight' column")
 
         # Create master factor weights matrix:
         # 1. Pivot factor weights to get matrix form (factors x tickers)
@@ -1154,8 +1220,8 @@ class PortfolioRebalancer:
     def _init_account_registry(self, verbose: bool = False) -> None:
         """Initialize the account registry.
 
-        Creates a DataFrame that serves as the master registry for all accounts,
-        containing their proportions and AccountRebalancer instances.
+        Creates a Series that serves as the master registry for all accounts,
+        containing their proportions.
 
         Args:
             verbose: If True, print detailed information about initialization
@@ -1166,7 +1232,7 @@ class PortfolioRebalancer:
         if verbose:
             print("\n==> _init_account_registry()\n")
 
-        # Create DataFrame indexed by Account with account proportions
+        # Create Series indexed by Account with account proportions
         proportions = self._account_ticker_allocations.groupby(level='Account').sum()
         proportions.name = 'Proportion'
 
@@ -1339,7 +1405,7 @@ class PortfolioRebalancer:
         # Get original allocations for this account
         account_allocations = self._account_ticker_allocations.xs(
             account, level='Account'
-        )['Allocation']  # Extract the Allocation column as a Series
+        )
 
         # Get tickers in canonical order
         canonical_tickers = self.getAccountTickers(account)
@@ -1614,6 +1680,11 @@ class AccountRebalancer:
     Attributes:
         port_rebalancer: Parent PortfolioRebalancer object
         account: Name of the account being rebalanced
+        _new_ticker_allocations: Series indexed by Ticker containing new allocation percentages
+        _factor_weights: DataFrame containing factor weights matrix for this account
+        _original_factor_allocations: Series indexed by Factor containing current allocation percentages
+        _target_factor_allocations: Series indexed by Factor containing target allocation percentages
+        _new_factor_allocations: Series indexed by Factor containing new allocation percentages
     """
 
     def __init__(
