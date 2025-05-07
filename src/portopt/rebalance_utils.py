@@ -285,39 +285,40 @@ def create_simple_account_rebalancer(account_name: str,
                                      complexity_penalty = complexity_penalty,
                                      verbose=verbose)
 
-def create_random_portfolio_rebalancer(account_names: list[str],
-                                       min_ticker_alloc: float = 0.0,
-                                       account_align_penalty: float = 1.0,
-                                       turnover_penalty: float = 0.0,
-                                       complexity_penalty: float = 0.0,
-                                       verbose: bool = False) -> PortfolioRebalancer:
+def create_random_ticker_allocations(
+    accounts: pd.Series,
+    tickers: list[str],
+    verbose: bool = False
+) -> pd.Series:
     """
-    Create a portfolio rebalancer with random test data.
+    Create random ticker allocations for a set of accounts.
+
+    For each account:
+    1. Randomly assigns allocations to some tickers (75% chance for each ticker)
+    2. Normalizes the allocations to sum to 1.0
+    3. Scales by the account's proportion of the portfolio
+
+    Args:
+        accounts: Series indexed by Account containing the proportion
+            of the portfolio held in each account
+        tickers: List of tickers to potentially allocate
+        verbose: If True, print detailed information about the allocations
+
+    Returns:
+        Series with hierarchical index [Account, Ticker] containing allocation
+        percentages for each account-ticker pair
     """
     if verbose:
-        print("\n==> create_random_portfolio_rebalancer()")
+        print("\n==> create_random_ticker_allocations()")
 
-    # --------------------------------------------------------------------------
-    # Define account proportions
-    account_proportions = pd.Series(0.0, index=account_names, name='Proportion')
-    account_proportions.index.name = 'Account'
-    for account_name in account_names:
-        account_proportions[account_name] = round(random.random(), 2)
-    # Scale account proportions to sum to 1.0
-    account_proportions = account_proportions / account_proportions.sum()
-    if verbose:
-        write_weights(account_proportions, title="Account Proportions")
-
-    # --------------------------------------------------------------------------
-    # Define account ticker allocations
-    index = pd.MultiIndex.from_product([account_names, TICKERS], names=['Account', 'Ticker'])
-    # Create a Series first, then convert to DataFrame
+    # Create MultiIndex Series for allocations
+    index = pd.MultiIndex.from_product([accounts.index, tickers], names=['Account', 'Ticker'])
     ticker_allocations = pd.Series(0.0, index=index, name='Allocation')
 
-    for account_name in account_names:
+    for account_name in accounts.index:
         if verbose:
             print(f"\n - processing {account_name}")
-        for ticker in TICKERS:
+        for ticker in tickers:
             # randomly generate a boolean to determine whether this
             # account should have an allocation for this ticker
             if random.random() < 0.75:
@@ -337,7 +338,7 @@ def create_random_portfolio_rebalancer(account_names: list[str],
             # First normalize the allocations to sum to 1.0
             normalized_account_allocations = original_account_allocations / original_account_allocations.sum()
             # Then scale by the account proportion to get final allocations
-            scaled_account_allocations = normalized_account_allocations * account_proportions[account_name]
+            scaled_account_allocations = normalized_account_allocations * accounts[account_name]
         # Set the value in the Series
         ticker_allocations.loc[account_name] = scaled_account_allocations
         if verbose:
@@ -355,6 +356,40 @@ def create_random_portfolio_rebalancer(account_names: list[str],
         write_weights(ticker_allocations, title="Final Ticker Allocations")
         total_allocations = ticker_allocations.sum()
         print(f"\nTotal allocations: {total_allocations:.2%}")
+        print("\n<== create_random_ticker_allocations()")
+
+    return ticker_allocations
+
+def create_random_portfolio_rebalancer(account_names: list[str],
+                                       min_ticker_alloc: float = 0.0,
+                                       account_align_penalty: float = 1.0,
+                                       turnover_penalty: float = 0.0,
+                                       complexity_penalty: float = 0.0,
+                                       verbose: bool = False) -> PortfolioRebalancer:
+    """
+    Create a portfolio rebalancer with random test data.
+    """
+    if verbose:
+        print("\n==> create_random_portfolio_rebalancer()")
+
+    # --------------------------------------------------------------------------
+    # Define accounts
+    accounts = pd.Series(0.0, index=account_names, name='Proportion')
+    accounts.index.name = 'Account'
+    for account_name in account_names:
+        accounts[account_name] = round(random.random(), 2)
+    # Scale account proportions to sum to 1.0
+    accounts = accounts / accounts.sum()
+    if verbose:
+        write_weights(accounts, title="Account Proportions")
+
+    # --------------------------------------------------------------------------
+    # Define account ticker allocations
+    ticker_allocations = create_random_ticker_allocations(
+        accounts=accounts,
+        tickers=TICKERS,
+        verbose=verbose
+    )
 
     # --------------------------------------------------------------------------
     # Define target factor allocations
