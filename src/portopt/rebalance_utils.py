@@ -360,6 +360,58 @@ def create_random_ticker_allocations(
 
     return ticker_allocations
 
+def create_random_factor_allocation(
+    factors: list[str],
+    verbose: bool = False
+) -> pd.Series:
+    """
+    Create random factor allocations that sum to 100%.
+
+    The process:
+    1. Generates random allocations for each factor
+    2. Normalizes the allocations to sum to 1.0
+    3. Adjusts the last factor to ensure the total is exactly 1.0
+
+    Args:
+        factors: List of factors to allocate
+        verbose: If True, print detailed information about the allocations
+
+    Returns:
+        Series indexed by Factor containing allocation percentages
+    """
+    if verbose:
+        print("\n==> create_random_factor_allocation()")
+
+    # Generate random allocations for each factor
+    original_allocations = pd.Series({factor: round(random.random(), 2) for factor in factors})
+    original_allocations.index.name = 'Factor'
+    original_allocations.name = 'Allocation'
+
+    # Normalize allocations to sum to 1.0
+    normalized_allocations = original_allocations
+    if original_allocations.sum() > 0:
+        normalized_allocations = original_allocations / original_allocations.sum()
+
+    # Ensure rounding doesn't affect total by adjusting last factor
+    total = normalized_allocations.sum()
+    if total != 1.0:
+        normalized_allocations[factors[-1]] = normalized_allocations[factors[-1]] + (1.0 - total)
+
+    if verbose:
+        # Create DataFrame with allocation steps
+        allocations_df = pd.DataFrame({
+            'Original': original_allocations,
+            'Normalized': normalized_allocations,
+            'Final': normalized_allocations
+        })
+        write_weights(allocations_df, title="Allocation Steps for Factor Allocations")
+        total_allocations = normalized_allocations.sum()
+        print(f"\nFinal total allocations: {total_allocations:.2%}")
+        write_weights(normalized_allocations, title="Final Factor Allocations")
+        print("\n<== create_random_factor_allocation()")
+
+    return normalized_allocations
+
 def create_random_portfolio_rebalancer(account_names: list[str],
                                        min_ticker_alloc: float = 0.0,
                                        account_align_penalty: float = 1.0,
@@ -393,34 +445,10 @@ def create_random_portfolio_rebalancer(account_names: list[str],
 
     # --------------------------------------------------------------------------
     # Define target factor allocations
-    # Generate random allocations for each factor
-    original_target_factor_allocations = pd.Series({factor: round(random.random(), 2) for factor in FACTORS})
-    original_target_factor_allocations.index.name = 'Factor'
-    original_target_factor_allocations.name = 'Allocation'
-
-    normalized_target_factor_allocations = original_target_factor_allocations
-    if original_target_factor_allocations.sum() > 0:
-        normalized_target_factor_allocations = original_target_factor_allocations / original_target_factor_allocations.sum()
-
-    # Ensure rounding doesn't affect total by adjusting last factor
-    total = normalized_target_factor_allocations.sum()
-    if total != 1.0:
-        normalized_target_factor_allocations[FACTORS[-1]] = normalized_target_factor_allocations[FACTORS[-1]] + (1.0 - total)
-
-    if verbose:
-        # create data frame with allocation steps
-        allocations_df = pd.DataFrame({
-            'Original': original_target_factor_allocations,
-            'Normalized': normalized_target_factor_allocations,
-            'Final': normalized_target_factor_allocations
-        })
-        write_weights(allocations_df, title="Allocation Steps for Target Factor Allocations")
-        total_allocations = normalized_target_factor_allocations.sum()
-        print(f"\nFinal total allocations: {total_allocations:.2%}")
-
-        write_weights(normalized_target_factor_allocations, title="Final Target Factor Allocations")
-    # Use normalized target factor allocations as the target factor allocations
-    target_factor_allocations = normalized_target_factor_allocations
+    target_factor_allocations = create_random_factor_allocation(
+        factors=FACTORS,
+        verbose=verbose
+    )
 
     # --------------------------------------------------------------------------
     # Define factor weights in long format with MultiIndex
