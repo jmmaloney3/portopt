@@ -412,6 +412,47 @@ def create_random_factor_allocation(
 
     return normalized_allocations
 
+def create_diagonal_ticker_factor_weights(
+    tickers: list[str],
+    factors: list[str],
+    verbose: bool = False
+) -> pd.Series:
+    """
+    Create a diagonal factor weights matrix where each ticker is assigned to exactly one factor.
+
+    The weights are structured as a Series with MultiIndex [Ticker, Factor] where:
+    - Each ticker has a weight of 1.0 for exactly one factor
+    - The factor with weight 1.0 is determined by the position of the ticker in the list
+    - All other factor weights are 0.0
+
+    Args:
+        tickers: List of tickers to assign weights to
+        factors: List of factors to assign weights from
+        verbose: If True, print detailed information about the weights
+
+    Returns:
+        Series with hierarchical index [Ticker, Factor] containing factor weights
+    """
+    if verbose:
+        print("\n==> create_diagonal_ticker_factor_weights()")
+
+    # Create multi-index Series with factor weights
+    index = pd.MultiIndex.from_product([tickers, factors], names=['Ticker', 'Factor'])
+    factor_weights = pd.Series(0.0, index=index, dtype=float)
+    factor_weights.name = 'Weight'
+
+    # Set weight to 1.0 if indices match, 0.0 otherwise
+    for i, ticker in enumerate(tickers):
+        for j, factor in enumerate(factors):
+            if i == j:
+                factor_weights[(ticker, factor)] = 1.0
+
+    if verbose:
+        write_weights(factor_weights, title="Factor Weights")
+        print("\n<== create_diagonal_ticker_factor_weights()")
+
+    return factor_weights
+
 def create_random_portfolio_rebalancer(account_names: list[str],
                                        min_ticker_alloc: float = 0.0,
                                        account_align_penalty: float = 1.0,
@@ -451,22 +492,12 @@ def create_random_portfolio_rebalancer(account_names: list[str],
     )
 
     # --------------------------------------------------------------------------
-    # Define factor weights in long format with MultiIndex
-    # Create multi-index Series with factor weights
-    index = pd.MultiIndex.from_product([TICKERS, FACTORS], names=['Ticker', 'Factor'])
-    factor_weights_series = pd.Series(0.0,index=index, dtype=float)
-    factor_weights_series.name = 'Weight'
-    for i, ticker in enumerate(TICKERS):
-        for j, factor in enumerate(FACTORS):
-            # Set weight to 1.0 if indices match, 0.0 otherwise
-            if i == j:
-                factor_weights_series[(ticker, factor)] = 1.0
-
-    if verbose:
-        write_weights(factor_weights_series, title="Final Factor Weights")
-
-    # Use Series as the factor weights
-    factor_weights = factor_weights_series
+    # Define factor weights
+    factor_weights = create_diagonal_ticker_factor_weights(
+        tickers=TICKERS,
+        factors=FACTORS,
+        verbose=verbose
+    )
 
     # --------------------------------------------------------------------------
     # Create the rebalancer
