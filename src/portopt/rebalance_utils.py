@@ -8,6 +8,7 @@ import random
 from portopt.utils import write_weights
 from portopt.rebalance import AccountRebalancer, PortfolioRebalancer
 from typing import Union
+import numpy as np
 
 TICKERS = ['ABCD', 'EFGH', 'JKLM', 'NOPQ', 'RSTU', 'VWXY', 'ZABC']
 FACTORS = ['Factor1', 'Factor2', 'Factor3', 'Factor4', 'Factor5', 'Factor6', 'Factor7']
@@ -450,6 +451,86 @@ def create_diagonal_ticker_factor_weights(
     if verbose:
         write_weights(factor_weights, title="Factor Weights")
         print("\n<== create_diagonal_ticker_factor_weights()")
+
+    return factor_weights
+
+def create_random_ticker_factor_weights(
+    tickers: list[str],
+    factors: list[str],
+    density: float = 1.0,
+    verbose: bool = False
+) -> pd.Series:
+    """
+    Create random factor weights where each ticker's weights sum to 100%.
+
+    The weights are structured as a Series with MultiIndex [Ticker, Factor] where:
+    - Each ticker's factor weights sum to 1.0
+    - The density parameter controls how many factors each ticker is exposed to
+    - Non-zero weights are randomly generated and normalized to sum to 1.0
+    - If no factors are selected or all weights are zero, assigns 100% to a random factor
+
+    Args:
+        tickers: List of tickers to assign weights to
+        factors: List of factors to assign weights from
+        density: Probability (0.0 to 1.0) that a ticker-factor pair gets a non-zero weight.
+            Default is 1.0, meaning all tickers are exposed to all factors.
+        verbose: If True, print detailed information about the weights
+
+    Returns:
+        Series with hierarchical index [Ticker, Factor] containing factor weights
+    """
+    if verbose:
+        print("\n==> create_random_ticker_factor_weights()")
+
+    # Create multi-index Series with factor weights
+    index = pd.MultiIndex.from_product([tickers, factors], names=['Ticker', 'Factor'])
+    factor_weights = pd.Series(0.0, index=index, dtype=float)
+    factor_weights.name = 'Weight'
+
+    # Generate random weights for each ticker
+    for ticker in tickers:
+        # First determine which factors this ticker will be exposed to
+        active_factors = [factor for factor in factors if random.random() < density]
+
+        if active_factors:  # Only proceed if there are any active factors
+            # Generate random weights for active factors
+            weights = {factor: round(random.random(), 2) for factor in active_factors}
+            # Normalize weights to sum to 1.0
+            total = sum(weights.values())
+            if total > 0:  # Only normalize if there are non-zero weights
+                weights = {factor: weight/total for factor, weight in weights.items()}
+                # Set the weights in the Series
+                for factor, weight in weights.items():
+                    factor_weights[(ticker, factor)] = weight
+            else:
+                # If all weights are zero, assign 100% to a random factor
+                random_factor = random.choice(active_factors)
+                factor_weights[(ticker, random_factor)] = 1.0
+        else:
+            # If no factors were selected, assign 100% to a random factor
+            random_factor = random.choice(factors)
+            factor_weights[(ticker, random_factor)] = 1.0
+
+    if verbose:
+        write_weights(factor_weights, title="Factor Weights")
+        # Print summary of factor exposures
+        ticker_exposures = factor_weights.groupby(level='Ticker').apply(
+            lambda x: sum(x > 0)
+        )
+        print("\nNumber of factors per ticker:")
+        print(ticker_exposures.to_string())
+
+    # Verify that weights sum to 1.0 for each ticker
+    ticker_sums = factor_weights.groupby(level='Ticker').sum()
+    invalid_tickers = ticker_sums[~np.isclose(ticker_sums, 1.0, rtol=1e-5)]
+    if not invalid_tickers.empty:
+        raise ValueError(
+            f"Factor weights must sum to 100% for each ticker. Found invalid sums for tickers:\n"
+            f"{invalid_tickers.to_string()}"
+        )
+
+    if verbose:
+        print("\n<== create_random_ticker_factor_weights()")
 
     return factor_weights
 
