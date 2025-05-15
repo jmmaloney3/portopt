@@ -279,15 +279,18 @@ class Portfolio(RebalanceMixin):
         factors = None
         factor_weights = None
         if need_factors:
-            if not self.factor_weights_file:
-                raise ValueError("Factor-based analysis requested but no factor weights file provided")
-            factors = self.getFactors().reset_index()
-            factor_weights = self.getFactorWeights().reset_index()
+            factors = self.getFactors(verbose=verbose).reset_index()
+            factor_weights = self.getFactorWeights(verbose=verbose).reset_index()
+
+        # Check if we need ticker data
+        need_tickers = False
+        if 'Ticker' in dimensions:
+            need_tickers = True
 
         # Only load ticker data if needed
         tickers = None
-        if 'Ticker' in dimensions:
-            tickers = self.getTickers().reset_index()
+        if need_tickers:
+            tickers = self.getTickers(verbose=verbose).reset_index()
 
         # Create DuckDB connection
         con = duckdb.connect()
