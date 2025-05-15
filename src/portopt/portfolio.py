@@ -58,20 +58,21 @@ class Portfolio(RebalanceMixin):
 
     def __init__(self,
                  config: dict,
-                 factor_weights_file: str,
+                 factor_weights_file: str | None,
                  *holdings_files):
         """
         Initialize Portfolio instance.
 
         Args:
             config: Configuration dictionary containing settings (typically from config.load_config())
-            factor_weights_file: Path to factor weights matrix file
+            factor_weights_file: Optional path to factor weights matrix file. If None, factor-based
+                               analysis will not be available.
             *holdings_files: Variable arguments specifying holdings data sources. Can be:
                       - A list of file paths
                       - A directory path containing CSV files
                       - Multiple file path arguments
         """
-        if not os.path.exists(factor_weights_file):
+        if factor_weights_file is not None and not os.path.exists(factor_weights_file):
             raise ValueError(f"Factor weights file not found: {factor_weights_file}")
 
         self.config = config
@@ -172,6 +173,9 @@ class Portfolio(RebalanceMixin):
         Returns:
             DataFrame indexed by [Ticker, Factor] containing:
             - Weight
+
+        Raises:
+            ValueError: If factor_weights_file is not available
         """
         if forceRefresh or self._factor_weights_cache is None:
             # Get factor dimension data
@@ -179,7 +183,7 @@ class Portfolio(RebalanceMixin):
 
             # Get weights file path from config
             if not self.factor_weights_file:
-                raise ValueError("factor_weights_file not specified in config")
+                raise ValueError("Factor weights file not provided.")
 
             # Load factor weights
             self._factor_weights_cache = load_factor_weights(
@@ -257,9 +261,33 @@ class Portfolio(RebalanceMixin):
         # Get required data
         holdings = self.getHoldings(verbose=verbose).reset_index()
         prices = self.getPrices(verbose=verbose).reset_index()
-        factors = self.getFactors().reset_index()
-        factor_weights = self.getFactorWeights().reset_index()
-        tickers = self.getTickers().reset_index() if 'Ticker' in dimensions else None
+
+        # Check if we need factor data
+        need_factors = False
+        if filters:
+            for dim in filters.keys():
+                if dim == 'Factor' or dim.startswith('Level_'):
+                    need_factors = True
+                    break
+
+        for dim in dimensions:
+            if dim == 'Factor' or dim.startswith('Level_'):
+                need_factors = True
+                break
+
+        # Only load factor data if needed
+        factors = None
+        factor_weights = None
+        if need_factors:
+            if not self.factor_weights_file:
+                raise ValueError("Factor-based analysis requested but no factor weights file provided")
+            factors = self.getFactors().reset_index()
+            factor_weights = self.getFactorWeights().reset_index()
+
+        # Only load ticker data if needed
+        tickers = None
+        if 'Ticker' in dimensions:
+            tickers = self.getTickers().reset_index()
 
         # Create DuckDB connection
         con = duckdb.connect()
@@ -268,8 +296,10 @@ class Portfolio(RebalanceMixin):
             # Register DataFrames as tables
             con.register("holdings", holdings)
             con.register("prices", prices)
-            con.register("factors", factors)
-            con.register("factor_weights", factor_weights)
+            if factors is not None:
+                con.register("factors", factors)
+            if factor_weights is not None:
+                con.register("factor_weights", factor_weights)
             if tickers is not None:
                 con.register("tickers", tickers)
 
