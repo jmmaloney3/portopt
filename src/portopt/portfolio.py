@@ -279,8 +279,8 @@ class Portfolio(RebalanceMixin):
         factors = None
         factor_weights = None
         if need_factors:
-            factors = self.getFactors(verbose=verbose).reset_index()
-            factor_weights = self.getFactorWeights(verbose=verbose).reset_index()
+            factors = self.getFactors().reset_index()
+            factor_weights = self.getFactorWeights().reset_index()
 
         # Check if we need ticker data
         need_tickers = False
