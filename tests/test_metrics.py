@@ -34,6 +34,20 @@ COLUMN_FORMATS = {
     'Allocation': {'width': 16, 'decimal': 2, 'type':'%'}
 }
 
+def getMetricsMixinInstance(holdings_data: pd.DataFrame,
+                            prices_data: pd.DataFrame,
+                            factors_data: pd.DataFrame = None,
+                            factor_weights_data: pd.DataFrame = None):
+    """Create a MetricsMixin instance with mock methods."""
+    metrics = MetricsMixin()
+    metrics.getHoldings = lambda **kwargs: holdings_data
+    metrics.getPrices = lambda **kwargs: prices_data
+    if factors_data is not None:
+        metrics.getFactors = lambda **kwargs: factors_data
+    if factor_weights_data is not None:
+        metrics.getFactorWeights = lambda **kwargs: factor_weights_data
+    return metrics
+
 def test_get_metrics_total_portfolio():
     """Test that getMetrics() without arguments returns correct total portfolio value and allocation."""
     # Create test data
@@ -51,12 +65,9 @@ def test_get_metrics_total_portfolio():
     }).set_index('Ticker')
     if VERBOSE:
         write_table(prices_data, columns=COLUMN_FORMATS, title='Prices')
-    # Create a mock MetricsMixin instance
-    metrics = MetricsMixin()
 
-    # Mock the required methods to return our test data
-    metrics.getHoldings = lambda **kwargs: holdings_data
-    metrics.getPrices = lambda **kwargs: prices_data
+    # Create a mock MetricsMixin instance
+    metrics = getMetricsMixinInstance(holdings_data, prices_data)
 
     # Call getMetrics without arguments
     result = metrics.getMetrics(verbose=VERBOSE)
@@ -103,13 +114,10 @@ def test_get_metrics_factor_dimensions():
     }).set_index(['Ticker', 'Factor'])
 
     # Create a mock MetricsMixin instance
-    metrics = MetricsMixin()
-
-    # Mock the required methods to return our test data
-    metrics.getHoldings = lambda **kwargs: holdings_data
-    metrics.getPrices = lambda **kwargs: prices_data
-    metrics.getFactors = lambda **kwargs: factors_data
-    metrics.getFactorWeights = lambda **kwargs: factor_weights_data
+    metrics = getMetricsMixinInstance(holdings_data,
+                                      prices_data,
+                                      factors_data,
+                                      factor_weights_data)
 
     # Get total value without dimensions
     total_metrics = metrics.getMetrics(verbose=VERBOSE)
@@ -148,11 +156,7 @@ def test_get_metrics_by_ticker():
         write_table(prices_data, columns=COLUMN_FORMATS, title='Prices')
 
     # Create a mock MetricsMixin instance
-    metrics = MetricsMixin()
-
-    # Mock the required methods to return our test data
-    metrics.getHoldings = lambda **kwargs: holdings_data
-    metrics.getPrices = lambda **kwargs: prices_data
+    metrics = getMetricsMixinInstance(holdings_data, prices_data)
 
     # Call getMetrics with Ticker dimension
     result = metrics.getMetrics('Ticker', verbose=VERBOSE)
