@@ -19,6 +19,7 @@ Rather than implementing metrics calculations in pure Python/pandas, the module 
 - **Performance**: Leverages DuckDB's columnar engine for fast aggregations
 - **Expressiveness**: Complex multi-dimensional queries are easier to reason about
 - **Maintainability**: Single algorithm handles all metric combinations rather than multiple code paths
+- **Flexibility**: Supports potential future migration to a database such as *BigQuery*
 
 ## Core Architecture
 
