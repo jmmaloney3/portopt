@@ -18,6 +18,7 @@ bt = "*"
 pyyaml = "*"
 duckdb = "*"
 portopt = {file = ".", editable = true}
+ibis-framework = {extras = ["duckdb"], version = "*"}
 
 [dev-packages]
 ipykernel = "*"
