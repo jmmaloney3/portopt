@@ -1,3 +1,7 @@
+"""
+Test suite for MetricsMixin class.
+"""
+
 import pandas as pd
 import numpy as np
 from portopt.metrics import MetricsMixin
@@ -871,6 +875,210 @@ def test_real_world_missing_factor_weights_scenario():
     # The key test is that the total value is preserved
     print("✓ Real-world missing factor weights scenario handled correctly")
 
+def test_original_double_counting_bug_with_factor_filters():
+    """Test case that reproduces the original double-counting bug reported by the user.
+
+    Original problem: When using factor filters like {'Level_0': ['Equity'], 'Level_1': ['US']}
+    with portfolio_allocation=True and dimensions like ['Account'], the total value was
+    incorrectly calculated as $7,019,716.77 when it should have been $3,051,391.05
+    (more than double the correct amount).
+
+    This was caused by double-counting tickers that had multiple factor exposures
+    when factor filters were used but factor dimensions were not.
+    """
+    # Create test data that reproduces the original issue
+    # AAPL has multiple factor exposures with fractional weights that sum to 1.0
+    holdings_data = pd.DataFrame({
+        'Ticker': ['AAPL', 'AAPL', 'MSFT', 'BND'],
+        'Account': ['IRA', '401k', 'IRA', 'IRA'],
+        'Quantity': [100, 50, 75, 200]
+    }).set_index(['Ticker', 'Account'])
+
+    prices_data = pd.DataFrame({
+        'Ticker': ['AAPL', 'MSFT', 'BND'],
+        'Price': [150.0, 300.0, 85.0]
+    }).set_index('Ticker')
+
+    # AAPL has multiple factor exposures with fractional weights (0.7 + 0.3 = 1.0)
+    # This is the key to reproducing the double-counting issue
+    factor_weights_data = pd.DataFrame({
+        'Ticker': ['AAPL', 'AAPL', 'MSFT', 'BND'],
+        'Factor': ['US_Large_Growth', 'US_Large_Tech', 'US_Large_Value', 'US_Bond'],
+        'Weight': [0.7, 0.3, 1.0, 1.0]
+    }).set_index(['Ticker', 'Factor'])
+
+    factors_data = pd.DataFrame({
+        'Factor': ['US_Large_Growth', 'US_Large_Tech', 'US_Large_Value', 'US_Bond'],
+        'Level_0': ['Equity', 'Equity', 'Equity', 'Bond'],
+        'Level_1': ['US', 'US', 'US', 'US'],
+        'Level_2': ['Large', 'Large', 'Large', 'N/A']
+    })
+
+    # Create MetricsMixin instance
+    metrics = getMetricsMixinInstance(
+        holdings_data, prices_data, factors_data, factor_weights_data
+    )
+
+    # This is the exact scenario that caused the original bug:
+    # - Using factor filters ({'Level_0': ['Equity']})
+    # - With portfolio_allocation=True
+    # - Grouping by non-factor dimensions (['Account'])
+    result = metrics.getMetrics(
+        'Account',
+        filters={'Level_0': ['Equity']},
+        portfolio_allocation=True,
+        verbose=VERBOSE
+    )
+
+    if VERBOSE:
+        print("=== Original Double-Counting Bug Test ===")
+        write_table(result, columns=COLUMN_FORMATS, title='Result with Factor Filters')
+        print(f"Total filtered value: ${result['Value'].sum():,.2f}")
+        print(f"Total allocation: {result['Allocation'].sum():.2%}")
+
+    # Calculate expected values manually:
+    # AAPL in IRA: 100 shares * $150 * 1.0 weight = $15,000
+    # AAPL in 401k: 50 shares * $150 * 1.0 weight = $7,500
+    # MSFT in IRA: 75 shares * $300 * 1.0 weight = $22,500
+    # Total equity value: $45,000
+    expected_total_equity_value = 45000.0
+
+    # Expected allocations (relative to total portfolio including bonds):
+    # Total portfolio value = $45,000 (equity) + $17,000 (bonds) = $62,000
+    # IRA allocation = $37,500 / $62,000 = 60.48%
+    # 401k allocation = $7,500 / $62,000 = 12.10%
+    expected_total_portfolio_value = 62000.0  # Including bonds
+    expected_ira_allocation = 37500.0 / expected_total_portfolio_value  # ~60.48%
+    expected_401k_allocation = 7500.0 / expected_total_portfolio_value  # ~12.10%
+
+    # Verify the fix works correctly
+    actual_total_value = result['Value'].sum()
+    actual_total_allocation = result['Allocation'].sum()
+
+    # The key test: total value should be correct (not double-counted)
+    assert abs(actual_total_value - expected_total_equity_value) < 0.01, \
+        f"Expected total equity value ${expected_total_equity_value:,.2f}, " \
+        f"but got ${actual_total_value:,.2f}. " \
+        f"This indicates the double-counting bug is not fixed!"
+
+    # Verify individual account values
+    ira_value = result.loc['IRA', 'Value']
+    account_401k_value = result.loc['401k', 'Value']
+
+    assert abs(ira_value - 37500.0) < 0.01, \
+        f"Expected IRA equity value $37,500, got ${ira_value:,.2f}"
+
+    assert abs(account_401k_value - 7500.0) < 0.01, \
+        f"Expected 401k equity value $7,500, got ${account_401k_value:,.2f}"
+
+    # Verify portfolio allocations are correct (relative to total portfolio)
+    ira_allocation = result.loc['IRA', 'Allocation']
+    account_401k_allocation = result.loc['401k', 'Allocation']
+
+    assert abs(ira_allocation - expected_ira_allocation) < 0.001, \
+        f"Expected IRA allocation {expected_ira_allocation:.3%}, got {ira_allocation:.3%}"
+
+    assert abs(account_401k_allocation - expected_401k_allocation) < 0.001, \
+        f"Expected 401k allocation {expected_401k_allocation:.3%}, got {account_401k_allocation:.3%}"
+
+    # The total allocation should be less than 100% since we're filtering to equity only
+    # but using portfolio_allocation=True (allocating relative to total portfolio including bonds)
+    expected_total_allocation = expected_total_equity_value / expected_total_portfolio_value  # ~72.58%
+    assert abs(actual_total_allocation - expected_total_allocation) < 0.001, \
+        f"Expected total allocation {expected_total_allocation:.3%}, got {actual_total_allocation:.3%}"
+
+    # Additional verification: ensure we're not getting the buggy double-counted result
+    # The original bug would have produced ~$67,500 total value (50% higher)
+    buggy_total_value = 67500.0  # What the bug would have produced
+    assert abs(actual_total_value - buggy_total_value) > 1000, \
+        f"Result ${actual_total_value:,.2f} is too close to the buggy value ${buggy_total_value:,.2f}. " \
+        f"The fix may not be working correctly!"
+
+    if VERBOSE:
+        print(f"✓ Expected total equity value: ${expected_total_equity_value:,.2f}")
+        print(f"✓ Actual total equity value: ${actual_total_value:,.2f}")
+        print(f"✓ Expected total allocation: {expected_total_allocation:.2%}")
+        print(f"✓ Actual total allocation: {actual_total_allocation:.2%}")
+        print(f"✓ Avoided buggy value: ${buggy_total_value:,.2f}")
+        print("✓ Original double-counting bug is fixed!")
+
+def test_invalid_dimension_validation():
+    """Test that requesting invalid dimensions throws appropriate ValueError."""
+    test_data = create_comprehensive_test_data()
+    metrics = getMetricsMixinInstance(
+        holdings=test_data['holdings'],
+        prices=test_data['prices'],
+        factors=test_data['factors'],
+        factor_weights=test_data['factor_weights'],
+        accounts=test_data['accounts'],
+        tickers=test_data['tickers']
+    )
+
+    # Test 1: Single invalid dimension
+    with pytest.raises(ValueError) as exc_info:
+        metrics.getMetrics('NonExistentDimension')
+
+    error_msg = str(exc_info.value)
+    assert "Requested dimensions not found in query: ['NonExistentDimension']" in error_msg
+    assert "Available columns:" in error_msg
+
+    # Test 2: Mix of valid and invalid dimensions
+    with pytest.raises(ValueError) as exc_info:
+        metrics.getMetrics('Ticker', 'InvalidDim1', 'Account', 'InvalidDim2')
+
+    error_msg = str(exc_info.value)
+    assert "Requested dimensions not found in query: ['InvalidDim1', 'InvalidDim2']" in error_msg
+    assert "Available columns:" in error_msg
+
+    # Test 3: Multiple invalid dimensions
+    with pytest.raises(ValueError) as exc_info:
+        metrics.getMetrics('BadDim1', 'BadDim2', 'BadDim3')
+
+    error_msg = str(exc_info.value)
+    assert "Requested dimensions not found in query: ['BadDim1', 'BadDim2', 'BadDim3']" in error_msg
+
+    # Test 4: Valid dimensions should work fine (no exception)
+    try:
+        result = metrics.getMetrics('Ticker', 'Account')
+        assert result is not None
+        assert len(result) > 0
+    except Exception as e:
+        pytest.fail(f"Valid dimensions should not raise exception, but got: {e}")
+
+    # Test 5: Factor dimensions when factor tables aren't available
+    # Create a metrics instance without factor tables
+    metrics_no_factors = getMetricsMixinInstance(
+        holdings=test_data['holdings'],
+        prices=test_data['prices']
+        # No factors or factor_weights provided
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        metrics_no_factors.getMetrics('Level_0')
+
+    error_msg = str(exc_info.value)
+    assert "Factor weights are required for the requested dimensions/filters" in error_msg
+    assert "but factor_weights table is not available" in error_msg
+
+    # Test 6: Test for actual "dimension not found" error with non-factor dimensions
+    # This should trigger the validation we added in _add_aggregates
+    with pytest.raises(ValueError) as exc_info:
+        # Use a simple query that won't require factor tables
+        metrics.getMetrics('Ticker', 'NonExistentColumn', metrics=['Quantity'])
+
+    error_msg = str(exc_info.value)
+    assert "Requested dimensions not found in query: ['NonExistentColumn']" in error_msg
+    assert "Available columns:" in error_msg
+
+    # Test 7: Edge case - empty dimensions list should work
+    try:
+        result = metrics.getMetrics()  # No dimensions specified
+        assert result is not None
+    except Exception as e:
+        pytest.fail(f"Empty dimensions should not raise exception, but got: {e}")
+
+    print("✅ All invalid dimension validation tests passed!")
+
 # ==============================================================================
 # Performance and Stress Tests
 # ==============================================================================
@@ -955,7 +1163,13 @@ if __name__ == "__main__":
     test_real_world_missing_factor_weights_scenario()
     print("✓ test_real_world_missing_factor_weights_scenario")
 
+    test_original_double_counting_bug_with_factor_filters()
+    print("✓ test_original_double_counting_bug_with_factor_filters")
+
     test_metrics_performance_with_large_dimensions()
     print("✓ test_metrics_performance_with_large_dimensions")
+
+    test_invalid_dimension_validation()
+    print("✓ test_invalid_dimension_validation")
 
     print("\n🎉 All tests passed! Comprehensive test suite completed successfully.")
