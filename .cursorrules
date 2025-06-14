@@ -1,0 +1,57 @@
+# Cursor AI Rules for Portfolio Optimization Project
+
+## Code Quality and Formatting
+
+### Whitespace Rules (CRITICAL)
+- NEVER add leading whitespace to blank lines
+- NEVER add trailing whitespace to any lines
+- Use 4 spaces for Python indentation (no tabs)
+- Ensure files end with a single newline
+- When editing existing code, preserve the existing clean whitespace formatting
+
+### Python Code Standards
+- Follow PEP 8 style guidelines
+- Use meaningful variable and function names
+- Add type hints where appropriate
+- Include docstrings for classes and public methods
+- Keep line length under 100 characters when practical
+
+### Documentation
+- Use clear, concise comments
+- Update docstrings when modifying function behavior
+- Include examples in docstrings for complex functions
+- Explain the "why" not just the "what" in comments
+
+### Testing
+- Maintain existing test coverage when modifying code
+- Add tests for new functionality
+- Use descriptive test names that explain what is being tested
+- Include edge cases and error conditions in tests
+
+### SQL and Database Code
+- Use proper SQL formatting with clear indentation
+- Add comments to explain complex queries
+- Use meaningful table and column aliases
+- Optimize queries for readability and performance
+
+### File Organization
+- Keep imports organized (standard library, third-party, local)
+- Group related functions together
+- Use consistent naming conventions across the project
+- Remove unused imports and variables
+
+## Project-Specific Guidelines
+
+### Portfolio Metrics
+- When working with factor weights, always consider double-counting scenarios
+- Ensure total portfolio values are consistent across different groupings
+- Validate that allocations sum to 1.0 (100%) where expected
+- Handle missing factor weights gracefully with UNDEFINED categories
+
+### Error Handling
+- Provide clear, actionable error messages
+- Validate inputs early and fail fast
+- Include context about available options in error messages
+- Use appropriate exception types
+
+Remember: This project has been carefully cleaned of whitespace issues. The .editorconfig file should help maintain formatting, but always double-check that your changes don't introduce trailing or leading whitespace on blank lines. 
