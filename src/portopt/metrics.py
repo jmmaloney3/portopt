@@ -78,47 +78,108 @@ class MetricsMixin:
 
         return tables
 
+    def _handle_undefined_factor_weights(self,
+                                       query: ibis.Table,
+                                       tables: Dict[str, ibis.Table],
+                                       requires_factor_levels: bool) -> ibis.Table:
+        """Handle tickers that don't have factor weights defined.
+
+        This method creates an "UNDEFINED" factor that matches the structure of the
+        user's factor hierarchy, ensuring tickers without factor weights are included
+        exactly once in factor-based calculations.
+
+        This adds the UNDEFINED factor to the query, and sets the Weight to 1.0
+        resulting the Factor, Weight, and facrtor hierarchy columns being replaced
+        with COALESCE expressions like the following:
+            ```
+            COALESCE("t8"."Factor", 'UNDEFINED') AS "Factor",
+            COALESCE("t8"."Weight", 1.0) AS "Weight",
+            COALESCE("t8"."Level_0", 'UNDEFINED') AS "Level_0",
+            COALESCE("t8"."Level_1", 'N/A') AS "Level_1",
+            COALESCE("t8"."Level_2", 'N/A') AS "Level_2"
+            ```
+        Args:
+            query: The current query with LEFT JOINed factor tables
+            tables: Dict of available tables
+            requires_factor_levels: Whether factor level columns are needed
+
+        Returns:
+            Query with undefined factor weights handled appropriately
+        """
+        # Set default values for missing factor weights
+        mutate_exprs = {
+            'Factor': query.Factor.coalesce('UNDEFINED'),
+            'Weight': query.Weight.coalesce(1.0)
+        }
+
+        # If factor levels are required, we need to determine the appropriate
+        # default values based on the actual factor hierarchy structure
+        if requires_factor_levels and 'factors' in tables:
+            # Get the factor hierarchy structure from the factors table
+            factors_df = tables['factors'].execute()
+
+            if not factors_df.empty:
+                # Get the level column names (excluding 'Factor' column)
+                level_columns = [col for col in factors_df.columns if col.startswith('Level_')]
+
+                # For each level column, set undefined tickers to "UNDEFINED" at Level_0
+                # and "N/A" for all other levels (following common convention)
+                available_columns = query.columns
+                for level_col in level_columns:
+                    if level_col in available_columns:
+                        if level_col == 'Level_0':
+                            mutate_exprs[level_col] = getattr(query, level_col).coalesce('UNDEFINED')
+                        else:
+                            mutate_exprs[level_col] = getattr(query, level_col).coalesce('N/A')
+
+        return query.mutate(**mutate_exprs)
+
     def _build_base_query(self,
                           tables: Dict[str, ibis.Table],
                           dimensions: List[str],
                           filters: Optional[Dict[str, Union[str, List[str]]]] = None,
                           verbose = False) -> ibis.Table:
         """Join together the base tables required for metrics calculations.
-        
+
         Args:
             tables: Dict of ibis tables
             dimensions: List of dimensions to include in query
             filters: Dict of filters to apply to the query
             verbose: If True, print the generated SQL query. Default is False.
-            
+
         Returns:
             ibis Table with base joined data
         """
         # Determine if factor tables are needed based on dimensions and filters
         requires_factor_weights = False
         requires_factor_levels = False
-        
+
         # Check dimensions
         if dimensions:
             requires_factor_weights = any(d.startswith('Level_') or d == 'Factor' for d in dimensions)
             requires_factor_levels = any(d.startswith('Level_') for d in dimensions)
-            
+
         # Check filters if they exist
         if filters:
             requires_factor_weights = requires_factor_weights or \
                                       any(d.startswith('Level_') or d == 'Factor' for d in filters.keys())
             requires_factor_levels = requires_factor_levels or \
                                      any(d.startswith('Level_') for d in filters.keys())
-        
+
         # Start with holdings and join with prices
         query = tables['holdings'].join(tables['prices'], 'Ticker')
-        
-        # Add factor tables if needed
+
+        # Add factor tables if needed - use LEFT JOINs to include all tickers
+        # even if they don't have factor weights defined
         if requires_factor_weights:
-            query = query.join(tables['factor_weights'], 'Ticker')
+            query = query.left_join(tables['factor_weights'], 'Ticker')
             if requires_factor_levels:
-                query = query.join(tables['factors'], 'Factor')
-                
+                query = query.left_join(tables['factors'], 'Factor')
+
+            # Handle tickers without factor weights by assigning them to an "UNDEFINED" factor
+            # This prevents them from being counted multiple times across all factors
+            query = self._handle_undefined_factor_weights(query, tables, requires_factor_levels)
+
         if verbose:
             print("Base Query --------------------------------")
             print(ibis.to_sql(query))

@@ -733,6 +733,144 @@ def test_metrics_complex_scenario():
     assert complex_portfolio['Allocation'].sum() < 1.0, \
         "Portfolio allocations should sum to less than 100% when filtered"
 
+def test_total_value_consistency_with_and_without_factors():
+    """Test that total portfolio value is consistent with and without factor dimensions.
+
+    This test addresses a critical issue where using factor dimensions can exclude
+    tickers that don't have factor weights, leading to incorrect total values.
+    """
+    test_data = create_comprehensive_test_data()
+
+    # Add a ticker without factor weights to test the issue
+    # Add holdings for a ticker that has no factor weights
+    additional_holdings = pd.DataFrame({
+        'Ticker': ['MISSING_FACTOR'],
+        'Account': ['IRA'],
+        'Quantity': [100.0]
+    }).set_index(['Ticker', 'Account'])
+
+    # Add price for the missing factor ticker
+    additional_prices = pd.DataFrame({
+        'Ticker': ['MISSING_FACTOR'],
+        'Price': [50.0]
+    }).set_index('Ticker')
+
+    # Combine with existing test data
+    extended_holdings = pd.concat([test_data['holdings'], additional_holdings])
+    extended_prices = pd.concat([test_data['prices'], additional_prices])
+
+    metrics = getMetricsMixinInstance(
+        extended_holdings,
+        extended_prices,
+        test_data['factors'],
+        test_data['factor_weights'],
+        test_data['accounts'],
+        test_data['tickers']
+    )
+
+    # Get total portfolio value without factor dimensions
+    total_without_factors = metrics.getMetrics(verbose=VERBOSE)
+    total_value_without = total_without_factors['Value'].iloc[0]
+
+    # Get total portfolio value with factor dimensions
+    total_with_factors = metrics.getMetrics('Level_0', 'Level_1', verbose=VERBOSE)
+    total_value_with = total_with_factors['Value'].sum()
+
+    if VERBOSE:
+        print(f"Total value without factors: ${total_value_without:.2f}")
+        print(f"Total value with factors: ${total_value_with:.2f}")
+        print(f"Difference: ${abs(total_value_without - total_value_with):.2f}")
+
+        # Show which tickers are included in each calculation
+        print("\nTickers without factors:")
+        write_table(total_without_factors, columns=COLUMN_FORMATS)
+
+        print("\nTickers with factors:")
+        write_table(total_with_factors, columns=COLUMN_FORMATS)
+
+    # The total values should be equal - if they're not, it indicates
+    # that some tickers are being excluded when factor tables are joined
+    assert np.isclose(total_value_without, total_value_with, rtol=1e-10), \
+        f"Total portfolio value should be consistent. Without factors: ${total_value_without:.2f}, " \
+        f"With factors: ${total_value_with:.2f}, Difference: ${abs(total_value_without - total_value_with):.2f}"
+
+def test_real_world_missing_factor_weights_scenario():
+    """Test scenario similar to the notebook where some tickers don't have factor weights.
+
+    This simulates the real-world case where a ticker like 'TBD' exists in holdings
+    but doesn't have corresponding factor weights defined.
+    """
+    # Create holdings with a mix of tickers - some with and some without factor weights
+    holdings_data = pd.DataFrame({
+        'Ticker': ['AAPL', 'MSFT', 'TBD', 'GOOGL'],
+        'Account': ['IRA', 'IRA', '401k', 'Taxable'],
+        'Quantity': [10.0, 20.0, 100.0, 5.0]  # TBD has significant quantity
+    }).set_index(['Ticker', 'Account'])
+
+    # Prices for all tickers
+    prices_data = pd.DataFrame({
+        'Ticker': ['AAPL', 'MSFT', 'TBD', 'GOOGL'],
+        'Price': [150.0, 300.0, 25.0, 200.0]  # TBD has $25 price = $2500 total value
+    }).set_index('Ticker')
+
+    # Factor data
+    factors_data = pd.DataFrame({
+        'Factor': ['US Large Cap Equity', 'International Equity'],
+        'Level_0': ['Equity', 'Equity'],
+        'Level_1': ['US', 'International']
+    })
+
+    # Factor weights - NOTE: TBD is intentionally missing
+    factor_weights_data = pd.DataFrame({
+        'Ticker': ['AAPL', 'MSFT', 'GOOGL'],  # TBD is missing!
+        'Factor': ['US Large Cap Equity', 'US Large Cap Equity', 'International Equity'],
+        'Weight': [1.0, 1.0, 1.0]
+    }).set_index(['Ticker', 'Factor'])
+
+    metrics = getMetricsMixinInstance(
+        holdings_data, prices_data, factors_data, factor_weights_data
+    )
+
+    # Calculate total without factor dimensions
+    total_without_factors = metrics.getMetrics(verbose=VERBOSE)
+    total_value_without = total_without_factors['Value'].iloc[0]
+
+    # Calculate total with factor dimensions
+    total_with_factors = metrics.getMetrics('Level_0', 'Level_1', verbose=VERBOSE)
+    total_value_with = total_with_factors['Value'].sum()
+
+    # Expected total: AAPL(10*150) + MSFT(20*300) + TBD(100*25) + GOOGL(5*200) = 1500 + 6000 + 2500 + 1000 = 11000
+    expected_total = 11000.0
+
+    if VERBOSE:
+        print(f"Expected total: ${expected_total:.2f}")
+        print(f"Total without factors: ${total_value_without:.2f}")
+        print(f"Total with factors: ${total_value_with:.2f}")
+
+        print("\nFactor breakdown:")
+        write_table(total_with_factors, columns=COLUMN_FORMATS)
+
+    # Both calculations should equal the expected total
+    assert np.isclose(total_value_without, expected_total), \
+        f"Total without factors should be ${expected_total:.2f}, got ${total_value_without:.2f}"
+
+    assert np.isclose(total_value_with, expected_total), \
+        f"Total with factors should be ${expected_total:.2f}, got ${total_value_with:.2f}"
+
+    # Both calculations should be equal to each other
+    assert np.isclose(total_value_without, total_value_with), \
+        f"Totals should be equal: without factors ${total_value_without:.2f}, with factors ${total_value_with:.2f}"
+
+    # Verify that TBD appears in the factor breakdown with appropriate classification
+    # Since TBD has no factor weights, it should appear in an "UNDEFINED" category
+    # Let's verify this by checking the factor breakdown
+    level_0_values = total_with_factors.index.get_level_values('Level_0').unique()
+    assert 'UNDEFINED' in level_0_values, \
+        f"UNDEFINED factor should appear in Level_0 values for tickers without factor weights, got: {list(level_0_values)}"
+
+    # The key test is that the total value is preserved
+    print("✓ Real-world missing factor weights scenario handled correctly")
+
 # ==============================================================================
 # Performance and Stress Tests
 # ==============================================================================
@@ -810,6 +948,12 @@ if __name__ == "__main__":
 
     test_metrics_complex_scenario()
     print("✓ test_metrics_complex_scenario")
+
+    test_total_value_consistency_with_and_without_factors()
+    print("✓ test_total_value_consistency_with_and_without_factors")
+
+    test_real_world_missing_factor_weights_scenario()
+    print("✓ test_real_world_missing_factor_weights_scenario")
 
     test_metrics_performance_with_large_dimensions()
     print("✓ test_metrics_performance_with_large_dimensions")
