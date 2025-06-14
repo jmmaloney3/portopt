@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from portopt.metrics import MetricsMixin
 from portopt.utils import write_table
-import pytes
+import pytest
 
 VERBOSE = False
 
@@ -204,7 +204,7 @@ def assert_metrics_equal(actual, expected, tolerance=1e-10):
     """Assert that actual and expected metrics are equal within tolerance."""
     for col in expected.columns:
         if col in actual.columns:
-            assert np.allclose(actual[col], expected[col], rtol=tolerance),
+            assert np.allclose(actual[col], expected[col], rtol=tolerance), \
                 f"Column {col} values don't match. Expected: {expected[col].values}, Actual: {actual[col].values}"
 
 def verify_metrics_mathematically(result, test_data, dimensions=None, filters=None,
@@ -326,9 +326,9 @@ def test_get_metrics_factor_dimensions():
         print("Factor metrics total value: ", factor_metrics['Value'].sum())
 
     # Verify results
-    assert factor_metrics['Value'].sum() == expected_total_value,
+    assert factor_metrics['Value'].sum() == expected_total_value, \
         "Total value should be the same with or without factor dimensions"
-    assert np.isclose(factor_metrics['Allocation'].sum(), 1.0),
+    assert np.isclose(factor_metrics['Allocation'].sum(), 1.0), \
         "Factor allocations should sum to 100%"
 
 def test_get_metrics_by_ticker():
@@ -371,16 +371,16 @@ def test_get_metrics_by_ticker():
         ticker_allocation = result.loc[ticker, 'Allocation']
 
         # Check value calculation
-        assert ticker_value == expected_values[ticker],
+        assert ticker_value == expected_values[ticker], \
             f"Value for {ticker} should be {expected_values[ticker]}, got {ticker_value}"
 
         # Check allocation calculation
         expected_allocation = expected_values[ticker] / expected_total
-        assert np.isclose(ticker_allocation, expected_allocation),
+        assert np.isclose(ticker_allocation, expected_allocation), \
             f"Allocation for {ticker} should be {expected_allocation}, got {ticker_allocation}"
 
     # Verify total allocation sums to 100%
-    assert np.isclose(result['Allocation'].sum(), 1.0),
+    assert np.isclose(result['Allocation'].sum(), 1.0), \
         "Total allocation should sum to 100%"
 
 # ==============================================================================
@@ -399,18 +399,18 @@ def test_metrics_individual_metrics():
         # Verify the requested metric is present and correct behavior
         if metric == 'Quantity':
             # Quantity should be the only column
-            assert list(result.columns) == [metric],
+            assert list(result.columns) == [metric], \
                 f"Expected only {metric} column, got {list(result.columns)}"
             assert result[metric].iloc[0] > 0, "Quantity should be positive"
         elif metric == 'Value':
             # Value should be the only column
-            assert list(result.columns) == [metric],
+            assert list(result.columns) == [metric], \
                 f"Expected only {metric} column, got {list(result.columns)}"
             assert result[metric].iloc[0] > 0, "Value should be positive"
         elif metric == 'Allocation':
             # Allocation requires Value to be calculated, so both should be presen
             expected_columns = ['Value', 'Allocation']
-            assert list(result.columns) == expected_columns,
+            assert list(result.columns) == expected_columns, \
                 f"Expected {expected_columns} columns for Allocation, got {list(result.columns)}"
             assert np.isclose(result[metric].iloc[0], 1.0), "Total allocation should be 1.0"
             assert result['Value'].iloc[0] > 0, "Value should be positive"
@@ -426,14 +426,14 @@ def test_metrics_by_account():
 
     # Verify we have the expected accounts
     expected_accounts = ['IRA', '401k', 'Taxable']
-    assert set(result.index) == set(expected_accounts),
+    assert set(result.index) == set(expected_accounts), \
         f"Expected accounts {expected_accounts}, got {list(result.index)}"
 
     # Mathematical verification
     verify_metrics_mathematically(result, test_data, dimensions=['Account'])
 
     # Verify allocations sum to 1
-    assert np.isclose(result['Allocation'].sum(), 1.0),
+    assert np.isclose(result['Allocation'].sum(), 1.0), \
         "Account allocations should sum to 100%"
 
     # Verify positive values
@@ -454,11 +454,11 @@ def test_metrics_by_multiple_dimensions():
 
     # Verify index structure
     assert isinstance(result.index, pd.MultiIndex), "Result should have MultiIndex"
-    assert result.index.names == ['Ticker', 'Account'],
+    assert result.index.names == ['Ticker', 'Account'], \
         f"Expected index names ['Ticker', 'Account'], got {result.index.names}"
 
     # Verify allocations sum to 1
-    assert np.isclose(result['Allocation'].sum(), 1.0),
+    assert np.isclose(result['Allocation'].sum(), 1.0), \
         "Total allocations should sum to 100%"
 
 def test_metrics_with_factor_levels():
@@ -475,7 +475,7 @@ def test_metrics_with_factor_levels():
     verify_metrics_mathematically(result_level0, test_data, dimensions=['Level_0'])
 
     expected_level0_values = ['Equity', 'Fixed Income']
-    assert set(result_level0.index) == set(expected_level0_values),
+    assert set(result_level0.index) == set(expected_level0_values), \
         f"Expected Level_0 values {expected_level0_values}, got {list(result_level0.index)}"
 
     # Test multiple factor levels
@@ -487,7 +487,7 @@ def test_metrics_with_factor_levels():
     verify_metrics_mathematically(result_multi_level, test_data, dimensions=['Level_0', 'Level_1'])
 
     # Verify both results sum to same total value
-    assert np.isclose(result_level0['Value'].sum(), result_multi_level['Value'].sum()),
+    assert np.isclose(result_level0['Value'].sum(), result_multi_level['Value'].sum()), \
         "Total value should be consistent across different groupings"
 
 def test_metrics_with_factor_dimension():
@@ -500,7 +500,7 @@ def test_metrics_with_factor_dimension():
         write_table(result, columns=COLUMN_FORMATS, title='Metrics by Factor')
 
     # Verify allocations sum to 1
-    assert np.isclose(result['Allocation'].sum(), 1.0),
+    assert np.isclose(result['Allocation'].sum(), 1.0), \
         "Factor allocations should sum to 100%"
 
     # Verify positive values
@@ -521,11 +521,11 @@ def test_metrics_with_filters_single_value():
 
     # Verify only expected tickers appear (those in IRA account)
     expected_tickers = ['AAPL', 'MSFT', 'BND']  # Based on test data
-    assert set(result.index).issubset(set(expected_tickers)),
+    assert set(result.index).issubset(set(expected_tickers)), \
         f"Result should only contain tickers from IRA account"
 
     # Verify allocations sum to 1 (within filtered portfolio)
-    assert np.isclose(result['Allocation'].sum(), 1.0),
+    assert np.isclose(result['Allocation'].sum(), 1.0), \
         "Filtered allocations should sum to 100%"
 
 def test_metrics_with_filters_multiple_values():
@@ -543,11 +543,11 @@ def test_metrics_with_filters_multiple_values():
 
     # Verify only expected accounts appear
     expected_accounts = ['IRA', '401k']
-    assert set(result.index) == set(expected_accounts),
+    assert set(result.index) == set(expected_accounts), \
         f"Expected accounts {expected_accounts}, got {list(result.index)}"
 
     # Verify allocations sum to 1
-    assert np.isclose(result['Allocation'].sum(), 1.0),
+    assert np.isclose(result['Allocation'].sum(), 1.0), \
         "Filtered allocations should sum to 100%"
 
 def test_metrics_with_factor_level_filters():
@@ -562,11 +562,11 @@ def test_metrics_with_factor_level_filters():
 
     # Verify only Level_1 values from Equity appear
     expected_level1 = ['US', 'International']
-    assert set(result.index).issubset(set(expected_level1)),
+    assert set(result.index).issubset(set(expected_level1)), \
         "Result should only contain Level_1 values from Equity"
 
     # Verify allocations sum to 1
-    assert np.isclose(result['Allocation'].sum(), 1.0),
+    assert np.isclose(result['Allocation'].sum(), 1.0), \
         "Filtered allocations should sum to 100%"
 
 def test_portfolio_allocation_vs_filtered_allocation():
@@ -603,13 +603,13 @@ def test_portfolio_allocation_vs_filtered_allocation():
 
     # Verify Allocations are differen
     # Filtered allocations should sum to 1, portfolio allocations should sum to less than 1
-    assert np.isclose(filtered_result['Allocation'].sum(), 1.0),
+    assert np.isclose(filtered_result['Allocation'].sum(), 1.0), \
         "Filtered allocations should sum to 100%"
-    assert portfolio_result['Allocation'].sum() < 1.0,
+    assert portfolio_result['Allocation'].sum() < 1.0, \
         "Portfolio allocations with filter should sum to less than 100%"
 
     # Verify portfolio allocations are smaller than filtered allocations
-    assert all(portfolio_sorted['Allocation'] < filtered_sorted['Allocation']),
+    assert all(portfolio_sorted['Allocation'] < filtered_sorted['Allocation']), \
         "Portfolio allocations should be smaller than filtered allocations"
 
 def test_metrics_edge_cases():
@@ -620,7 +620,7 @@ def test_metrics_edge_cases():
     # Test with empty metrics list (should use defaults)
     result = metrics.getMetrics(metrics=[], verbose=VERBOSE)
     expected_default_metrics = ['Quantity', 'Value', 'Allocation']
-    assert list(result.columns) == expected_default_metrics,
+    assert list(result.columns) == expected_default_metrics, \
         "Empty metrics list should use default metrics"
 
     # Test with unknown filter dimension (should return empty result or error gracefully)
@@ -652,19 +652,19 @@ def test_metrics_consistency_across_groupings():
 
     # Verify all groupings sum to same total value
     total_value = total['Value'].iloc[0]
-    assert np.isclose(by_ticker['Value'].sum(), total_value),
+    assert np.isclose(by_ticker['Value'].sum(), total_value), \
         "Ticker grouping should sum to total value"
-    assert np.isclose(by_account['Value'].sum(), total_value),
+    assert np.isclose(by_account['Value'].sum(), total_value), \
         "Account grouping should sum to total value"
-    assert np.isclose(by_level0['Value'].sum(), total_value),
+    assert np.isclose(by_level0['Value'].sum(), total_value), \
         "Level_0 grouping should sum to total value"
 
     # Verify all allocations sum to 1
-    assert np.isclose(by_ticker['Allocation'].sum(), 1.0),
+    assert np.isclose(by_ticker['Allocation'].sum(), 1.0), \
         "Ticker allocations should sum to 100%"
-    assert np.isclose(by_account['Allocation'].sum(), 1.0),
+    assert np.isclose(by_account['Allocation'].sum(), 1.0), \
         "Account allocations should sum to 100%"
-    assert np.isclose(by_level0['Allocation'].sum(), 1.0),
+    assert np.isclose(by_level0['Allocation'].sum(), 1.0), \
         "Level_0 allocations should sum to 100%"
 
 def test_metrics_with_fractional_weights():
@@ -681,7 +681,7 @@ def test_metrics_with_fractional_weights():
     verify_metrics_mathematically(result, test_data, dimensions=['Factor'])
 
     # Verify allocations sum to 1
-    assert np.isclose(result['Allocation'].sum(), 1.0),
+    assert np.isclose(result['Allocation'].sum(), 1.0), \
         "Factor allocations with fractional weights should sum to 100%"
 
     # Verify positive values
@@ -717,9 +717,9 @@ def test_metrics_complex_scenario():
                    title='Complex Scenario - Portfolio Allocation')
 
     # Verify structure
-    assert isinstance(complex_filtered.index, pd.MultiIndex),
+    assert isinstance(complex_filtered.index, pd.MultiIndex), \
         "Result should have MultiIndex for multiple dimensions"
-    assert complex_filtered.index.names == ['Level_0', 'Level_1'],
+    assert complex_filtered.index.names == ['Level_0', 'Level_1'], \
         "Index should have correct dimension names"
 
     # Verify Values are the same (sort both to handle potential ordering differences)
@@ -728,9 +728,9 @@ def test_metrics_complex_scenario():
     pd.testing.assert_series_equal(filtered_values_sorted, portfolio_values_sorted)
 
     # Verify allocation differences
-    assert np.isclose(complex_filtered['Allocation'].sum(), 1.0),
+    assert np.isclose(complex_filtered['Allocation'].sum(), 1.0), \
         "Filtered allocations should sum to 100%"
-    assert complex_portfolio['Allocation'].sum() < 1.0,
+    assert complex_portfolio['Allocation'].sum() < 1.0, \
         "Portfolio allocations should sum to less than 100% when filtered"
 
 # ==============================================================================
@@ -750,7 +750,7 @@ def test_metrics_performance_with_large_dimensions():
     assert len(result.index.names) == 4, "Should have 4 dimension levels"
 
     # Verify allocations sum to 1
-    assert np.isclose(result['Allocation'].sum(), 1.0),
+    assert np.isclose(result['Allocation'].sum(), 1.0), \
         "Multi-dimension allocations should sum to 100%"
 
 # ==============================================================================
