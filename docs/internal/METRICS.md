@@ -52,37 +52,11 @@ The metrics calculation follows a structured pipeline:
 ## Critical Implementation Details
 
 ### Double-Counting Prevention
-The most complex aspect of the implementation is preventing double-counting when tickers have multiple factor exposures:
+Portfolio metrics calculations face a critical challenge when securities have multiple factor exposures with fractional weights. The solution involves pre-aggregating factor weights before final metrics calculation to prevent systematic double-counting of position values.
 
-**The Problem:**
-```sql
--- AAPL has multiple factor exposures:
--- AAPL → US_Large_Growth (weight: 0.7)
--- AAPL → US_Large_Tech (weight: 0.3)
+**Implementation**: See [ADR-001: Factor Weight Pre-Aggregation to Prevent Double Counting](adr/001-double-counting-prevention.md) for detailed analysis of the problem, considered alternatives, and the chosen solution.
 
--- Naive aggregation double-counts the position:
-SELECT Level_0, SUM(Quantity * Price) AS Value
-FROM base_query
-GROUP BY Level_0
--- Results in: Equity = $30,000 (should be $15,000)
-```
-
-**The Solution:**
-Pre-aggregate factor weights before final metrics calculation:
-```sql
--- Step 1: Aggregate weights by position and factor levels
-SELECT Ticker, Account, Quantity, Price, Level_0, Level_1, SUM(Weight) AS Weight
-FROM base_query
-GROUP BY Ticker, Account, Quantity, Price, Level_0, Level_1
-
--- Step 2: Calculate metrics with aggregated weights
-SELECT Level_0, SUM(Quantity * Price * Weight) AS Value
-FROM aggregated_query
-GROUP BY Level_0
--- Results in: Equity = $15,000 (correct)
-```
-
-This is implemented in `_aggregate_factor_weights()` which is called whenever factor tables are joined.
+**Key Method**: `_aggregate_factor_weights()` automatically handles this whenever factor tables are joined.
 
 ### Factor Table Requirements Logic
 The system intelligently determines which tables to load based on requested dimensions and filters:
@@ -100,17 +74,11 @@ def _requires_factor_tables(dimensions, filters):
 This optimization prevents unnecessary table joins and improves performance.
 
 ### Undefined Factor Handling
-Tickers without factor weights are handled gracefully by assigning them to an "UNDEFINED" category:
+Portfolio analytics must handle securities that lack factor weight definitions while maintaining complete portfolio coverage and consistent total values across different grouping methods.
 
-```sql
--- Uses COALESCE to provide defaults
-COALESCE(Factor, 'UNDEFINED') AS Factor,
-COALESCE(Weight, 1.0) AS Weight,
-COALESCE(Level_0, 'UNDEFINED') AS Level_0,
-COALESCE(Level_1, 'N/A') AS Level_1
-```
+**Implementation**: See [ADR-002: UNDEFINED Factor Category for Tickers Without Factor Weights](adr/002-undefined-factor-handling.md) for detailed analysis of the problem, considered alternatives, and the chosen solution.
 
-This ensures all positions are included in calculations exactly once.
+**Key Method**: `_handle_undefined_factor_weights()` assigns undefined tickers to a structured "UNDEFINED" category that integrates seamlessly with factor hierarchy aggregations.
 
 ## Public Interface
 
