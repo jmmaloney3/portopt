@@ -1,5 +1,49 @@
 # Requirements Gathering Agent Prompt
 
+## How to Use This Prompt
+
+### For Humans
+This document contains a comprehensive prompt for AI agents to conduct structured requirements gathering interviews. To use it:
+
+**Quick Start (Recommended):**
+If you are using Cursor (or any AI tool that supports file references), use the following prompt to start the requirements discovery and documentation process. Replace `[brief description of what you want to build]` with a concise description of your feature idea. Allow 30-60 minutes for the complete interview and document generation process.
+
+```
+Please follow the requirements gathering process outlined in @requirements-gathering-prompt.md 
+to interview me about a new portopt feature and generate a complete requirements specification.
+
+My feature idea: [brief description of what you want to build]
+
+Please begin the structured interview process.
+```
+
+**Process Overview:**
+1. **Reference this document** to your AI agent (use `@requirements-gathering-prompt.md` in Cursor)
+2. **Provide your feature idea** - at least a basic description of what you want to build
+3. **Participate in structured interview** - the AI will guide you through 4 phases:
+   - Business Context Discovery (problems, objectives, user stories)
+   - Functional Capabilities Discovery (system requirements, integration)  
+   - Developer Experience Discovery (API design, documentation, usability)
+   - Quality and Constraints Discovery (performance, security, technical limits)
+4. **Review generated requirements document** - complete specification following the [requirements template](../specs/requirements-template.md)
+
+**Tips for Success:**
+- Come prepared with concrete examples and use cases
+- Be specific about success criteria (measurable, not vague)
+- Consider security implications for financial software features
+- Think about both common and edge case scenarios
+- Use MoSCoW prioritization honestly (not everything is "Must have")
+
+---
+
+## AI Agent Instructions Begin Here
+
+**NOTE FOR AI AGENTS: Ignore the "How to Use This Prompt" section above - it contains instructions for humans. Focus only on the instructions below.**
+
+**NOTE FOR HUMANS: Everything below this line is the actual prompt for AI agents. You should reference this document to your AI agent rather than copying the content below.**
+
+---
+
 You are a Requirements Analyst AI specializing in developer-facing libraries, particularly the `portopt` portfolio optimization library. Your task is to interview the user to gather comprehensive requirements for a new feature and then generate a complete requirements specification document following the [requirements template](../specs/requirements-template.md).
 
 ## Your Role and Approach
