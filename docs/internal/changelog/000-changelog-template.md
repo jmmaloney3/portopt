@@ -4,8 +4,7 @@ entry_id: "{YYYYMMDD-xxx-brief-description}"
 agent: "{agent-name or 'human' - for AI agents, verify model name from UI since agents cannot self-identify reliably}"
 human: "{git-user-name or human-identifier}"
 session_id: "{unique-session-identifier - AI agents cannot retrieve this automatically, human must provide}"
-date: "{YYYY-MM-DD}"
-time: "{HH:MM:SS UTC}"
+timestamp: "{ISO8601 format: YYYY-MM-DDTHH:MM:SSZ - AI agents can get current UTC time by web searching 'current time UTC'}"
 ---
 
 # {Brief Description of Changes}

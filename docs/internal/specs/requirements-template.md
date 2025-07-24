@@ -205,9 +205,9 @@ Define environmental limitations and compatibility requirements the system must 
 **Functional Requirements Template:**
 
 > **[Capability Category]**
-> - **FR-[#]**: [System capability description using "The system must..." format]
+> - **FR-[#]**: The system must [capability description]
 > 
-> **Priority**: [Critical | High | Medium | Low]  
+> **Priority**: [Must have | Should have | Could have | Won't have]  
 > **User Role**: [Primary user role this requirement serves]  
 > **Preconditions**: [Conditions that must be true before execution]  
 > **Postconditions**: [Expected system state after execution]  
@@ -231,11 +231,11 @@ Define environmental limitations and compatibility requirements the system must 
 - **Conditional Behavior**: "When [trigger/condition], the system must [action] [object]"
 - **Input/Output**: "Given [input/data], the system must [process/calculate] and return [output]"
 
-**Priority Levels:**
-- **Critical**: Core functionality that must be implemented for basic system operation
-- **High**: Important functionality that significantly impacts user value
-- **Medium**: Valuable functionality that enhances user experience
-- **Low**: Nice-to-have functionality that can be deferred
+**Priority Levels ([MoSCoW Method](https://en.wikipedia.org/wiki/MoSCoW_method)):**
+- **Must have**: Critical to current delivery for it to be a success. Without this, the project delivery should be considered a failure.
+- **Should have**: Important but not necessary for current delivery. Often not as time-critical or there may be alternative ways to satisfy the requirement.
+- **Could have**: Desirable but not necessary. Could improve user experience or satisfaction for little development cost. Included if time and resources permit.
+- **Won't have**: Least-critical, lowest-payback items, or not appropriate at this time. Not planned for the current delivery but may be reconsidered for future releases.
 
 **Examples:**
 
@@ -244,7 +244,7 @@ Define environmental limitations and compatibility requirements the system must 
 > **1. Risk Calculation**
 >    - **FR-1**: The system must calculate portfolio risk metrics (volatility, VaR, CVaR) for individual portfolios
 >    
->    **Priority**: High  
+>    **Priority**: Must have  
 >    **User Role**: Portfolio Manager, Risk Analyst  
 >    **Preconditions**: Portfolio has valid weights that sum to 1.0 and at least 2 assets with historical return data  
 >    **Postconditions**: Risk metrics are calculated, validated, and cached for future access  
@@ -260,7 +260,7 @@ Define environmental limitations and compatibility requirements the system must 
 >    
 >    - **FR-2**: The system must support multiple risk models (historical, parametric, Monte Carlo)
 >    
->    **Priority**: Medium  
+>    **Priority**: Should have  
 >    **User Role**: Quantitative Analyst, Risk Analyst  
 >    **Preconditions**: Portfolio has sufficient historical return data (minimum 30 data points for reliable estimates)  
 >    **Postconditions**: User can select and switch between risk models, with model choice persisted for session  
@@ -282,7 +282,7 @@ Define environmental limitations and compatibility requirements the system must 
 > **2. Cross-Portfolio Analysis**
 >    - **FR-3**: The system must identify factor concentration risks across multiple portfolios
 >    
->    **Priority**: High  
+>    **Priority**: Must have  
 >    **User Role**: Portfolio Manager, Risk Manager  
 >    **Preconditions**: Multiple portfolios loaded with valid factor exposure data  
 >    **Postconditions**: Concentration risks identified and flagged with severity levels and recommendations  
@@ -297,7 +297,7 @@ Define environmental limitations and compatibility requirements the system must 
 >    
 >    - **FR-4**: The system must generate risk decomposition reports showing contribution by asset class and factor
 >    
->    **Priority**: Medium  
+>    **Priority**: Should have  
 >    **User Role**: Portfolio Manager, Investment Committee  
 >    **Preconditions**: Risk analysis has been performed and results are available  
 >    **Postconditions**: Formatted reports generated and available for export or presentation  
@@ -315,7 +315,7 @@ Define environmental limitations and compatibility requirements the system must 
 > **1. Optimization Algorithms**
 >    - **FR-1**: The system must support mean-variance optimization with customizable constraints
 >    
->    **Priority**: Critical  
+>    **Priority**: Must have  
 >    **User Role**: Portfolio Manager, Quantitative Analyst  
 >    **Preconditions**: Expected returns and covariance matrix available, constraints are mathematically feasible  
 >    **Postconditions**: Optimal portfolio weights calculated and validated, optimization results stored  
@@ -330,7 +330,7 @@ Define environmental limitations and compatibility requirements the system must 
 >    
 >    - **FR-2**: The system must support risk parity and minimum variance optimization strategies
 >    
->    **Priority**: High  
+>    **Priority**: Must have  
 >    **User Role**: Quantitative Analyst, Portfolio Manager  
 >    **Preconditions**: Covariance matrix is available and positive semi-definite  
 >    **Postconditions**: Alternative optimization strategies available with consistent interface  
