@@ -5,8 +5,8 @@
 - **Requirement ID**: REQ-2025-001
 - **Title**: Portfolio Performance Analysis & Attribution System
 - **Author**: Portfolio Requirements Interview Process
-- **Date Created**: 2025-01-14
-- **Last Updated**: 2025-01-14
+- **Date Created**: 2025-07-25
+- **Last Updated**: 2025-07-25
 - **Status**: Draft
 - **Priority**: Critical
 - **Target Release**: v0.2.0
