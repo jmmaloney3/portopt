@@ -6,8 +6,8 @@
 - **Title**: Portfolio Performance Analysis & Attribution System
 - **Author**: Portfolio Requirements Interview Process
 - **Date Created**: 2025-07-25
-- **Last Updated**: 2025-07-25
-- **Status**: Draft
+- **Last Updated**: 2025-07-27
+- **Status**: Approved
 - **Priority**: Critical
 - **Target Release**: v0.2.0
 
@@ -57,13 +57,13 @@ Define platform requirements, dependency constraints, and compatibility requirem
 
 #### Secondary Problems
 
-**PS-2**: Current portfolio analysis lacks factor-level attribution capabilities
+**PS-2**: Current portfolio analysis lacks comprehensive factor analysis capabilities
 
-- **Who**: Portfolio managers analyzing factor-based investment strategies
-- **What**: Need to understand which factors contribute to portfolio performance at different time periods
-- **Why**: To evaluate factor allocation decisions and identify sources of performance
-- **Current State**: Factor weights are defined but no attribution analysis is available
-- **Impact**: Cannot identify which factor allocations are contributing positively or negatively to returns
+- **Who**: Portfolio managers analyzing factor-based investment strategies and managing portfolio risk
+- **What**: Need bidirectional factor analysis: (1) understand which factors contribute to portfolio performance, and (2) understand which tickers contribute to portfolio's exposure to each factor
+- **Why**: To evaluate factor allocation decisions, identify sources of performance, and manage factor concentration risk
+- **Current State**: Factor weights are defined but no attribution analysis or exposure analysis is available
+- **Impact**: Cannot identify which factor allocations are contributing positively or negatively to returns, and cannot identify concentration risk or unintended factor exposure through specific holdings
 
 **Traceability:**
 - **Addresses**: PS-1 (lack of objective performance metrics)
@@ -134,7 +134,11 @@ I want to calculate time-weighted returns for my portfolio over any time period,
 So that I can evaluate investment performance isolated from cash flow timing.
 
 **Acceptance Criteria:**
-- [ ] Can calculate TWR for entire portfolio, individual accounts, or filtered subsets
+- [ ] **Flexible Asset Grouping**: Can calculate TWR for:
+  - [ ] Entire portfolio
+  - [ ] One or more accounts
+  - [ ] One or more tickers
+  - [ ] One or more factors
 - [ ] Supports predefined time periods (YTD, last quarter, last year) and custom date ranges
 - [ ] Handles contributions and withdrawals properly without affecting performance measurement
 - [ ] Returns results within 30 seconds for typical portfolio (50 tickers, 10 accounts)
@@ -152,6 +156,8 @@ So that I can understand the actual return experience on my invested dollars.
 
 **Acceptance Criteria:**
 - [ ] Can calculate MWR using Internal Rate of Return methodology
+- [ ] **Flexible Asset Grouping**: Supports same asset grouping options as TWR:
+  - [ ] Entire portfolio, one or more accounts, one or more tickers, one or more factors
 - [ ] Accounts for timing and size of all contributions and withdrawals
 - [ ] Supports same time period options as TWR calculations
 - [ ] Provides clear explanation of when to use MWR vs TWR
@@ -171,7 +177,8 @@ So that I can evaluate risk-adjusted performance and drawdown characteristics.
 - [ ] Calculates portfolio volatility (standard deviation of returns)
 - [ ] Calculates Sharpe ratio with configurable risk-free rate
 - [ ] Calculates maximum drawdown over the analysis period
-- [ ] Supports risk metric calculation at portfolio, account, and factor levels
+- [ ] **Flexible Asset Grouping**: Supports risk metric calculation for:
+  - [ ] Entire portfolio, one or more accounts, one or more tickers, one or more factors
 - [ ] Risk metrics calculated over same time periods as return metrics
 
 **Traceability:**
@@ -187,7 +194,8 @@ So that I can understand which factors contributed positively or negatively to r
 **Acceptance Criteria:**
 - [ ] Provides factor-level return attribution across 4-level factor hierarchy
 - [ ] Shows factor contribution to total portfolio returns with specific percentages
-- [ ] Supports factor attribution at portfolio, account, and time period levels
+- [ ] **Flexible Asset Grouping**: Supports factor attribution analysis for:
+  - [ ] Entire portfolio, one or more accounts, one or more tickers, one or more factors
 - [ ] Handles missing factor weights using existing portopt UNDEFINED factor logic
 - [ ] Results formatted as "Factor X contributed +2.3% to total returns"
 
@@ -204,7 +212,9 @@ So that I can understand factor concentration and make informed rebalancing deci
 **Acceptance Criteria:**
 - [ ] Shows which tickers contribute to specific factor exposures
 - [ ] Identifies holdings with highest factor concentrations
-- [ ] Supports bidirectional analysis (factors→tickers and tickers→factors)
+- [ ] **Flexible Asset Grouping**: Supports bidirectional analysis for:
+  - [ ] Entire portfolio, one or more accounts, one or more tickers, one or more factors
+  - [ ] Factors→tickers analysis and tickers→factors analysis
 - [ ] Provides factor concentration warnings above configurable thresholds
 - [ ] Results help identify diversification opportunities
 
@@ -265,7 +275,11 @@ So that I can identify potentially better allocation approaches.
 **Completion Criteria:**
 - [ ] TWR calculation engine implemented following industry standard methodology
 - [ ] Handles cash flows (contributions, withdrawals) without affecting performance measurement
-- [ ] Supports calculation at portfolio, account, ticker, and factor aggregation levels
+- [ ] **Flexible Asset Grouping**: Supports calculation for multiple asset groupings:
+  - [ ] Entire portfolio
+  - [ ] One or more accounts
+  - [ ] One or more tickers
+  - [ ] One or more factors
 - [ ] Performance: Completes within 30 seconds for typical portfolio (50 tickers, 10 accounts)
 - [ ] Integration: Works with existing portopt factor weight and holdings systems
 - [ ] Documentation: Clear explanation of TWR methodology and when to use it
@@ -308,6 +322,8 @@ So that I can identify potentially better allocation approaches.
 **Completion Criteria:**
 - [ ] MWR calculation using IRR methodology for actual dollar return experience
 - [ ] Handles complex cash flow patterns (irregular contributions, multiple withdrawals)
+- [ ] **Flexible Asset Grouping**: Supports same asset groupings as TWR calculations:
+  - [ ] Entire portfolio, one or more accounts, one or more tickers, one or more factors
 - [ ] Supports same time period options as TWR calculations
 - [ ] Performance: Completes within reasonable time for complex cash flow scenarios
 - [ ] Documentation: Clear explanation of MWR vs TWR and when to use each
@@ -330,7 +346,11 @@ So that I can identify potentially better allocation approaches.
 - [ ] Portfolio volatility calculation (standard deviation of returns)
 - [ ] Sharpe ratio calculation with configurable risk-free rate (default: 2%)
 - [ ] Maximum drawdown calculation over analysis period
-- [ ] Risk metrics calculated at portfolio, account, ticker, and factor levels
+- [ ] **Flexible Asset Grouping**: Risk metrics calculated for multiple asset groupings:
+  - [ ] Entire portfolio
+  - [ ] One or more accounts
+  - [ ] One or more tickers
+  - [ ] One or more factors
 - [ ] Performance: Risk calculations complete within performance targets for return calculations
 
 **Traceability:**
@@ -341,25 +361,27 @@ So that I can identify potentially better allocation approaches.
 
 ### Factor Attribution & Analysis
 
-**FR-5**: The system must provide factor attribution analysis for portfolio performance
+**FR-5**: The system must provide comprehensive factor attribution analysis for portfolio performance and risk management
 
 **Priority**: Must have
 **User Role**: Portfolio Manager, Quantitative Analyst
 **Preconditions**: Factor weights are defined for portfolio holdings, return data available
-**Postconditions**: Factor attribution calculated showing contribution of each factor to total returns
+**Postconditions**: Factor attribution calculated showing contribution of each factor to total returns and ticker contributions to factor exposures
 **Dependencies**: FR-1 (TWR calculation), FR-6 (factor weight handling)
 
 **Completion Criteria:**
 - [ ] Factor-level return attribution across 4-level factor hierarchy (25 leaf factors)
-- [ ] Bidirectional analysis: factors→performance and holdings→factor exposure
+- [ ] Bidirectional analysis: (1) factors→performance attribution and (2) tickers→factor exposure contribution
 - [ ] Time-based attribution analysis for any supported time period
-- [ ] Results format: "Factor X contributed +2.3% to total returns"
+- [ ] Results format: "Factor X contributed +2.3% to total returns" and "Ticker Y contributes 15% of Factor X exposure"
 - [ ] Integration: Uses existing portopt factor weights and UNDEFINED factor handling
+- [ ] **Flexible Asset Grouping**: Supports factor attribution analysis for multiple asset groupings:
+  - [ ] Entire portfolio, one or more accounts, one or more tickers, one or more factors
 
 **Traceability:**
-- **Problem Statement**: PS-2 - Current portfolio analysis lacks factor-level attribution capabilities
+- **Problem Statement**: PS-2 - Current portfolio analysis lacks comprehensive factor analysis capabilities
 - **Objective**: OBJ-2 - Provide comprehensive factor attribution analysis
-- **User Story**: US-4 - Analyze factor attribution for portfolio performance
+- **User Story**: US-4 - Analyze factor attribution for portfolio performance, US-5 - Identify holdings driving factor exposure
 - **Impacts**: FR-7 (factor concentration), FR-8 (benchmark comparison)
 
 **FR-6**: The system must handle factor weights consistently with existing portopt factor handling logic
@@ -378,28 +400,29 @@ So that I can identify potentially better allocation approaches.
 - [ ] Documentation: References existing factor weight handling documentation
 
 **Traceability:**
-- **Problem Statement**: PS-2 - Limited factor attribution capabilities
+- **Problem Statement**: PS-2 - Current portfolio analysis lacks comprehensive factor analysis capabilities
 - **Objective**: OBJ-2 - Provide comprehensive factor attribution analysis
 - **User Story**: US-4 - Analyze factor attribution for portfolio performance
 - **Impacts**: FR-5 (factor attribution), FR-7 (factor concentration analysis)
 
-**FR-7**: The system must identify factor concentration risks and contribution patterns
+**FR-7**: The system must identify factor concentration risks, unintended exposures, and factor overlap patterns
 
 **Priority**: Should have
 **User Role**: Portfolio Manager, Risk Manager
 **Preconditions**: Factor attribution analysis completed, factor exposure data available
-**Postconditions**: Factor concentration analysis available showing concentration risks and ticker contributions
+**Postconditions**: Comprehensive factor risk analysis showing concentration, unintended exposures, and overlap issues
 **Dependencies**: FR-5 (factor attribution analysis)
 
 **Completion Criteria:**
-- [ ] Identifies holdings with highest contribution to specific factor exposures
-- [ ] Flags concentration risks above configurable thresholds
-- [ ] Shows which tickers drive exposure to particular factors
-- [ ] Supports concentration analysis at account and portfolio levels
-- [ ] Results help identify diversification opportunities and concentration risks
+- [ ] **Concentration Risk Analysis**: Identifies holdings with highest contribution to specific factor exposures and flags concentration above configurable thresholds
+- [ ] **Unintended Exposure Detection**: Shows unexpected factor exposures (e.g., emerging market exposure in "US equity" holdings)
+- [ ] **Factor Overlap Analysis**: Identifies multiple holdings providing redundant exposure to the same factors
+- [ ] **Ticker-to-Factor Mapping**: Shows which tickers drive exposure to particular factors with percentage contributions
+- [ ] **Cross-Account Analysis**: Supports concentration analysis at both account and portfolio levels
+- [ ] **Actionable Results**: Provides specific recommendations for addressing concentration risks and improving diversification
 
 **Traceability:**
-- **Problem Statement**: PS-2 - Limited factor attribution capabilities
+- **Problem Statement**: PS-2 - Current portfolio analysis lacks comprehensive factor analysis capabilities
 - **Objective**: OBJ-2 - Provide comprehensive factor attribution analysis
 - **User Story**: US-5 - Identify holdings driving factor exposure
 - **Impacts**: None (leaf requirement)
@@ -618,8 +641,8 @@ So that I can identify potentially better allocation approaches.
 ### Dependency Constraints
 
 **Required Compatibility**: Must work with existing portopt dependencies
-- **Core Dependencies**: pandas, numpy, cvxpy, ibis, duckdb (maintain existing version compatibility)
-- **Financial Libraries**: Integration with bt/ffn frameworks for backtesting and performance analysis
+- **Core Dependencies**: pandas, numpy, cvxpy, statsmodel, duckdb, ibis-framework, pyyaml (maintain existing version compatibility)
+- **Financial Libraries**: bt, ffn frameworks for backtesting and performance analysis (bt already in use)
 - **Market Data**: Continue using yfinance for price data (consistent with existing market_data.py)
 
 **New Dependencies**: New dependencies should be added judiciously
