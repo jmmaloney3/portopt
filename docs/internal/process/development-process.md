@@ -3,11 +3,11 @@
 ## Document Information
 
 - **Title**: Development Process Standard Operating Procedure (SOP)
-- **Author**: [Author name]
-- **Date Created**: [YYYY-MM-DD]
-- **Last Updated**: [YYYY-MM-DD]
+- **Author**: john and claude-4-sonnet
+- **Date Created**: 2025-07-19
+- **Last Updated**: 2025-07-23
 - **Version**: 1.0
-- **Status**: [Draft | Active | Deprecated]
+- **Status**: Draft
 
 ## How to Use This SOP
 
