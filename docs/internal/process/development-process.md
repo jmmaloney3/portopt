@@ -5,8 +5,8 @@
 - **Title**: Development Process Standard Operating Procedure (SOP)
 - **Author**: john and claude-4-sonnet
 - **Date Created**: 2025-07-19
-- **Last Updated**: 2025-07-23
-- **Version**: 1.0
+- **Last Updated**: 2025-07-31
+- **Version**: 1.1
 - **Status**: Draft
 
 ## How to Use This SOP
@@ -27,56 +27,138 @@ This Standard Operating Procedure (SOP) defines the step-by-step process for all
 
 All development work follows this five-phase process:
 
-1. **Planning & Setup** - Define requirements, create branches, set up environment
-2. **Development** - Implement functionality with tests and documentation  
-3. **Pre-Review Validation** - Self-check and automated validation before peer review
-4. **Review & Approval** - Peer review, approvals, and final validation
-5. **Integration & Release** - Merge, deploy, and monitor changes
+1. **Feature Analysis & Design** - Define requirements, determine implementation approach, create feature decomposition (system-wide activities)
+2. **Increment Design** - Plan technical approach for current increment (per-increment activity)
+3. **Development** - Set up environment, implement functionality with tests and documentation, perform self-review (per-increment activity)
+4. **Review & Approval** - Peer review, approvals, and final validation (per-increment activity)
+5. **Integration & Release** - Merge, deploy, and monitor changes (per-increment activity)
 
-*Each phase is detailed with step-by-step instructions below.*
+*Phase 1 contains system-wide activities (done once per feature). Phases 2-5 contain per-increment activities (repeated for each increment: 1x for monolithic, Nx for iterative).*
 
 ---
 
-## Step 1: Planning & Setup Phase
+## Step 1: Feature Analysis & Design Phase (System-Wide Activities)
 
-### 1.1 Define Requirements
-**What to do**: Create or review requirements documentation for your feature/task.
+*This phase contains system-wide activities that are performed once per feature, regardless of whether the implementation uses a single increment (monolithic) or multiple increments (iterative).*
+
+### 1.1 Define Requirements (System-Wide Activity)
+
+**What to do**: Create or review requirements documentation for your feature/task using the [Requirements Template](../templates/requirements-template.md).
+
+**Process Decision**: We use structured requirements gathering to ensure comprehensive coverage of business needs, functional capabilities, and developer experience.
 
 **Instructions**:
-1. If this is new functionality, create requirements using the [Requirements Template](specs/requirements-template.md)
-2. If this is a bug fix or a minor enhancement, ensure you understand the acceptance criteria
-3. Identify dependencies on other features or systems
-4. Clarify any ambiguous requirements with stakeholders
+- **For new functionality**: Create requirements document conforming to the [Requirements Template](../templates/requirements-template.md)
+- **Recommended approach**: Use the [Requirements Gathering Prompt](../prompts/requirements-gathering-prompt.md) with an AI agent to conduct a structured interview
+- **For bug fixes or minor enhancements**: Ensure you understand the acceptance criteria
+- **Identify dependencies** on other features or systems
+- **Clarify ambiguous requirements** with stakeholders
+
+**Benefits of Structured Requirements**:
+- **Complete Coverage**: Ensures all requirement types are addressed (business, functional, DX, non-functional, constraints)
+- **Traceability**: Clear linkage from business problems to implementation details
+- **Developer Focus**: Special attention to Developer Experience for library-focused projects
+- **Early Risk Identification**: Surface dependencies and constraints before implementation
 
 **Deliverables**: 
 - [ ] Requirements clearly defined and understood
 - [ ] Acceptance criteria identified
 - [ ] Dependencies documented
 
-### 1.2 Plan Technical Approach
-**What to do**: Design your implementation approach and identify risks.
+### 1.2 Determine Design Approach (System-Wide Activity)
 
-**Instructions**:
-1. Review existing code and architecture patterns
-2. Identify which modules need to be modified or created
-3. Plan your testing strategy (unit, integration, manual)
-4. Identify risks and mitigation strategies:
-   - **Security risks**: Authentication, authorization, data validation, injection attacks
-   - **Performance risks**: Scalability, memory usage, computational complexity
-   - **Technical risks**: Integration points, dependency conflicts, compatibility issues
-   - **Operational risks**: Deployment complexity, monitoring, rollback procedures
-5. For significant changes, discuss approach with team lead
+**What to do**: Decide whether this requires monolithic or iterative design approach.
+
+**Process Decision**: We treat iterative design as the norm and monolithic design as a special case (single increment). This enables early value delivery, rapid feedback, and risk mitigation for complex features.
+
+#### Iterative vs Monolithic Design Decision
+
+**Use Iterative Design When:**
+- Requirements span >3 major functional areas
+- High technical uncertainty or risk
+- Implementation estimated >4 weeks
+- Natural increment boundaries exist  
+- Early value delivery and user feedback are important
+- Feature has multiple distinct capabilities that could provide standalone value
+
+**Use Monolithic Design When:**
+- Single cohesive functional area
+- Well-understood technical approach
+- Implementation estimated <3 weeks
+- No meaningful increment boundaries
+- Tight coupling between components makes separation impractical
+
+**Benefits of Iterative Design**:
+- **Risk Mitigation**: Fail fast on infeasible approaches with minimal investment
+- **Better Designs**: Implementation learning improves subsequent design decisions
+- **Early Value Delivery**: Users get working functionality sooner
+- **Rapid Feedback**: Get user feedback early to prevent building the wrong thing
+- **Manageable Complexity**: Smaller design sessions are less overwhelming and more focused
+- **Adaptability**: Can pivot based on implementation discoveries and user feedback
+
+**Acceptable Trade-offs**:
+- **Early Delivery Philosophy**: Accept risk of some interface rework to deliver value sooner and get feedback before investing too heavily in any direction
+- **Process Overhead**: Multiple design sessions vs single comprehensive session
+- **Interface Evolution**: May need to refactor interfaces between increments based on learnings
+- **Coordination Complexity**: Managing dependencies and sequencing between increments
 
 **Deliverables**:
-- [ ] Implementation approach planned
-- [ ] Testing strategy identified
-- [ ] Security, performance, technical, and operational risks assessed
+- [ ] Design approach decided (iterative vs monolithic)
 
-### 1.3 Set Up Development Environment
+### 1.3 Plan Feature Decomposition (System-Wide Activity - Iterative Only)
+
+**What to do**: Create feature decomposition document that breaks complex requirements into implementable increments using the [Feature Decomposition Specification](../templates/feature-decomposition-specification.md).
+
+**Instructions**:
+- **For Iterative Approach**: Create feature decomposition document conforming to the [Feature Decomposition Specification](../templates/feature-decomposition-specification.md)
+- **Recommended approach**: Use the [Feature Decomposition Prompt](../prompts/feature-decomposition-prompt.md) with an AI agent to conduct a structured systems engineering interview
+- **Plan learning integration** between increments and define increment interfaces
+- **For Monolithic Approach**: Skip this section
+
+**Deliverables**:
+- [ ] **For Iterative**: Feature decomposition document created with defined increments, dependencies, and interfaces
+- [ ] **For Monolithic**: N/A (skip to Step 2)
+- [ ] Existing tests pass locally
+
+---
+
+## Step 2: Increment Design Phase (Per-Increment Activity)
+
+*This phase contains increment-specific design activities that are performed once for each increment (1x for monolithic approach, Nx for iterative approach).*
+
+### 2.1 Plan Technical Approach
+
+**What to do**: Create detailed technical design document for the current increment (or complete feature if monolithic) using the [Technical Design Template](../templates/technical-design-template.md).
+
+**Instructions**:
+- **For Iterative Approach - Before Designing Subsequent Increments**: Complete Learning Integration preparation (see Learning Integration Checklist)
+- **Create technical design document** conforming to the [Technical Design Template](../templates/technical-design-template.md)
+- **Recommended approach**: Use the [Technical Design Prompt](../prompts/technical-design-prompt.md) with an AI agent to conduct a structured design interview
+- **For Iterative**: Focus on current increment scope and interfaces to other increments, incorporating learnings from previous increments
+- **For Monolithic**: Design the complete feature
+
+**Learning Integration Checklist** (for subsequent increments in iterative approach):
+- [ ] **Implementation Learning Captured** - Previous increment learnings documented using [Implementation Learning Capture](../templates/implementation-learning-capture.md)
+- [ ] **Interface Refinements Identified** - Needed changes to interfaces documented
+- [ ] **Design Adaptations Planned** - Next increment design adapted based on learnings
+- [ ] **Risk Updates** - Risk assessment updated based on implementation experience
+
+**Deliverables**:
+- [ ] **For Iterative - Subsequent Increments**: Learning integration preparation completed
+- [ ] Technical design document created for current increment/feature following template structure
+
+---
+
+## Step 3: Development Phase (Per-Increment Activity)
+
+*This phase contains all development and pre-review validation activities that are performed once for each increment (1x for monolithic approach, Nx for iterative approach).*
+
+### 3.1 Set Up Development Environment
+
 **What to do**: Prepare your development environment and create your feature branch.
 
 **Instructions**:
-1. Ensure your local environment matches [Development Tools](#development-tools) requirements
+1. Ensure your local environment matches [Development Tools](design-principles-and-standards.md#process--infrastructure-standards) requirements
 2. Pull latest changes from main branch
 3. Create feature branch following naming conventions: `feature/brief-description` or `bugfix/brief-description`
 4. Verify development environment is working (run existing tests)
@@ -93,65 +175,27 @@ git checkout -b feature/your-feature-name
 - [ ] Feature branch created
 - [ ] Existing tests pass locally
 
----
+### 3.2 Implement Increment
 
-## Step 2: Development Phase
+**What to do**: Implement the increment functionality by developing code, tests, and documentation together following all implementation standards.
 
-### 2.1 Implement Core Functionality
-**What to do**: Write the main code for your feature following project standards.
-
-**Instructions**:
-1. Follow [Repository Standards](#repository-standards) for code organization
-2. Implement functionality incrementally with frequent commits
-3. Follow Python code style guidelines (PEP 8, meaningful names, type hints)
-4. Add docstrings for public functions and classes
-5. Add code comments explaining complex logic ("why" not "what")
-
-**Code Quality Checklist**:
-- [ ] **Style guidelines met** - Follows PEP 8, lines under 100 characters
-- [ ] **Meaningful names used** - Variables, functions, and classes have clear, descriptive names
-- [ ] **Type hints added** - Public APIs and complex functions include appropriate type hints
-- [ ] **Code comments added** - Complex logic explained with "why" not just "what"
-
-### 2.2 Write Tests Alongside Implementation
-**What to do**: Create comprehensive tests for your functionality.
+**Process Decision**: We implement incrementally with frequent commits, developing code, tests, and documentation in parallel following established standards.
 
 **Instructions**:
-1. Follow [Testing Standards](#testing-standards) for test structure and organization
-2. Write unit tests for individual functions/methods
-3. Create integration tests for module interactions
-4. Test edge cases, error conditions, and boundary scenarios
-5. Ensure test coverage meets >90% threshold
-6. Run tests frequently during development
+1. Follow [Implementation Standards](design-principles-and-standards.md#implementation-standards) from Design Principles & Standards
+2. **For Iterative Approach**: Implement one increment at a time, capturing learnings using [Implementation Learning Capture](../templates/implementation-learning-capture.md)
 
-**Testing Checklist**:
-- [ ] **Unit tests added** - Individual functions/methods tested in isolation
-- [ ] **Integration tests added** - Module interactions tested (if applicable)
-- [ ] **Edge cases tested** - Error conditions, boundary cases, and invalid inputs covered
-- [ ] **Test coverage >90%** - Automated test suite maintains coverage thresholds
+**Implementation Checklist**:
+- [ ] **Implementation standards met** - Follow [Implementation Standards](design-principles-and-standards.md#implementation-standards) (code quality, testing, documentation, repository practices, module organization)
 - [ ] **All tests pass locally** - No regressions in existing functionality
 
-### 2.3 Update Documentation
-**What to do**: Create or update documentation alongside your implementation.
+### 3.3 Complete Development Validation
 
+**What to do**: Perform comprehensive validation including self-review, automated validation, manual testing, and compatibility checks before requesting peer review.
+
+#### Self-Review
 **Instructions**:
-1. Update API documentation (docstrings) for any new or modified public interfaces
-2. Update user guides if functionality affects end-user workflows
-3. Update architecture documentation for significant structural changes
-4. Create usage examples for new functionality
-5. Ensure documentation is clear and includes practical examples
-
-**Documentation Checklist**:
-- [ ] **API documentation updated** - Public APIs have complete docstrings with examples
-- [ ] **User documentation updated** - Guides updated for user-facing changes
-- [ ] **Architecture docs updated** - Structural changes documented (if applicable)
-- [ ] **Changelog updated** - Significant changes documented for release notes
-
-### 2.4 Perform Self-Review
-**What to do**: Review your own code using the same criteria that peer reviewers will apply.
-
-**Instructions**:
-1. Review your code changes line by line using the [Code Review Checklist](#code-review-checklist) from Code Review Standards
+1. Review your code changes line by line using the [Code Review Checklist](design-principles-and-standards.md#code-review-checklist) from Design Principles & Standards
 2. Focus especially on areas where you can objectively self-assess:
    - Requirements fulfillment and logic correctness
    - Code readability and maintainability  
@@ -159,16 +203,7 @@ git checkout -b feature/your-feature-name
 3. For areas requiring external perspective (design fit, integration impact), prepare context for reviewers
 4. Fix any issues you identify before requesting peer review
 
-**Self-Review Checklist**: 
-Use the [Code Review Checklist](#code-review-checklist) from Code Review Standards - the same criteria reviewers will apply.
-
----
-
-## Step 3: Pre-Review Validation Phase
-
-### 3.1 Complete Developer Validation
-**What to do**: Run all automated checks and ensure your code meets quality standards.
-
+#### Automated Validation
 **Instructions**:
 1. Run full test suite locally: `pytest`
 2. Check test coverage: `pytest --cov`
@@ -176,15 +211,7 @@ Use the [Code Review Checklist](#code-review-checklist) from Code Review Standar
 4. Ensure CI/CD pipeline passes (push to feature branch and check status)
 5. Fix any issues found by automated checks
 
-**Automated Validation Checklist**:
-- [ ] **All automated tests pass** - Full test suite passes without errors
-- [ ] **CI/CD pipeline passes** - All automated quality checks and builds succeed
-- [ ] **Linting passes** - Code style meets project standards
-- [ ] **Test coverage maintained** - Coverage thresholds met
-
-### 3.2 Perform Manual Testing
-**What to do**: Test your functionality manually to catch issues automation might miss.
-
+#### Manual Testing
 **Instructions**:
 1. Test the happy path with typical inputs
 2. Test error scenarios and edge cases
@@ -192,24 +219,21 @@ Use the [Code Review Checklist](#code-review-checklist) from Code Review Standar
 4. For UI changes, test across different environments
 5. Document any manual testing performed
 
-**Manual Testing Checklist**:
-- [ ] **Happy path tested** - Core functionality works with typical inputs
-- [ ] **Error scenarios tested** - System handles invalid inputs gracefully
-- [ ] **Integration tested** - Works correctly with related functionality
-
-### 3.3 Ensure Backward Compatibility
-**What to do**: Verify your changes don't break existing functionality.
-
+#### Compatibility Validation
 **Instructions**:
-1. Review [API Compatibility Policy](#api-compatibility-policy)
-2. If making breaking changes, follow deprecation process
-3. Test against existing code that uses your modified APIs
+1. Follow [Backward Compatibility Standards](design-principles-and-standards.md#backward-compatibility) from Design Principles & Standards
 
-**Compatibility Checklist**:
-- [ ] **Backward compatibility maintained** - Existing APIs continue to work (unless deprecation followed)
-- [ ] **Breaking changes documented** - Deprecation process followed if needed
+**Development Validation Checklist**:
+- [ ] **Self-review completed** - Code reviewed using [Code Review Checklist](design-principles-and-standards.md#code-review-checklist)
+- [ ] **All automated tests pass** - Full test suite passes without errors
+- [ ] **CI/CD pipeline passes** - All automated quality checks and builds succeed
+- [ ] **Linting passes** - Code style meets project standards
+- [ ] **Test coverage maintained** - Coverage thresholds met
+- [ ] **Manual testing completed** - Happy path, error scenarios, and integration tested
+- [ ] **Compatibility standards met** - [Backward Compatibility Standards](design-principles-and-standards.md#backward-compatibility) followed
 
 ### 3.4 Create Pull Request
+
 **What to do**: Create a clear, well-documented pull request.
 
 **Instructions**:
@@ -230,6 +254,7 @@ Use the [Code Review Checklist](#code-review-checklist) from Code Review Standar
 ## Step 4: Review & Approval Phase
 
 ### 4.1 Code Reviewer Instructions
+
 **What to do** (for reviewers): Conduct thorough review focusing on aspects that require human judgment.
 
 **Review Focus Areas**:
@@ -244,9 +269,10 @@ Use the [Code Review Checklist](#code-review-checklist) from Code Review Standar
 - **Clear & Specific** - Point to exact lines and provide concrete improvement suggestions
 
 **Code Review Checklist**: 
-Use the [Code Review Checklist](#code-review-checklist) from Code Review Standards to ensure comprehensive review.
+Use the [Code Review Checklist](design-principles-and-standards.md#code-review-checklist) from Design Principles & Standards to ensure comprehensive review.
 
 ### 4.2 Support Code Review Process
+
 **What to do**: Respond to reviewer feedback and iterate on your implementation.
 
 **Instructions**:
@@ -256,6 +282,7 @@ Use the [Code Review Checklist](#code-review-checklist) from Code Review Standar
 4. Ensure all reviewer concerns are addressed
 
 ### 4.3 Obtain Required Approvals
+
 **What to do**: Ensure all necessary approvals are obtained before merge.
 
 **Instructions**:
@@ -275,20 +302,26 @@ Use the [Code Review Checklist](#code-review-checklist) from Code Review Standar
 ## Step 5: Integration & Release Phase
 
 ### 5.1 Merge and Deploy
+
 **What to do**: Merge your changes and deploy to integration environment.
 
 **Instructions**:
 1. Merge pull request using project's preferred merge strategy
 2. Verify integration tests pass in integration environment
-3. Monitor for any immediate issues
-4. Clean up feature branch after successful merge
+3. **For Iterative Approach**: After each increment, capture implementation learnings and plan next increment design session
+4. Validate system-level coherence following System Integration Standards
+5. Monitor for any immediate issues
+6. Clean up feature branch after successful merge
 
 **Integration Checklist**:
 - [ ] **Code merged** - Pull request successfully merged to main
 - [ ] **Integration tests pass** - Full test suite passes in integration environment
+- [ ] **System integration standards met** - Follow [System Integration Standards](design-principles-and-standards.md#system-integration-standards) (API coherence, end-to-end workflows, performance, documentation)
+- [ ] **Implementation learnings captured** - For iterative approach, document learnings from completed increment
 - [ ] **No immediate issues** - No obvious problems detected post-merge
 
 ### 5.2 Release Preparation (If Applicable)
+
 **What to do**: Prepare for release if your changes are part of a release.
 
 **Instructions**:
@@ -300,9 +333,10 @@ Use the [Code Review Checklist](#code-review-checklist) from Code Review Standar
 **Release Checklist**:
 - [ ] **Version updated** - Version numbers updated per semantic versioning
 - [ ] **Release notes updated** - Changes documented for users
-- [ ] **Compatibility verified** - API compatibility policy followed
+- [ ] **Compatibility verified** - [Backward Compatibility Standards](design-principles-and-standards.md#backward-compatibility) followed
 
 ### 5.3 Post-Deployment Monitoring
+
 **What to do**: Monitor your changes after deployment to catch any issues.
 
 **Instructions**:
@@ -320,166 +354,15 @@ Use the [Code Review Checklist](#code-review-checklist) from Code Review Standar
 
 ## Reference Materials
 
-The following sections provide detailed standards, policies, and procedures referenced in the step-by-step instructions above. Use these as reference when you need specific guidance on implementation details.
+All development standards have been consolidated into the [Design Principles & Development Standards](design-principles-and-standards.md) document to serve as a single source of truth.
 
-### Quick Reference Index
-- **Development Standards**: [Repository Standards](#repository-standards), [Testing Standards](#testing-standards), [Manual Testing](#manual-testing--validation)
-- **Quality Assurance**: [Continuous Integration](#continuous-integration), [API Compatibility Policy](#api-compatibility-policy), [Code Review Standards](#code-review-standards)
-- **Process Management**: [Release Process](#release-process)
-- **Organizational Support**: [Tools and Infrastructure](#tools-and-infrastructure)
-- **Governance**: [Compliance and Standards](#compliance-and-standards), [Process Improvement](#process-improvement)
-
-## Repository Standards
-
-### Branch Management
-- **Main Branch**: Always deployable, protected from direct pushes
-- **Feature Branches**: Created for each user story or task
-- **Branch Naming**: Use descriptive names (e.g., `feature/risk-calculation`, `bugfix/portfolio-loading`)
-
-### Commit Standards
-- **Commit Messages**: Use clear, descriptive commit messages
-- **Atomic Commits**: Each commit should represent a single logical change
-- **Commit Frequency**: Commit often with meaningful checkpoints
-
-## Testing Standards
-
-### Test Implementation
-- **Test Structure**: Follow Arrange-Act-Assert pattern
-- **Test Naming**: Use descriptive test names that explain what is being tested
-- **Mocking**: Use appropriate mocking for external dependencies
-- **Test Data**: Use representative test data sets in isolated environments
-
-### Test Types
-- **Unit Testing**: Test individual components in isolation
-- **Integration Testing**: Test module interactions and end-to-end workflows
-- **Performance Testing**: Establish baselines and monitor for regressions
-
-## Manual Testing & Validation
-
-- **Test Plans**: Create test plans for complex features
-- **User Acceptance**: Verify functionality meets user requirements
-- **Edge Case Testing**: Test boundary conditions and error scenarios
-
-## Continuous Integration
-
-### Automation Requirements
-- **Quality Gate Automation**: All checklist criteria must be enforced through automated checks where possible
-- **Pull Request Validation**: Automated checks must pass before human review
-- **Build Pipeline**: Automated linting, testing, security scanning, and dependency checking
-
-### Build & Deployment Standards
-- **Reproducible Builds**: Ensure builds are consistent and reproducible
-- **Artifact Management**: Manage build artifacts and dependencies
-- **Environment Consistency**: Maintain consistent development and production environments
-
-## Code Review Standards
-
-### Code Review Checklist
-
-The following checklist is used for both self-review (Step 2.4) and peer review (Step 4.1) to ensure consistent quality standards:
-
-- [ ] **Requirements met** - Implementation fulfills acceptance criteria
-- [ ] **Design principles followed** - Adheres to [portopt Design Principles](design-principles.md)
-- [ ] **Logic is sound and efficient** - Implementation is correct and reasonably optimized
-- [ ] **Code is readable and maintainable** - Future developers can understand and modify
-- [ ] **Test strategy is appropriate** - Tests cover the right scenarios at the right level
-- [ ] **Documentation quality is good** - Clear, accurate, and helpful documentation
-- [ ] **Error handling appropriate** - Proper error handling and edge case management
-- [ ] **Security implications considered** - No obvious security vulnerabilities
-- [ ] **Performance considered** - No obvious performance issues introduced
-- [ ] **Integration considerations reviewed** - Impacts on other components considered
-
-## Release Process
-
-### Version Management
-- **Semantic Versioning**: Follow semantic versioning (MAJOR.MINOR.PATCH)
-- **Release Notes**: Document all changes, fixes, and new features
-- **Changelog**: Maintain detailed changelog for all releases
-
-### Deployment
-- **Staging**: Test in staging environment before production
-- **Rollback Plan**: Have rollback procedures for all deployments
-- **Monitoring**: Monitor system health after deployments
-
-## API Compatibility Policy
-
-### Backwards Compatibility Standards
-
-All changes to public APIs must follow these compatibility standards:
-
-#### **Semantic Versioning**
-- **MAJOR version**: Breaking changes that require user code modifications
-- **MINOR version**: New functionality that is backwards compatible
-- **PATCH version**: Backwards compatible bug fixes
-
-#### **Breaking Change Definition**
-Breaking changes include but are not limited to:
-- Removing public functions, classes, or methods
-- Changing function signatures (parameters, return types)
-- Changing public class interfaces
-- Modifying expected behavior of existing functionality
-- Changing import paths or module organization
-
-#### **Non-Breaking Changes**
-These changes are allowed in MINOR releases:
-- Adding new public functions, classes, or methods
-- Adding new optional parameters with default values
-- Adding new return fields to existing functions (where applicable)
-- Internal implementation improvements that don't affect public behavior
-
-#### **Deprecation Process**
-- **Warning Phase**: Mark as deprecated with clear warnings and migration guidance
-- **Timeline**: Minimum 6 months deprecation period before removal
-- **Documentation**: Update all documentation to reflect deprecation
-- **Migration Guide**: Provide clear migration path to new functionality
-
-#### **API Stability Guarantees**
-- **Public API**: Covered by backwards compatibility guarantees
-- **Private/Internal**: Marked with leading underscore, no compatibility guarantees
-- **Experimental**: Clearly marked, may change without notice
-
-### API Documentation Requirements
-- All public APIs must have complete docstrings
-- Breaking changes must be documented in changelog with migration instructions
-- Deprecations must include timeline and recommended alternatives
-
-## Compliance and Standards
-
-### Security Standards
-- **Vulnerability Scanning**: Regular security scans of dependencies
-- **Secure Coding**: Follow secure coding practices
-- **Access Control**: Implement appropriate access controls
-- **Data Protection**: Protect sensitive data appropriately
-
-### Regulatory Compliance
-- **License Compliance**: Ensure all dependencies have compatible licenses
-- **Documentation**: Maintain required documentation for compliance
-- **Audit Trail**: Maintain audit trails for changes and deployments
-
-## Process Improvement
-
-### Metrics and Monitoring
-- **Development Metrics**: Track cycle time, defect rates, and test coverage
-- **Quality Metrics**: Monitor code quality and technical debt
-- **Performance Metrics**: Track system performance and reliability
-
-### Retrospectives
-- **Regular Reviews**: Conduct regular process retrospectives
-- **Continuous Improvement**: Implement process improvements based on feedback
-- **Knowledge Sharing**: Share lessons learned across the team
-
-## Tools and Infrastructure
-
-### Development Tools
-- **IDE/Editor**: [Specify preferred development environment]
-- **Version Control**: Git with GitHub/GitLab
-- **Package Management**: `pipenv` for Python dependencies
-- **Testing**: `pytest` for Python testing
-
-### CI/CD Tools
-- **Build System**: [Specify CI/CD platform]
-- **Deployment**: [Specify deployment tools]
-- **Monitoring**: [Specify monitoring and alerting tools]
+### Quick Reference to Standards
+- **All Development Standards**: [Design Principles & Development Standards](design-principles-and-standards.md)
+  - Implementation Standards (code quality, testing, documentation, repository practices, module organization)
+  - Code Review Standards
+  - Build & Deployment Standards
+  - Security & Compliance Standards
+  - Process & Infrastructure Standards
 
 ---
 
@@ -497,7 +380,10 @@ This document should be reviewed and updated regularly to reflect:
 
 ## Related Documents
 
-- [portopt Design Principles](design-principles.md)
-- [Requirements Template](specs/requirements-template.md)
-- [ADR Templates](adr/000-adr-template.md)
+- [portopt Design Principles & Standards](design-principles-and-standards.md)
+- [Requirements Template](../templates/requirements-template.md)
+- [Requirements Gathering Prompt](../prompts/requirements-gathering-prompt.md)
+- [Feature Decomposition Prompt](../prompts/feature-decomposition-prompt.md)
+- [Technical Design Prompt](../prompts/technical-design-prompt.md)
+- [ADR Templates](adr/000-adr-template.md)  
 - [Changelog Guidelines](changelog/README.md) 

@@ -1,13 +1,25 @@
-# portopt Library Design Principles & Standards
+# portopt Design Principles & Development Standards
 
 ## Document Information
-- **Last Updated**: 2025-07-07
+
+- **Title**: Design Principles & Development Standards
+- **Author**: john and claude-4-sonnet
+- **Date Created**: 2025-07-19
+- **Last Updated**: 2025-07-31
+- **Version**: 1.1
 - **Status**: Living Document
 - **Scope**: Entire portopt library
 
 ## Overview
 
 This document defines the design principles, coding standards, and development conventions for the `portopt` Python library. These guidelines ensure consistency, maintainability, and usability across all modules and features.
+
+**Document Scope:**
+- **Design Principles**: High-level architectural and API design philosophy
+- **Development Standards**: Specific implementation standards for code quality, testing, documentation, compatibility, and error handling
+- **Process Integration**: Standards referenced by development process workflows and templates
+
+*This document serves as the single source of truth for all development standards used throughout the portopt project.*
 
 ## Core Philosophy
 
@@ -164,11 +176,27 @@ class Portfolio(ValidationMixin, MetricsMixin):
 - **Protocol Types**: Use Protocol for duck typing where appropriate
 
 #### Testing Standards
-- **Coverage**: Maintain >90% test coverage for new code
-- **Test Organization**: Mirror source structure in test directory
+
+**Test Implementation**
+- **Test Structure**: Follow Arrange-Act-Assert pattern
 - **Test Naming**: Use descriptive test names that explain what is being tested
+- **Test Organization**: Mirror source structure in test directory
+- **Mocking**: Use appropriate mocking for external dependencies
+- **Test Data**: Use representative test data sets in isolated environments
+
+**Test Types**
+- **Unit Testing**: Test individual components in isolation
+- **Integration Testing**: Test module interactions and end-to-end workflows
+- **Performance Testing**: Establish baselines and monitor for regressions
+
+**Coverage and Quality**
+- **Coverage**: Maintain >90% test coverage for new code
 - **Edge Cases**: Include tests for edge cases and error conditions
-- **Integration Tests**: Test module interactions, not just individual functions
+
+**Manual Testing & Validation**
+- **Test Plans**: Create test plans for complex features
+- **User Acceptance**: Verify functionality meets user requirements
+- **Edge Case Testing**: Test boundary conditions and error scenarios
 
 ### Documentation Standards
 - **Public APIs**: All public functions and classes must have comprehensive docstrings
@@ -178,6 +206,26 @@ class Portfolio(ValidationMixin, MetricsMixin):
 - **Complex Logic**: Comment complex algorithms and business logic
 - **API Stability**: Clearly mark experimental vs. stable APIs
 - **Changelog**: Document breaking changes and new features
+
+### Repository & Version Control
+
+#### Branch Management
+- **Main Branch**: Always deployable, protected from direct pushes
+- **Feature Branches**: Created for each user story or task
+- **Branch Naming**: Use descriptive names (e.g., `feature/risk-calculation`, `bugfix/portfolio-loading`)
+
+#### Commit Standards
+- **Commit Messages**: Use clear, descriptive commit messages
+- **Atomic Commits**: Each commit should represent a single logical change
+- **Commit Frequency**: Commit often with meaningful checkpoints
+
+#### Release Process
+- **Semantic Versioning**: Follow semantic versioning (MAJOR.MINOR.PATCH)
+- **Release Notes**: Document all changes, fixes, and new features  
+- **Changelog**: Maintain detailed changelog for all releases
+- **Staging**: Test in staging environment before production
+- **Rollback Plan**: Have rollback procedures for all deployments
+- **Monitoring**: Monitor system health after deployments
 
 ### Module Organization
 
@@ -197,6 +245,25 @@ class Portfolio(ValidationMixin, MetricsMixin):
 - **Size Management**: Keep modules reasonably sized (typically <1000 lines)
 - **Public Interfaces**: Use `__all__` to define public APIs
 - **Private Functions**: Use leading underscore for internal functions
+
+### Increment Completion Criteria
+
+Each increment must meet these criteria before being considered complete. This applies to all increments, whether part of a multi-increment feature decomposition or a single monolithic increment:
+
+- [ ] **Functional Completeness**: All increment scope items implemented and tested
+- [ ] **User Value Validation**: Increment provides stated user value (validated through usage or feedback)
+- [ ] **Technical Quality**: All implementation standards met (code quality, testing, documentation, repository practices, module organization)
+- [ ] **Integration Success**: Works correctly with existing system and previous increments
+- [ ] **Performance Requirements**: Meets non-functional requirements for the increment scope
+
+### System Integration Standards
+
+Each increment must meet these system integration standards to ensure coherent system-wide functionality:
+
+- [ ] **API Coherence** - Increment interfaces work together logically with existing system APIs
+- [ ] **End-to-End Workflows** - Complete user workflows function as designed across all system components
+- [ ] **Performance at Scale** - System performance remains acceptable with all increments integrated
+- [ ] **Documentation Consistency** - System-level documentation accurately reflects the actual integrated implementation
 
 ## Data Handling Standards
 
@@ -251,10 +318,46 @@ class Portfolio(ValidationMixin, MetricsMixin):
 - **Examples**: Provide example configuration files
 
 ### Backward Compatibility
-- **Semantic Versioning**: Follow semantic versioning for releases
-- **Deprecation Policy**: Provide deprecation warnings before removing features
-- **Migration Guides**: Provide clear migration paths for breaking changes
-- **Feature Flags**: Use feature flags for experimental functionality
+
+All changes to public APIs must follow these compatibility standards:
+
+#### **Semantic Versioning**
+- **MAJOR version**: Breaking changes that require user code modifications
+- **MINOR version**: New functionality that is backwards compatible
+- **PATCH version**: Backwards compatible bug fixes
+
+#### **Breaking Change Definition**
+Breaking changes include but are not limited to:
+- Removing public functions, classes, or methods
+- Changing function signatures (parameters, return types)
+- Changing public class interfaces
+- Modifying expected behavior of existing functionality
+- Changing import paths or module organization
+
+#### **Non-Breaking Changes**
+These changes are allowed in MINOR releases:
+- Adding new public functions, classes, or methods
+- Adding new optional parameters with default values
+- Adding new return fields to existing functions (where applicable)
+- Internal implementation improvements that don't affect public behavior
+
+#### **Deprecation Process**
+- **Warning Phase**: Mark as deprecated with clear warnings and migration guidance
+- **Timeline**: Minimum 6 months deprecation period before removal
+- **Documentation**: Update all documentation to reflect deprecation
+- **Migration Guide**: Provide clear migration path to new functionality
+
+#### **API Stability Guarantees**
+- **Public API**: Covered by backwards compatibility guarantees
+- **Private/Internal**: Marked with leading underscore, no compatibility guarantees
+- **Experimental**: Clearly marked, may change without notice
+
+#### **Documentation Requirements**
+- All public APIs must have complete docstrings
+- Breaking changes must be documented in changelog with migration instructions
+- Deprecations must include timeline and recommended alternatives
+
+#### **Process Integration**
 - **Impact Assessment**: Assess impact of changes on existing users
 - **Testing**: Test backward compatibility with existing usage patterns
 - **Communication**: Communicate changes through appropriate channels
@@ -301,6 +404,69 @@ To facilitate the installation and thus adoption of `portopt`, the set of extern
 - [NumPy Docstring Standard](https://numpydoc.readthedocs.io/)
 - [Semantic Versioning](https://semver.org/)
 - [Python Type Hints](https://docs.python.org/3/library/typing.html)
+
+
+## Code Review Standards
+
+### Code Review Checklist
+The following checklist is used for both self-review and peer review to ensure consistent quality standards:
+
+- [ ] **Requirements met** - Implementation fulfills acceptance criteria
+- [ ] **Design principles followed** - Adheres to portopt Design Principles & Standards
+- [ ] **Logic is sound and efficient** - Implementation is correct and reasonably optimized
+- [ ] **Code is readable and maintainable** - Future developers can understand and modify
+- [ ] **Test strategy is appropriate** - Tests cover the right scenarios at the right level
+- [ ] **Documentation quality is good** - Clear, accurate, and helpful documentation
+- [ ] **Error handling appropriate** - Proper error handling and edge case management
+- [ ] **Security implications considered** - No obvious security vulnerabilities
+- [ ] **Performance considered** - No obvious performance issues introduced
+- [ ] **Integration considerations reviewed** - Impacts on other components considered
+
+## Build & Deployment Standards
+
+### Continuous Integration
+- **Quality Gate Automation**: All checklist criteria must be enforced through automated checks where possible
+- **Pull Request Validation**: Automated checks must pass before human review
+- **Build Pipeline**: Automated linting, testing, security scanning, and dependency checking
+
+### Build Standards
+- **Reproducible Builds**: Ensure builds are consistent and reproducible
+- **Artifact Management**: Manage build artifacts and dependencies
+- **Environment Consistency**: Maintain consistent development and production environments
+
+## Security & Compliance Standards
+
+### Security Standards
+- **Vulnerability Scanning**: Regular security scans of dependencies
+- **Secure Coding**: Follow secure coding practices
+- **Access Control**: Implement appropriate access controls
+- **Data Protection**: Protect sensitive data appropriately
+
+### Regulatory Compliance
+- **License Compliance**: Ensure all dependencies have compatible licenses
+- **Documentation**: Maintain required documentation for compliance
+- **Audit Trail**: Maintain audit trails for changes and deployments
+
+## Process & Infrastructure Standards
+
+### Development Tools
+- **IDE/Editor**: [Specify preferred development environment]
+- **Version Control**: Git with GitHub/GitLab
+- **Package Management**: `pipenv` for Python dependencies
+- **Testing**: `pytest` for Python testing
+
+### CI/CD Tools
+- **Build System**: [Specify CI/CD platform]
+- **Deployment**: [Specify deployment tools]
+- **Monitoring**: [Specify monitoring and alerting tools]
+
+### Process Improvement
+- **Development Metrics**: Track cycle time, defect rates, and test coverage
+- **Quality Metrics**: Monitor code quality and technical debt
+- **Performance Metrics**: Track system performance and reliability
+- **Regular Reviews**: Conduct regular process retrospectives
+- **Continuous Improvement**: Implement process improvements based on feedback
+- **Knowledge Sharing**: Share lessons learned across the team
 
 ## Updates and Maintenance
 
