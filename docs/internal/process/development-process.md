@@ -5,8 +5,8 @@
 - **Title**: Development Process Standard Operating Procedure (SOP)
 - **Author**: john and claude-4-sonnet
 - **Date Created**: 2025-07-19
-- **Last Updated**: 2025-07-31
-- **Version**: 1.1
+- **Last Updated**: 2025-08-07
+- **Version**: 1.1.1
 - **Status**: Draft
 
 ## How to Use This SOP
@@ -27,81 +27,30 @@ This Standard Operating Procedure (SOP) defines the step-by-step process for all
 
 This process involves multiple stakeholders with distinct areas of authority and responsibility. Clear role definition ensures proper governance while enabling efficient decision-making.
 
-### Document Ownership & Approval Authority
+### Role Authority Matrix
 
-Each document type in the development process has a designated owner who must approve changes to maintain consistency and system integrity:
+| Role | Primary Focus | Document Ownership | Decision Authority | Key Activities |
+|------|---------------|-------------------|-------------------|----------------|
+| **Product Manager** | Business value and user needs | Requirements Document | Business requirements, functional specifications, acceptance criteria | Define requirements, approve scope changes, ensure business alignment |
+| **Architecture Lead** | System-level design coherence | Feature Decomposition, ADRs | System architecture, increment boundaries, technology choices | Define system architecture, approve decomposition changes, maintain ADRs |
+| **Technical Lead** | Implementation approach | Technical Design Document | Implementation approach, technical design patterns | Create technical designs, approve design changes, ensure design quality and adherence to design principles |
+| **Development Team** | Implementation execution | Implementation Learning | N/A (knowledge sharing) | Implement code/tests/docs following development standards, identify issues, capture lessons learned |
 
-| Document Type | Template | Owner | Approval Authority | Scope of Responsibility |
-|---------------|----------|-------|-------------------|------------------------|
-| **Requirements Document** | [Requirements Template](../templates/requirements-template.md) | **Product Manager** | Business requirements, functional specifications, acceptance criteria | Owns the "what" needs to be built and business value |
-| **Feature Decomposition** | [Feature Decomposition Specification](../templates/feature-decomposition-specification.md) | **Architecture Lead** | System-level design, increment boundaries, interfaces, dependencies | Owns system architecture and integration coherence |
-| **Technical Design Document** | [Technical Design Template](../templates/technical-design-template.md) | **Technical Lead** | Implementation approach, detailed technical design, development patterns | Owns "how" the increment will be technically implemented |
-| **Architecture Decision Records** | [ADR Template](../adr/000-adr-template.md) | **Architecture Lead** | Architectural choices, technology decisions, system-level patterns | Owns architectural decisions that impact system design |
-| **Implementation Learning** | [Implementation Learning Capture](../templates/implementation-learning-capture.md) | **Development Team** | Knowledge capture, lessons learned, development insights | No approval needed - knowledge sharing activity |
+### Decision-Making & Conflict Resolution
 
-### Role Definitions
+**Standard Decision Process**: When issues arise during design or implementation that require changes to established documents:
 
-#### **Product Manager**
-- **Primary Focus**: Business value, user needs, and functional requirements
-- **Key Responsibilities**:
-  - Defines and maintains business requirements and acceptance criteria
-  - Approves changes to functional specifications and scope
-  - Negotiates requirement changes with technical teams
-  - Ensures business alignment throughout development process
+1. **Negotiate** with the appropriate document owner (see Role Authority Matrix above)
+2. **Obtain approval** from the document owner for proposed changes  
+3. **If approved**: Update the relevant document with approved changes and adjust approach accordingly
+4. **If not approved**: Choose one of the following options:
+   - Modify your approach to work within existing constraints
+   - Accept technical debt and document it for future resolution
+   - Escalate to higher-level decision makers for resolution
 
-#### **Architecture Lead** 
-- **Primary Focus**: System-level design coherence and architectural integrity
-- **Key Responsibilities**:
-  - Defines system architecture and integration patterns
-  - Approves feature decomposition and increment boundaries
-  - Validates architectural decisions and technology choices
-  - Ensures system-level consistency across increments
-  - Maintains architectural decision records (ADRs)
-
-#### **Technical Lead**
-- **Primary Focus**: Detailed implementation approach and technical execution
-- **Key Responsibilities**:
-  - Creates and maintains technical design documents
-  - Defines implementation approach and development patterns
-  - Approves technical design changes during implementation
-  - Ensures technical quality and consistency within increments
-  - May be the same person as the implementing developer
-
-#### **Development Team**
-- **Primary Focus**: Implementation execution and knowledge capture
-- **Key Responsibilities**:
-  - Implements code, tests, and documentation following standards
-  - Identifies issues during design and implementation phases
-  - Captures implementation lessons and insights
-  - Follows established technical designs and architectural decisions
-
-### Decision-Making Authority
-
-#### **Requirements & Scope Changes**
-- **Authority**: Product Manager
-- **When**: Requirements discoveries during design (Step 2.2) or implementation (Step 3.2)
-- **Process**: Negotiate → Approve → Update requirements document → Adjust approach
-
-#### **System Design & Architecture Changes**  
-- **Authority**: Architecture Lead
-- **When**: Decomposition issues or architectural decisions during design (Step 2.2) or implementation (Step 3.2)
-- **Process**: Negotiate → Approve → Update decomposition/create ADR → Adjust approach
-
-#### **Technical Implementation Changes**
-- **Authority**: Technical Lead  
-- **When**: Technical design modifications needed during implementation (Step 3.2)
-- **Process**: Negotiate → Approve → Update technical design → Adjust implementation
-
-### Escalation & Conflict Resolution
-
-**Cross-Role Conflicts**: When decisions span multiple areas of authority (e.g., business requirements vs. technical constraints), stakeholders should collaborate to find solutions that satisfy both business and technical needs.
-
-**Approval Rejection**: If document owners reject proposed changes, the requesting team must either:
-- Modify their approach to work within existing constraints, or  
-- Accept technical debt and document it for future resolution, or
-- Escalate to higher-level decision makers for resolution
-
-**Role Clarity**: When unclear which role has authority, default to the most restrictive interpretation and involve all potentially affected stakeholders in the decision.
+**Special Cases**:
+- **Cross-Role Conflicts**: When decisions span multiple authority areas, stakeholders collaborate to find solutions satisfying both business and technical needs
+- **Role Clarity**: When authority is unclear, involve all potentially affected stakeholders and default to the most restrictive interpretation
 
 ## Process Principles
 
