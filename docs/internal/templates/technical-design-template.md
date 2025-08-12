@@ -22,7 +22,7 @@ This document defines HOW the system will be implemented to fulfill the requirem
 
 ### Design Principles Alignment
 
-*This design must follow the [portopt Design Principles & Standards](../design-principles-and-standards.md). Document how this design aligns with or requires exceptions to established principles.*
+*This design must follow the [Design Principles & Standards](../design-principles-and-standards.md). Document how this design aligns with or requires exceptions to established principles.*
 
 **Principle Alignment:**
 - **[Principle Name]**: [How this design aligns or requires exception]

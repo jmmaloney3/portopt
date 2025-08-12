@@ -164,7 +164,7 @@ All development work follows this five-phase process:
 
 **Instructions**:
 - **For Iterative Approach**:
-  1. **Create initial feature decomposition document** conforming to the [Feature Decomposition Specification](../templates/feature-decomposition-specification.md)
+  1. **Create initial feature decomposition document** conforming to the [Feature Decomposition Template](../templates/feature-decomposition-template.md)
      - **Recommended approach**: Use the [Feature Decomposition Prompt](../prompts/feature-decomposition-prompt.md) with an AI agent to conduct a structured systems engineering interview
   2. **Share for technical stakeholder review** with technical leads from affected product areas and gather feedback on architectural coherence, increment boundaries, interfaces, and dependencies
   3. **Iterate on decomposition** based on feedback until technical stakeholders agree the decomposition is architecturally sound and implementable
@@ -376,7 +376,7 @@ git checkout -b feature/your-feature-name
 **What to do**: Document implementation insights, patterns, and lessons learned for future reference.
 
 **Instructions**:
-Document implementation lessons using [Implementation Learning Capture](../templates/implementation-learning-capture.md):
+Document implementation lessons using [Learning Capture Template](../templates/learning-capture-template.md):
 
 1. **Development patterns and techniques** - What coding approaches worked well or poorly
 2. **Technical insights and gotchas** - Unexpected discoveries about libraries, frameworks, or system behavior
@@ -469,11 +469,11 @@ This document should be reviewed and updated regularly to reflect:
 - [Design Principles & Standards](design-principles-and-standards.md)
 - [Requirements Template](../templates/requirements-template.md)
 - [Requirements Gathering Prompt](../prompts/requirements-gathering-prompt.md)
-- [Feature Decomposition Specification](../templates/feature-decomposition-specification.md)
+- [Feature Decomposition Template](../templates/feature-decomposition-template.md)
 - [Feature Decomposition Prompt](../prompts/feature-decomposition-prompt.md)
 - [Technical Design Template](../templates/technical-design-template.md)
 - [Technical Design Prompt](../prompts/technical-design-prompt.md)
-- [Implementation Learning Capture](../templates/implementation-learning-capture.md)
+- [Learning Capture Template](../templates/learning-capture-template.md)
 - [ADR Template](adr/000-adr-template.md)
 - [Changelog Guidelines](changelog/README.md)
 - [Changelog Template](changelog/000-changelog-template.md)
