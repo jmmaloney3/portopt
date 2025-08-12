@@ -422,6 +422,23 @@ The following checklist is used for both self-review and peer review to ensure c
 - [ ] **Performance considered** - No obvious performance issues introduced
 - [ ] **Integration considerations reviewed** - Impacts on other components considered
 
+### Code Review Focus Areas
+
+Human reviewers should especially focus on these key aspects during code review:
+
+- **Design & Architecture** - Does solution fit well with existing patterns?
+- **Code Quality & Maintainability** - Is code readable and well-structured?
+- **Testing & Documentation** - Are tests appropriate and documentation clear?
+
+### Code Review Feedback Guidelines
+
+Provide effective, constructive feedback:
+
+- **Constructive & Actionable** - Provide specific suggestions, not just criticism
+- **Educational** - Explain the "why" behind feedback to help developer learning
+- **Respectful** - Focus on code, not person; acknowledge good practices too
+- **Clear & Specific** - Point to exact lines and provide concrete improvement suggestions
+
 ## Build & Deployment Standards
 
 ### Continuous Integration
