@@ -143,6 +143,7 @@ All development work follows this five-phase process:
 
 **Instructions**:
 1. **Analyze Feature Requirements Against Existing Architecture**:
+   - **If the system architecture document doesn't exist**: Skip this step and proceed to step 2
    - **Review existing system architecture** - Understand current system components, interfaces, and architectural patterns
    - **Map feature requirements to existing capabilities** - Identify what can be reused, what needs to be extended, and what needs to be created
    - **Identify architectural gaps** - Determine what new components, interfaces, or patterns are needed
@@ -155,6 +156,7 @@ All development work follows this five-phase process:
    - **Document architectural decisions** - Create ADRs for significant architectural changes
 
 3. **Update Living System Architecture Document**:
+   - **If the system architecture document doesn't exist**: Create a new document using the [System Architecture Template](../templates/system-architecture-template.md)
    - **Recommended approach**: Use the [System Architecture Update Prompt](../prompts/system-architecture-update-prompt.md) with an AI agent to conduct a structured architecture update interview
    - **Revise component architecture** - Update component descriptions and relationships
    - **Update integration patterns** - Document new integration patterns or modify existing ones
@@ -520,7 +522,7 @@ This document should be reviewed and updated regularly to reflect:
 ## Related Documents
 
 - [Design Principles & Standards](design-principles-and-standards.md)
-- [System Architecture Document](../system-architecture.md) - Living document maintained by Architecture Lead
+- [System Architecture Template](../templates/system-architecture-template.md)
 - [System Architecture Update Prompt](../prompts/system-architecture-update-prompt.md)
 - [Requirements Template](../templates/requirements-template.md)
 - [Requirements Gathering Prompt](../prompts/requirements-gathering-prompt.md)
