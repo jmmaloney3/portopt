@@ -32,8 +32,8 @@ This process involves multiple stakeholders with distinct areas of authority and
 | Role | Primary Focus | Document Ownership | Decision Authority | Key Activities |
 |------|---------------|-------------------|-------------------|----------------|
 | **Product Manager** | Business value and user needs | Requirements Document | Business requirements, functional specifications, acceptance criteria | Define requirements, approve scope changes, ensure business alignment |
-| **Architecture Lead** | System-level design coherence | Feature Decomposition, ADRs | System architecture, increment boundaries, technology choices | Define system architecture, approve decomposition changes, maintain ADRs |
-| **Technical Lead** | Implementation approach | Technical Design Document | Implementation approach, technical design patterns | Create technical designs, approve design changes, ensure design quality and adherence to design principles |
+| **Architecture Lead** | System-level design coherence | System Architecture Document, ADRs | System architecture, architectural changes, technology choices | Define and maintain system architecture, approve architectural changes, maintain ADRs |
+| **Technical Lead** | Implementation approach | Feature Decomposition Document, Technical Design Document | Implementation approach, technical design patterns, increment planning | Create feature decompositions and technical designs, approve design changes, ensure design quality and adherence to design principles |
 | **Development Team** | Implementation execution | Implementation Learning | N/A (knowledge sharing) | Implement code/tests/docs following development standards, identify issues, capture lessons learned |
 
 ### Decision-Making & Conflict Resolution
@@ -62,11 +62,13 @@ These core principles guide our development approach and inform the specific pro
 
 This approach provides complete coverage of all requirement types (business, functional, DX, non-functional, constraints), maintains clear traceability from business problems to implementation details, gives special attention to Developer Experience for our library-focused project, and enables early risk identification by surfacing dependencies and constraints before implementation begins.
 
-### Iterative Design as Default
+### Incremental Delivery Philosophy
 
-**Process Decision**: We treat iterative design as the norm and monolithic design as a special case (single increment). This enables early value delivery, rapid feedback, and risk mitigation for complex features.
+**Process Decision**: We break down features into increments based on value delivery, risk mitigation, and learning opportunities. Single increment implementations are simply a special case of this approach. We accept the risk of some interface rework in order to deliver value to users sooner and get feedback before investing too heavily in any particular direction.
 
-**Benefits of Iterative Design**:
+This philosophy recognizes that the cost of potential interface refactoring is generally less than the cost of building the wrong thing or missing critical feedback opportunities. By delivering working functionality incrementally, we can validate assumptions early, gather real user feedback, and make informed decisions about subsequent development based on actual usage rather than theoretical requirements.
+
+**Benefits of Incremental Delivery**:
 - **Risk Mitigation**: Fail fast on infeasible approaches with minimal investment
 - **Better Designs**: Implementation learning improves subsequent design decisions
 - **Early Value Delivery**: Users get working functionality sooner
@@ -75,9 +77,10 @@ This approach provides complete coverage of all requirement types (business, fun
 - **Adaptability**: Can pivot based on implementation discoveries and user feedback
 
 **Acceptable Trade-offs**:
-- **Early Delivery Philosophy**: Accept risk of some interface rework to deliver value sooner and get feedback before investing too heavily in any direction
-- **Process Overhead**: Multiple design sessions vs single comprehensive session
+- **Rework Risk**: Accept risk of some interface rework to deliver 
+value sooner and get feedback before investing too heavily in any direction
 - **Interface Evolution**: May need to refactor interfaces between increments based on learnings
+- **Process Overhead**: Multiple design sessions vs single comprehensive session
 - **Coordination Complexity**: Managing dependencies and sequencing between increments
 
 ### Incremental Implementation
@@ -86,23 +89,17 @@ This approach provides complete coverage of all requirement types (business, fun
 
 This parallel development approach ensures quality is built in from the start rather than added later, provides continuous validation through testing, and maintains comprehensive documentation throughout the development process.
 
-### Early Delivery Philosophy
-
-**Process Decision**: We accept the risk of some interface rework in order to deliver value to users sooner and get feedback before investing too heavily in any particular direction.
-
-This philosophy recognizes that the cost of potential interface refactoring is generally less than the cost of building the wrong thing or missing critical feedback opportunities. By delivering working functionality incrementally, we can validate assumptions early, gather real user feedback, and make informed decisions about subsequent development based on actual usage rather than theoretical requirements.
-
 ## Development Workflow Overview
 
 All development work follows this five-phase process:
 
-1. **Feature Analysis & Design** - Define requirements, determine implementation approach, create feature decomposition (system-wide activities)
+1. **Feature Analysis & Design** - Define requirements, update system architecture, plan feature decomposition (system-wide activities)
 2. **Increment Design** - Plan technical approach for current increment (per-increment activity)
 3. **Development** - Set up environment, implement functionality with tests and documentation, perform self-review (per-increment activity)
 4. **Review & Approval** - Peer review, approvals, and final validation (per-increment activity)
 5. **Integration & Release** - Merge, deploy, and monitor changes (per-increment activity)
 
-*Phase 1 contains system-wide activities (done once per feature). Phases 2-5 contain per-increment activities (repeated for each increment: 1x for monolithic, Nx for iterative).*
+*Phase 1 contains system-wide activities (done once per feature). Phases 2-5 contain per-increment activities (repeated for each increment: 1x for single increment, Nx for multiple increments).*
 
 ---
 
@@ -138,53 +135,100 @@ All development work follows this five-phase process:
   - **For major features**: Requirements document following template format
   - **For minor work**: Acceptance criteria documented in ticket/issue
 
-### 1.2 Determine Design Approach (System-Wide Activity)
+### 1.2 System Architecture Update (System-Wide Activity)
 
-**What to do**: Decide whether this requires monolithic or iterative design approach.
+**What to do**: Update the living system architecture document to incorporate new feature requirements and identify any new system components or architectural changes needed.
 
-**Instructions**:
-
-- **Use Iterative Design When:**
-  - Requirements span >3 major functional areas
-  - High technical uncertainty or risk
-  - Implementation estimated >4 weeks
-  - Natural increment boundaries exist
-  - Early value delivery and user feedback are important
-  - Feature has multiple distinct capabilities that could provide standalone value
-
-- **Use Monolithic Design When:**
-  - Single cohesive functional area
-  - Well-understood technical approach
-  - Implementation estimated <3 weeks
-  - No meaningful increment boundaries
-  - Tight coupling between components makes separation impractical
-
-**Completion Criteria**:
-- [ ] Design approach decided (iterative vs monolithic)
-
-### 1.3 Plan Feature Decomposition (System-Wide Activity - Iterative Only)
-
-**What to do**: Create and validate feature decomposition document that breaks complex requirements into implementable increments through an iterative process of creation, review, and refinement.
-
-**Process Flow**: Feature decomposition work is inherently collaborative and requires validation from technical stakeholders. This step involves cycles of definition, review, clarification, and refinement until the decomposition is clear and agreed upon.
+**Process Flow**: System architecture design is inherently collaborative and requires validation from technical stakeholders. This step involves cycles of analysis, review, clarification, and refinement until the architectural changes are clear and agreed upon.
 
 **Instructions**:
-- **For Iterative Approach**:
-  1. **Create initial feature decomposition document** conforming to the [Feature Decomposition Template](../templates/feature-decomposition-template.md)
-     - **Recommended approach**: Use the [Feature Decomposition Prompt](../prompts/feature-decomposition-prompt.md) with an AI agent to conduct a structured systems engineering interview
-  2. **Share for technical stakeholder review** with technical leads from affected product areas and gather feedback on architectural coherence, increment boundaries, interfaces, and dependencies
-  3. **Iterate on decomposition** based on feedback until technical stakeholders agree the decomposition is architecturally sound and implementable
-- **For Monolithic Approach**: Skip this section
+1. **Analyze Feature Requirements Against Existing Architecture**:
+   - **Review existing system architecture** - Understand current system components, interfaces, and architectural patterns
+   - **Map feature requirements to existing capabilities** - Identify what can be reused, what needs to be extended, and what needs to be created
+   - **Identify architectural gaps** - Determine what new components, interfaces, or patterns are needed
+   - **Assess architectural impact** - Evaluate how the new feature affects existing architecture, performance, and maintainability
 
-**Validation Activities** (Iterative Approach):
-- **Verify increment coherence**: Does each increment deliver standalone value and have clear boundaries?
-- **Confirm interface clarity**: Are interfaces between increments well-defined and implementable?
-- **Validate dependency management**: Are dependencies between increments properly sequenced and manageable?
-- **Check architectural consistency**: Does the decomposition align with existing system architecture and design principles?
+2. **Design Architectural Changes**:
+   - **Define new system components** - Specify new modules, services, or components needed
+   - **Design new interfaces** - Define interfaces between new and existing components
+   - **Update data models** - Extend or create data models to support new functionality
+   - **Document architectural decisions** - Create ADRs for significant architectural changes
+
+3. **Update Living System Architecture Document**:
+   - **Recommended approach**: Use the [System Architecture Update Prompt](../prompts/system-architecture-update-prompt.md) with an AI agent to conduct a structured architecture update interview
+   - **Revise component architecture** - Update component descriptions and relationships
+   - **Update integration patterns** - Document new integration patterns or modify existing ones
+   - **Update data architecture** - Revise data models and flows
+   - **Update performance characteristics** - Document performance implications of architectural changes
+
+4. **Share for Technical Stakeholder Review** with technical leads and development team and gather feedback on:
+   - **Architectural coherence**: Do the changes maintain system architectural consistency?
+   - **Implementation feasibility**: Can the architectural changes be implemented with available resources?
+   - **Performance impact**: Will the changes maintain acceptable system performance?
+   - **Maintainability**: Do the changes support long-term system maintainability?
+
+5. **Iterate on Architectural Changes** based on feedback until technical stakeholders agree the architectural approach is sound and implementable
+
+**Note**: If stakeholder review reveals issues requiring changes to previously approved documents (requirements, etc.), follow the [Decision-Making & Conflict Resolution](#decision-making--conflict-resolution) process to obtain proper approvals before updating those documents.
+
+**Validation Activities**:
+- **Verify architectural consistency**: Do the changes follow existing architectural patterns and principles?
+- **Confirm implementation feasibility**: Can the proposed architectural changes be implemented?
+- **Validate performance impact**: Will the changes maintain acceptable system performance and scalability?
+- **Check maintainability**: Do the changes support long-term system maintainability and evolution?
 
 **Completion Criteria**:
-- [ ] **For Iterative**: Accepted feature decomposition with technical stakeholder agreement on increment boundaries, interfaces, and dependencies
-- [ ] **For Monolithic**: N/A (skip to Step 2)
+- [ ] **System architecture updated** - Living system architecture document updated with new feature requirements
+- [ ] **Architectural changes validated** - Technical stakeholders agree architectural approach is sound
+- [ ] **ADRs created** - Significant architectural decisions documented in ADRs
+
+### 1.3 Feature Decomposition Planning (System-Wide Activity)
+
+**What to do**: Break down the new feature into implementable increments for value delivery, risk mitigation, and learning opportunities. Note that "monolithic" implementation is simply a single increment.
+
+**Process Flow**: Feature decomposition planning is inherently collaborative and requires validation from technical stakeholders. This step involves cycles of planning, review, clarification, and refinement until the increment plan is clear and agreed upon.
+
+**Instructions**:
+1. **Analyze Feature for Increment Opportunities**:
+   - **Review updated system architecture** - Understand the architectural components identified in Step 1.2
+   - **Identify value delivery opportunities** - Determine which capabilities provide immediate user value
+   - **Assess risk mitigation needs** - Identify high-risk areas that should be addressed early
+   - **Plan learning opportunities** - Determine what should be learned early to inform later development
+   - **Consider implementation complexity** - Evaluate natural boundaries for implementation work
+
+2. **Create Feature Decomposition Document**:
+   - **Use the [Feature Decomposition Template](../templates/feature-decomposition-template.md)**
+      - **Recommended approach**: Use the [Feature Decomposition Prompt](../prompts/feature-decomposition-prompt.md) with an AI agent to conduct a structured decomposition interview
+   - **Plan increments based on multiple drivers**:
+     - **Early Value Delivery**: Get working functionality to users quickly
+     - **Risk Mitigation**: Fail fast on infeasible approaches with minimal investment
+     - **Learning Opportunities**: Implementation learning improves subsequent design decisions
+     - **Rapid Feedback**: Get user feedback early to prevent building the wrong thing
+     - **Manageable Complexity**: Smaller design sessions are less overwhelming and more focused
+     - **Adaptability**: Can pivot based on implementation discoveries and user feedback
+
+3. **Share for Stakeholder Review** with technical leads and product stakeholders and gather feedback on:
+   - **Value delivery strategy**: Does the increment plan deliver value early and frequently?
+   - **Risk mitigation**: Are high-risk areas addressed early in the plan?
+   - **Learning opportunities**: Does the plan maximize learning and feedback opportunities?
+   - **Implementation feasibility**: Are increment boundaries technically feasible and well-defined?
+   - **Architectural alignment**: Do increments align with system architecture components where appropriate?
+
+4. **Iterate on Decomposition Plan** based on feedback until stakeholders agree the increment plan is optimal for value delivery and implementation
+
+**Note**: If stakeholder review reveals issues requiring changes to previously approved documents (requirements, system architecture, etc.), follow the [Decision-Making & Conflict Resolution](#decision-making--conflict-resolution) process to obtain proper approvals before updating those documents.
+
+**Validation Activities**:
+- **Verify increment value**: Does each increment provide meaningful standalone value?
+- **Confirm risk mitigation**: Are high-risk areas addressed early in the plan?
+- **Validate learning opportunities**: Does the plan maximize learning and feedback?
+- **Check implementation feasibility**: Can each increment be implemented in 1-3 weeks?
+- **Assess architectural alignment**: Do increments align with system architecture where beneficial?
+
+**Completion Criteria**:
+- [ ] **Feature decomposition completed** - Increment plan is clear and validated
+- [ ] **Decomposition document created** - Feature decomposition document following template format
+- [ ] **Stakeholder agreement** - Increment plan is optimal for value delivery and implementation
 
 ---
 
@@ -198,9 +242,10 @@ All development work follows this five-phase process:
 
 **Instructions**:
 1. **Review current requirements document** - Focus on sections relevant to current increment scope
-2. **Review current feature decomposition** - Understand increment boundaries, interfaces, and dependencies
-3. **Review relevant ADRs** - Understand architectural decisions that may impact current increment
-4. **Review implementation learning documents** - Learn from previous increment patterns and lessons (may include learnings from previous projects for first increment)
+2. **Review updated system architecture** - Understand architectural components and integration points identified in Step 1.2
+3. **Review feature decomposition document** - Understand increment boundaries, interfaces, and dependencies for current increment
+4. **Review relevant ADRs** - Understand architectural decisions that may impact current increment
+5. **Review implementation learning documents** - Learn from previous increment patterns and lessons (may include learnings from previous projects for first increment)
 
 **Completion Criteria**:
 - [ ] All relevant context reviewed and understood (requirements, decomposition, ADRs, learning documents)
@@ -219,6 +264,8 @@ All development work follows this five-phase process:
    - **For Monolithic**: Design the complete feature
 2. **Share for implementation stakeholder review** with team(s) charged with implementing the design and gather feedback on technical feasibility, implementation approach, and design clarity
 3. **Iterate on technical design** based on feedback until implementation stakeholders agree the design is technically sound and implementable
+
+**Note**: If stakeholder review reveals issues requiring changes to previously approved documents (requirements, system architecture, feature decomposition, etc.), follow the [Decision-Making & Conflict Resolution](#decision-making--conflict-resolution) process to obtain proper approvals before updating those documents.
 
 **Validation Activities**:
 - **Verify technical feasibility**: Can the proposed approach be implemented with available resources and constraints?
@@ -473,6 +520,8 @@ This document should be reviewed and updated regularly to reflect:
 ## Related Documents
 
 - [Design Principles & Standards](design-principles-and-standards.md)
+- [System Architecture Document](../system-architecture.md) - Living document maintained by Architecture Lead
+- [System Architecture Update Prompt](../prompts/system-architecture-update-prompt.md)
 - [Requirements Template](../templates/requirements-template.md)
 - [Requirements Gathering Prompt](../prompts/requirements-gathering-prompt.md)
 - [Feature Decomposition Template](../templates/feature-decomposition-template.md)

@@ -108,25 +108,34 @@ Focus on how to deliver user value early and get feedback quickly:
 - Which increments would teach us the most about the remaining work?
 
 ### Phase 3: Systems Engineering Analysis
-Analyze the technical systems architecture and increment dependencies:
+Analyze the technical systems architecture, increment dependencies, and existing system integration:
+
+**Existing System Integration Analysis:**
+- What existing system capabilities can be leveraged by the increments?
+- Which existing components, APIs, or services will the increments need to integrate with?
+- What existing data models or schemas are relevant to the increment requirements?
+- How do existing architectural patterns apply to the proposed increments?
 
 **Dependency Analysis:**
 - Which functional areas must be implemented before others can begin?
 - What data, APIs, or infrastructure do increments need to share?
 - Which increments can be developed in parallel vs sequentially?
 - What external dependencies (libraries, services, data) affect sequencing?
+- What dependencies exist on existing system components?
 
 **Interface Architecture:**
 - How will increments communicate and share data?
 - What interfaces need to be defined between increments?
 - Which interfaces are most likely to evolve as we learn more?
 - How can we design interfaces to minimize future rework?
+- What interfaces are needed to connect with existing system components?
 
 **Integration Strategy:**
 - How do the increments work together to fulfill the complete requirements?
 - What's the overall system architecture that emerges from the increments?
 - Which integration points are most critical to get right early?
 - How does each increment fit into the existing portopt ecosystem?
+- How will the increments leverage and extend existing system capabilities?
 
 **Technical Coherence:**
 - Do the proposed increments create a coherent technical architecture?
@@ -148,6 +157,8 @@ Validate the proposed decomposition and prepare for implementation:
 - Is the overall system architecture sound and maintainable?
 - Are there gaps in functionality or integration?
 - Does the decomposition support future evolution and extension?
+- Does the decomposition effectively leverage existing system capabilities?
+- Are integration points with existing system components well-defined?
 
 **Implementation Readiness:**
 - Are increment scopes clear enough to begin design sessions?
@@ -235,6 +246,8 @@ Before finalizing the document, verify:
 - [ ] Interfaces between increments are specified at appropriate level
 - [ ] Integration architecture is coherent and maintainable
 - [ ] Decomposition aligns with existing system patterns
+- [ ] Existing system capabilities are effectively leveraged
+- [ ] Integration points with existing system are well-defined
 
 **Implementation Readiness:**
 - [ ] Increment scopes are clear and bounded (1-3 weeks each)
