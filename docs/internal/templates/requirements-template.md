@@ -19,21 +19,22 @@
 
 This document organizes requirements into five interconnected types that work together to ensure complete coverage from business need to system requirements:
 
+### **Personas** → **WHO**
+Define the key user archetypes and their characteristics that drive design decisions and user experience requirements.
+- **Primary Personas**: Main user types whose needs must be satisfied for success
+- **Secondary Personas**: Supporting user types with specific needs or constraints
+- **Anti-Personas**: User types explicitly not targeted or supported
+
 ### **Business Requirements** → **WHY**
 Define the fundamental problems, strategic goals, and user value that justify this development effort.
 - **Problem Statements**: Core challenges and pain points that need solving
-- **Objectives & Key Results**: Strategic goals with measurable success criteria  
+- **Objectives & Key Results**: Strategic goals with measurable success criteria
 - **User Stories**: Specific user-centered solutions that deliver business value
 
 ### **Functional Requirements** → **WHAT**
 Define the core capabilities and behaviors the system must provide, independent of how users access them.
 - System capabilities, business logic, data processing, and computational features
 - Focus on what the system does, not how developers interact with it
-
-### **Developer Experience (DX) Requirements** → **HOW** 
-Define how developers discover, access, and successfully use the functional capabilities.
-- API design, module organization, error handling, documentation, and usability
-- Critical for libraries where developers are the primary users
 
 ### **Non-Functional Requirements** → **HOW WELL**
 Define quality attributes and performance characteristics the system must exhibit.
@@ -46,25 +47,219 @@ Define environmental limitations and compatibility requirements the system must 
 - External factors that constrain implementation choices
 
 ### **Requirements Flow**
+**User Foundation:**
+- **Personas** → Define who we're building for
+
 **Business Foundation:**
 - **Problem Statements** → Identify core challenges
-- **Objectives & Key Results** → Define strategic goals  
+- **Objectives & Key Results** → Define strategic goals
 - **User Stories** → Translate into user-centered solutions
 
 **System Requirements:**
 - **Functional Requirements** → Define system capabilities (WHAT)
-- **DX Requirements** → Define developer interaction (HOW)
 - **Non-Functional Requirements** → Define quality attributes (HOW WELL)
 
 **Constraints:** All technical requirements operate within **Technical Constraints** (platform, compatibility, dependencies)
 
-*Note: For developer-facing libraries, Functional and DX requirements work as pairs - Functional defines system capabilities while DX defines how developers access those capabilities. Both trace back to the same User Stories but address different aspects of the solution.*
+*Note: For developer-facing libraries, Functional requirements define the system capabilities that developers will use. For end-user facing applications, Functional requirements define the system capabilities that support user interactions. All trace back to the same User Stories and address the core system capabilities needed to deliver value.*
+
+## Personas
+*Personas are detailed, semi-fictional representations of key user archetypes that help ensure requirements remain user-centered and realistic. They provide context for understanding user needs, behaviors, goals, and constraints. Well-defined personas help validate that business requirements, user stories, and technical requirements all address real user needs and create meaningful value. For developer-facing libraries, personas should focus on different types of developers, analysts, and technical users. For end-user facing applications, personas should represent the target end users who will interact with the user interface.*
+
+### Primary Personas
+*Primary personas represent the main user types whose needs must be satisfied for the project to be successful. These are the users whose goals and workflows drive the core functionality and user experience decisions.*
+
+**Primary Persona Template:**
+
+> **P-[#]**: [Persona Name] - [Brief role description]
+>
+> **Demographics & Background:**
+> - **Role**: [Job title and primary responsibilities]
+> - **Experience Level**: [Beginner/Intermediate/Expert in relevant domains]
+> - **Technical Skills**: [Programming languages, tools, frameworks they use]
+> - **Work Environment**: [Typical work setting, tools, constraints]
+> - **Goals**: [What they want to achieve in their role]
+>
+> **Behaviors & Workflows:**
+> - **Primary Tasks**: [Most common activities they perform]
+> - **Decision Making**: [How they approach problems and make choices]
+> - **Information Sources**: [Where they get help, documentation, examples]
+> - **Pain Points**: [Current frustrations and challenges]
+> - **Success Metrics**: [How they measure success in their work]
+>
+> **Technical Context:**
+> - **Current Tools**: [What they use now for similar tasks]
+> - **Integration Needs**: [How this fits into their existing workflow]
+> - **Performance Expectations**: [Speed, reliability, accuracy requirements]
+> - **Learning Preferences**: [How they prefer to learn new tools]
+>
+> **Traceability:**
+> - **Primary Problems**: [PS-IDs that directly affect this persona]
+> - **Key User Stories**: [US-IDs that primarily serve this persona]
+> - **Critical Requirements**: [FR-IDs that are essential for this persona]
+> - **Related Personas**: [Other persona IDs that interact with or depend on this one]
+
+**Example for Developer-Facing Library:**
+
+> **P-1**: Sarah Chen - Quantitative Portfolio Manager
+>
+> **Demographics & Background:**
+> - **Role**: Senior Portfolio Manager at a mid-size investment firm, manages $500M in assets across multiple strategies
+> - **Experience Level**: Expert in portfolio theory, intermediate Python user, expert in Excel and Bloomberg
+> - **Technical Skills**: Python (pandas, numpy), R, SQL, Bloomberg Terminal, Excel VBA
+> - **Work Environment**: Fast-paced investment office, needs quick answers for client meetings and investment committee presentations
+> - **Goals**: Optimize portfolio performance, manage risk effectively, provide clear analysis to stakeholders
+>
+> **Behaviors & Workflows:**
+> - **Primary Tasks**: Daily portfolio analysis, risk monitoring, factor exposure calculations, client reporting
+> - **Decision Making**: Data-driven, needs to understand methodology and assumptions, values transparency
+> - **Information Sources**: Bloomberg, academic papers, vendor research, internal models
+> - **Pain Points**: Time-consuming manual calculations, difficulty comparing multiple portfolios, inconsistent risk metrics
+> - **Success Metrics**: Portfolio performance vs benchmarks, risk-adjusted returns, client satisfaction
+>
+> **Technical Context:**
+> - **Current Tools**: Bloomberg PORT, Excel models, custom R scripts, vendor risk systems
+> - **Integration Needs**: Must work with existing data sources, export to Excel/PDF for presentations
+> - **Performance Expectations**: Calculations must complete within 30 seconds, results must be accurate and reproducible
+> - **Learning Preferences**: Prefers working examples, clear documentation, gradual complexity progression
+>
+> **Traceability:**
+> - **Primary Problems**: PS-1 (cross-portfolio factor analysis), PS-3 (time-consuming manual processes)
+> - **Key User Stories**: US-1 (factor exposure calculation), US-4 (risk reporting)
+> - **Critical Requirements**: FR-1 (risk calculation), FR-3 (cross-portfolio analysis)
+> - **Related Personas**: P-2 (Risk Analyst), P-3 (Junior Analyst)
+
+**Example for End-User Facing Application:**
+
+> **P-1**: Maria Rodriguez - Small Business Owner
+>
+> **Demographics & Background:**
+> - **Role**: Owner of a small retail business with 5 employees, manages inventory, sales, and customer relationships
+> - **Experience Level**: Beginner to intermediate computer user, comfortable with basic software applications
+> - **Technical Skills**: Microsoft Office, basic web browsing, smartphone apps, social media
+> - **Work Environment**: Small office with shared computer, works from home occasionally, uses mobile devices frequently
+> - **Goals**: Increase sales, manage inventory efficiently, understand customer behavior, save time on administrative tasks
+>
+> **Behaviors & Workflows:**
+> - **Primary Tasks**: Daily sales tracking, inventory management, customer communication, financial reporting
+> - **Decision Making**: Intuitive, values simplicity, needs clear visual feedback, prefers step-by-step guidance
+> - **Information Sources**: Business software, online tutorials, peer recommendations, vendor support
+> - **Pain Points**: Complex software interfaces, time-consuming data entry, difficulty understanding reports, limited technical support
+> - **Success Metrics**: Increased sales, reduced time on administrative tasks, better inventory management, improved customer satisfaction
+>
+> **Technical Context:**
+> - **Current Tools**: Excel spreadsheets, basic accounting software, paper-based systems, smartphone apps
+> - **Integration Needs**: Must work with existing business processes, export data for accounting, mobile access
+> - **Performance Expectations**: Fast, reliable, easy to learn, minimal training required
+> - **Learning Preferences**: Visual tutorials, hands-on practice, simple interfaces, immediate feedback
+>
+> **Traceability:**
+> - **Primary Problems**: PS-1 (complex business software), PS-2 (time-consuming administrative tasks)
+> - **Key User Stories**: US-1 (simple sales tracking), US-2 (inventory management)
+> - **Critical Requirements**: FR-1 (user-friendly interface), FR-2 (mobile access)
+> - **Related Personas**: P-2 (Store Manager), P-3 (Accountant)
+
+### Secondary Personas
+*Secondary personas represent important user types with specific needs or constraints that should be considered but are not the primary drivers of the solution.*
+
+**Secondary Persona Template:**
+
+> **P-[#]**: [Persona Name] - [Brief role description]
+>
+> **Demographics & Background:**
+> - **Role**: [Job title and responsibilities]
+> - **Experience Level**: [Beginner/Intermediate/Expert]
+> - **Technical Skills**: [Relevant technical background]
+> - **Work Environment**: [Work context and constraints]
+> - **Goals**: [What they want to achieve]
+>
+> **Specific Needs & Constraints:**
+> - **Unique Requirements**: [What makes this persona different from primary personas]
+> - **Constraints**: [Limitations or special considerations]
+> - **Integration Points**: [How they interact with primary personas or the system]
+>
+> **Traceability:**
+> - **Related Problems**: [PS-IDs that affect this persona]
+> - **Supporting User Stories**: [US-IDs that serve this persona]
+> - **Specific Requirements**: [FR-IDs that address this persona's needs]
+
+**Example:**
+
+> **P-2**: Marcus Rodriguez - Risk Analyst
+>
+> **Demographics & Background:**
+> - **Role**: Risk Analyst supporting portfolio managers, responsible for risk monitoring and reporting
+> - **Experience Level**: Expert in risk modeling, intermediate Python user, expert in statistical analysis
+> - **Technical Skills**: Python (scipy, statsmodels), R, SQL, statistical modeling, stress testing
+> - **Work Environment**: Risk management team, needs to provide detailed analysis and regulatory reporting
+> - **Goals**: Ensure portfolio risks are within limits, provide detailed risk analysis, support regulatory compliance
+>
+> **Specific Needs & Constraints:**
+> - **Unique Requirements**: Needs detailed risk decomposition, stress testing capabilities, regulatory reporting formats
+> - **Constraints**: Must work within regulatory frameworks, needs audit trails, requires detailed documentation
+> - **Integration Points**: Supports portfolio managers (P-1), provides analysis to compliance team
+>
+> **Traceability:**
+> - **Related Problems**: PS-2 (limited risk model flexibility), PS-4 (regulatory reporting complexity)
+> - **Supporting User Stories**: US-3 (risk model comparison), US-5 (regulatory reporting)
+> - **Specific Requirements**: FR-2 (multiple risk models), FR-4 (risk decomposition)
+
+### Anti-Personas
+*Anti-personas represent user types that are explicitly not targeted or supported by the solution. Defining these helps clarify scope and prevent scope creep.*
+
+**Anti-Persona Template:**
+
+> **AP-[#]**: [Anti-Persona Name] - [Brief description of why they're not targeted]
+>
+> **Why Not Targeted:**
+> - **Scope Mismatch**: [Why this persona falls outside the solution scope]
+> - **Alternative Solutions**: [What they should use instead]
+> - **Impact on Design**: [How this exclusion affects design decisions]
+>
+> **Traceability:**
+> - **Scope Boundaries**: [How this helps define what NOT to build]
+> - **Design Constraints**: [How this exclusion influences requirements]
+
+**Example for Developer-Facing Library:**
+
+> **AP-1**: Retail Individual Investors - Not targeted due to complexity and regulatory requirements
+>
+> **Why Not Targeted:**
+> - **Scope Mismatch**: Library is designed for institutional use, retail investors need simplified interfaces and different regulatory compliance
+> - **Alternative Solutions**: Should use retail-focused investment platforms or robo-advisors
+> - **Impact on Design**: Allows focus on professional-grade features without retail usability constraints
+>
+> **Traceability:**
+> - **Scope Boundaries**: No retail-friendly interfaces, no simplified workflows, no retail regulatory compliance
+> - **Design Constraints**: Can assume professional technical knowledge, focus on institutional workflows
+
+**Example for End-User Facing Application:**
+
+> **AP-1**: Enterprise IT Administrators - Not targeted due to deployment complexity and security requirements
+>
+> **Why Not Targeted:**
+> - **Scope Mismatch**: Application is designed for small business use, enterprise users need advanced security, integration, and deployment options
+> - **Alternative Solutions**: Should use enterprise-grade business management platforms with IT administration features
+> - **Impact on Design**: Allows focus on simplicity and ease of use without enterprise complexity
+>
+> **Traceability:**
+> - **Scope Boundaries**: No enterprise deployment options, no advanced security features, no complex integrations
+> - **Design Constraints**: Can focus on simplicity and ease of use, assume basic technical knowledge
 
 ## Business Requirements
-*Business requirements capture the WHY behind any development effort - the fundamental problems that need solving, the strategic goals to achieve, and the user value to deliver. This section establishes the business justification and user-centered foundation for all technical work that follows. Business requirements consist of three interconnected components: Problem Statements identify the core challenges, Objectives & Key Results define strategic goals with measurable outcomes, and User Stories translate business needs into specific user-centered solutions. Unlike functional or technical requirements that focus on system capabilities, business requirements focus on human needs, business value, and measurable impact. Every technical requirement should trace back to these business requirements to ensure development efforts remain aligned with actual user problems and organizational goals.*
+*Business requirements capture the WHY behind any development effort - the fundamental problems that need solving, the strategic goals to achieve, and the user value to deliver. This section establishes the business justification and user-centered foundation for all technical work that follows.*
+
+*Business requirements consist of three interconnected components:*
+- *Problem Statements identify the core challenges*
+- *Objectives & Key Results define strategic goals with measurable outcomes*
+- *User Stories translate business needs into specific user-centered solutions*
+
+*Unlike functional or technical requirements that focus on system capabilities, business requirements focus on human needs, business value, and measurable impact. Every technical requirement should trace back to these business requirements to ensure development efforts remain aligned with actual user problems and organizational goals.*
 
 ### Problem Statements
-*Problem statements define the core challenges and pain points that drive the need for new functionality. They serve as the foundation for all subsequent requirements by clearly articulating who is affected, what they're trying to accomplish, and why current solutions are inadequate. Well-written problem statements ensure that objectives, user stories, and technical requirements all trace back to real user needs and business value. For developer-facing libraries like portopt, problem statements should focus on developer workflow challenges, API limitations, or gaps in functionality that prevent users from achieving their goals efficiently.*
+*Problem statements define the core challenges and pain points that drive the need for new functionality. They serve as the foundation for all subsequent requirements by clearly articulating who is affected, what they're trying to accomplish, and why current solutions are inadequate. Well-written problem statements ensure that objectives, user stories, and technical requirements all trace back to real user needs and business value.*
+
+*For developer-facing libraries, problem statements should focus on developer workflow challenges, API limitations, or gaps in functionality. For end-user facing applications, problem statements should focus on user interface limitations, workflow inefficiencies, or gaps in user experience that prevent users from achieving their goals efficiently.*
 
 #### Primary Problem
 **Problem Statement Template:**
@@ -75,8 +270,9 @@ Define environmental limitations and compatibility requirements the system must 
 > - **Why**: [What is the underlying business/technical need?]
 > - **Current State**: [How do they do this today? What are the pain points?]
 > - **Impact**: [What happens if this problem isn't solved? Cost/risk/opportunity]
-> 
+>
 > **Traceability:**
+> - **Primary Personas**: [P-IDs of personas most affected by this problem]
 > - **Addresses**: [Parent problem statement this stems from, if any - use PS-ID]
 > - **Addressed By**: [OBJ-IDs that tackle this problem]
 > - **Related Problems**: [Other PS-IDs that are related or dependent]
@@ -84,13 +280,14 @@ Define environmental limitations and compatibility requirements the system must 
 **Example:**
 
 > **PS-1**: Portfolio managers need to analyze factor exposures across multiple portfolios simultaneously
-> - **Who**: Portfolio managers using the portopt library
+> - **Who**: Portfolio managers using the portopt library (P-1: Sarah Chen)
 > - **What**: Need to analyze factor exposures across multiple portfolios simultaneously
 > - **Why**: To identify concentration risks and optimize asset allocation across accounts
 > - **Current State**: Must analyze each portfolio individually, leading to missed cross-portfolio insights
 > - **Impact**: Suboptimal risk management and missed diversification opportunities
-> 
+>
 > **Traceability:**
+> - **Primary Personas**: P-1 (Sarah Chen - Portfolio Manager)
 > - **Addresses**: None (primary problem statement)
 > - **Addressed By**: OBJ-1 (Improve portfolio risk management capabilities)
 > - **Related Problems**: PS-2 (Limited risk model flexibility)
@@ -105,13 +302,14 @@ Define environmental limitations and compatibility requirements the system must 
 **OKR Template:**
 
 > **OBJ-[#]**: [Ambitious, qualitative goal that addresses the main problem. Format: "Improve/Enable/Transform [capability/process] to solve [problem]"]
-> 
+>
 > **Key Results:**
 > - **KR1**: [Measurable outcome with specific target and timeline]
 > - **KR2**: [Another measurable outcome with target and timeline]
 > - **KR3**: [Third measurable outcome with target and timeline]
-> 
+>
 > **Traceability:**
+> - **Target Personas**: [P-IDs of personas this objective primarily serves]
 > - **Addresses Problems**: [PS-IDs that this objective tackles]
 > - **Supported By**: [US-IDs that contribute to this objective]
 > - **Related Objectives**: [Other OBJ-IDs that are related or dependent]
@@ -119,13 +317,14 @@ Define environmental limitations and compatibility requirements the system must 
 **Example:**
 
 > **OBJ-1**: Improve portfolio risk management capabilities across multi-portfolio investment programs.
-> 
+>
 > **Key Results:**
 > - **KR1**: Reduce time to identify concentration risks by 30% within 6 months
 > - **KR2**: Achieve 80% adoption by portfolio managers within 6 months of release
 > - **KR3**: Decrease risk-related portfolio losses by 15% within 1 year
-> 
+>
 > **Traceability:**
+> - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-2 (Marcus Rodriguez - Risk Analyst)
 > - **Addresses Problems**: PS-1 (cross-portfolio factor analysis)
 > - **Supported By**: US-1 (factor exposure calculation), US-2 (risk visualization)
 > - **Related Objectives**: OBJ-2 (expand risk model options)
@@ -139,57 +338,59 @@ Define environmental limitations and compatibility requirements the system must 
 #### Core User Stories
 **User Story Template:**
 
-> **US-[#]**: As a [user persona],  
-> I want to [desired functionality],  
+> **US-[#]**: As a [user persona],
+> I want to [desired functionality],
 > So that [business benefit/value].
-> 
-> **Acceptance Criteria:**  
+>
+> **Acceptance Criteria:**
 > *These define when this specific user story is functionally complete. Choose either bullet point or Given/When/Then format:*
-> 
+>
 > **Option 1 - Bullet Point Format** (best for simple, straightforward requirements):
 > - [ ] [Specific, testable criterion 1]
 > - [ ] [Specific, testable criterion 2]
 > - [ ] [Specific, testable criterion 3]
-> 
+>
 > **Option 2 - Given/When/Then Format** (best for complex behaviors with specific contexts):
-> - [ ] Given [initial context or state]  
->       When [action is performed]  
+> - [ ] Given [initial context or state]
+>       When [action is performed]
 >       Then [expected outcome occurs]
-> - [ ] Given [another context]  
->       When [different action]  
+> - [ ] Given [another context]
+>       When [different action]
 >       Then [different expected outcome]
-> 
+>
  > **Traceability:**
+> - **Primary Persona**: [P-ID of the main persona this story serves]
 > - **Supports Objective**: [OBJ-ID that this story contributes to]
-> - **Addresses Problem**: [PS-ID that this story helps solve]  
+> - **Addresses Problem**: [PS-ID that this story helps solve]
 > - **Implemented By**: [FR-IDs that deliver this story]
 > - **Related Stories**: [Other US-IDs that are related or dependent]
 
 **Example (connecting to the OKR above):**
 
-> **US-1**: As a portfolio manager,  
-> I want to calculate cross-sectional factor exposures for multiple portfolios,  
+> **US-1**: As a portfolio manager,
+> I want to calculate cross-sectional factor exposures for multiple portfolios,
 > So that I can quickly identify concentration risks across my entire investment program.
-> 
+>
 > **Acceptance Criteria (Bullet Point Format):**
 > - [ ] Can input multiple Portfolio objects simultaneously
 > - [ ] Returns factor exposures in a standardized format within 30 seconds
 > - [ ] Handles missing factor data gracefully with clear warnings
 > - [ ] Provides summary statistics highlighting concentration risks
 > - [ ] Supports custom factor models for specialized analysis
-> 
+>
 > **Alternative: Acceptance Criteria (Given/When/Then Format):**
-> - [ ] Given multiple Portfolio objects with valid weights  
->       When I call `calculate_factor_exposures(portfolios)`  
+> - [ ] Given multiple Portfolio objects with valid weights
+>       When I call `calculate_factor_exposures(portfolios)`
 >       Then I receive a DataFrame with factor exposures for each portfolio within 30 seconds
-> - [ ] Given portfolios with missing factor data  
->       When I calculate factor exposures  
+> - [ ] Given portfolios with missing factor data
+>       When I calculate factor exposures
 >       Then missing data is handled gracefully with clear warnings and suggested actions
-> - [ ] Given a custom factor model specification  
->       When I pass it to the factor exposure calculation  
+> - [ ] Given a custom factor model specification
+>       When I pass it to the factor exposure calculation
 >       Then the results use the custom model and highlight concentration risks
-> 
+>
  > **Traceability:**
+> - **Primary Persona**: P-1 (Sarah Chen - Portfolio Manager)
 > - **Supports Objective**: OBJ-1 (Improve portfolio risk management capabilities)
 > - **Addresses Problem**: PS-1 (cross-portfolio factor analysis)
 > - **Implemented By**: FR-1 (factor exposure calculation), FR-2 (risk metrics)
@@ -200,31 +401,32 @@ Define environmental limitations and compatibility requirements the system must 
 
 ## Functional Requirements
 
-*This section defines what the system must do - the core capabilities and behaviors that fulfill business requirements. For developer-facing libraries, functional requirements focus on system capabilities independent of how developers will access them.*
+*This section defines what the system must do - the core capabilities and behaviors that fulfill business requirements. For developer-facing libraries, functional requirements focus on system capabilities independent of how developers will access them. For end-user facing applications, functional requirements focus on system capabilities independent of how users will interact with the user interface.*
 
 **Functional Requirements Template:**
 
 > **[Capability Category]**
 > - **FR-[#]**: The system must [capability description]
-> 
-> **Priority**: [Must have | Should have | Could have | Won't have]  
-> **User Role**: [Primary user role this requirement serves]  
-> **Preconditions**: [Conditions that must be true before execution]  
-> **Postconditions**: [Expected system state after execution]  
+>
+> **Priority**: [Must have | Should have | Could have | Won't have]
+> **User Role**: [Primary user role this requirement serves]
+> **Preconditions**: [Conditions that must be true before execution]
+> **Postconditions**: [Expected system state after execution]
 > **Dependencies**: [Other requirements this depends on, or "None"]
-> 
+>
 > **Traceability:**
 > - **Problem Statement**: [PS-ID] - Brief description of the problem this addresses
 > - **Objective**: [OBJ-ID] - The objective this requirement helps achieve
 > - **User Story**: [US-ID] - The user story this requirement implements
+> - **Target Personas**: [P-IDs of personas this requirement primarily serves]
 > - **Impacts**: [List of FR-IDs] - Other requirements that depend on this one
-> 
-> **Completion Criteria:**
-> - [ ] [Technical validation requirement]
-> - [ ] [Performance benchmark requirement]
-> - [ ] [Integration requirement]
-> - [ ] [Quality gate requirement]
-> - [ ] [Documentation requirement]
+
+**Completion Criteria:**
+- [ ] [Technical validation requirement]
+- [ ] [Performance benchmark requirement]
+- [ ] [Integration requirement]
+- [ ] [Quality gate requirement]
+- [ ] [Documentation requirement]
 
 **Common Statement Patterns:**
 - **Basic Action**: "The system must [action] [object] [constraint/condition]"
@@ -243,13 +445,21 @@ Define environmental limitations and compatibility requirements the system must 
 
 > **1. Risk Calculation**
 >    - **FR-1**: The system must calculate portfolio risk metrics (volatility, VaR, CVaR) for individual portfolios
->    
->    **Priority**: Must have  
->    **User Role**: Portfolio Manager, Risk Analyst  
->    **Preconditions**: Portfolio has valid weights that sum to 1.0 and at least 2 assets with historical return data  
->    **Postconditions**: Risk metrics are calculated, validated, and cached for future access  
+>
+>    **Priority**: Must have
+>    **User Role**: Portfolio Manager, Risk Analyst
+>    **Preconditions**: Portfolio has valid weights that sum to 1.0 and at least 2 assets with historical return data
+>    **Postconditions**: Risk metrics are calculated, validated, and cached for future access
 >    **Dependencies**: None
->    
+>
+>    **Traceability:**
+>    - **Problem Statement**: PS-1 - Portfolio managers need cross-portfolio factor analysis
+>    - **Objective**: OBJ-1 - Improve portfolio risk management capabilities
+>    - **User Story**: US-1 - Factor exposure calculation for multiple portfolios
+>    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-2 (Marcus Rodriguez - Risk Analyst)
+>
+>    - **Impacts**: FR-3 (cross-portfolio analysis), FR-5 (risk-adjusted performance metrics)
+>
 >    **Completion Criteria:**
 >    - [ ] All three risk metrics implemented and unit tested
 >    - [ ] Handles edge cases (empty portfolios, single asset, missing data)
@@ -257,198 +467,122 @@ Define environmental limitations and compatibility requirements the system must 
 >    - [ ] Integration: Works with all supported portfolio data formats
 >    - [ ] Documentation: API docs and usage examples complete
 >    - [ ] Test coverage: >95% for risk calculation module
->    
+>
 >    - **FR-2**: The system must support multiple risk models (historical, parametric, Monte Carlo)
->    
->    **Priority**: Should have  
->    **User Role**: Quantitative Analyst, Risk Analyst  
->    **Preconditions**: Portfolio has sufficient historical return data (minimum 30 data points for reliable estimates)  
->    **Postconditions**: User can select and switch between risk models, with model choice persisted for session  
+>
+>    **Priority**: Should have
+>    **User Role**: Quantitative Analyst, Risk Analyst
+>    **Preconditions**: Portfolio has sufficient historical return data (minimum 30 data points for reliable estimates)
+>    **Postconditions**: User can select and switch between risk models, with model choice persisted for session
 >    **Dependencies**: FR-1 (portfolio risk metrics calculation)
->    
+>
 >    **Traceability:**
 >    - **Problem Statement**: PS-2 - Current risk calculations are limited to single methodology
 >    - **Objective**: OBJ-2 - Provide comprehensive risk analysis capabilities
 >    - **User Story**: US-3 - As a risk analyst, I want to compare different risk models
+>    - **Target Personas**: P-2 (Marcus Rodriguez - Risk Analyst), P-4 (Data Scientist)
 >    - **Impacts**: FR-5 (risk-adjusted performance metrics), FR-8 (stress testing)
->    
+>
 >    **Completion Criteria:**
 >    - [ ] All three risk models implemented and selectable by user
 >    - [ ] User can switch between models seamlessly within same session
 >    - [ ] Performance: Risk model switching <5 seconds
 >    - [ ] Documentation: Clear examples for each risk model
 >    - [ ] Validation: Results validated against known benchmarks
-> 
+>
 > **2. Cross-Portfolio Analysis**
 >    - **FR-3**: The system must identify factor concentration risks across multiple portfolios
->    
->    **Priority**: Must have  
->    **User Role**: Portfolio Manager, Risk Manager  
->    **Preconditions**: Multiple portfolios loaded with valid factor exposure data  
->    **Postconditions**: Concentration risks identified and flagged with severity levels and recommendations  
+>
+>    **Priority**: Must have
+>    **User Role**: Portfolio Manager, Risk Manager
+>    **Preconditions**: Multiple portfolios loaded with valid factor exposure data
+>    **Postconditions**: Concentration risks identified and flagged with severity levels and recommendations
 >    **Dependencies**: FR-1 (portfolio risk metrics calculation)
->    
+>
+>    **Traceability:**
+>    - **Problem Statement**: PS-1 - Cross-portfolio factor analysis needed
+>    - **Objective**: OBJ-1 - Improve portfolio risk management capabilities
+>    - **User Story**: US-1 - Factor exposure calculation for multiple portfolios
+>    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-3 (Junior Analyst)
+>    - **Impacts**: FR-4 (risk decomposition reports), FR-6 (optimization recommendations)
+>
 >    **Completion Criteria:**
 >    - [ ] Analyzes factor exposures across unlimited number of portfolios
 >    - [ ] Identifies concentration risks above configurable thresholds
 >    - [ ] Performance: Analysis of 100 portfolios <30 seconds
 >    - [ ] Output: Clear visualization of concentration risks
 >    - [ ] Integration: Works with existing portfolio loading functionality
->    
+>
 >    - **FR-4**: The system must generate risk decomposition reports showing contribution by asset class and factor
->    
->    **Priority**: Should have  
->    **User Role**: Portfolio Manager, Investment Committee  
->    **Preconditions**: Risk analysis has been performed and results are available  
->    **Postconditions**: Formatted reports generated and available for export or presentation  
+>
+>    **Priority**: Should have
+>    **User Role**: Portfolio Manager, Investment Committee
+>    **Preconditions**: Risk analysis has been performed and results are available
+>    **Postconditions**: Formatted reports generated and available for export or presentation
 >    **Dependencies**: FR-1 (portfolio risk metrics), FR-3 (concentration risk analysis)
->    
+>
+>    **Traceability:**
+>    - **Problem Statement**: PS-3 - Time-consuming manual reporting processes
+>    - **Objective**: OBJ-1 - Improve portfolio risk management capabilities
+>    - **User Story**: US-4 - As a portfolio manager, I want automated risk reporting
+>    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-5 (Investment Committee Member)
+>    - **Impacts**: FR-7 (presentation export), FR-9 (automated reporting)
+>
 >    **Completion Criteria:**
 >    - [ ] Reports show risk contribution by asset class and individual factors
 >    - [ ] Supports export to multiple formats (PDF, Excel, CSV)
 >    - [ ] Customizable report templates for different stakeholder needs
 >    - [ ] Performance: Report generation <10 seconds for typical portfolio
 >    - [ ] Documentation: Report interpretation guide included
+>
 
 **Example 2: Optimization Engine**
 
 > **1. Optimization Algorithms**
 >    - **FR-1**: The system must support mean-variance optimization with customizable constraints
->    
->    **Priority**: Must have  
->    **User Role**: Portfolio Manager, Quantitative Analyst  
->    **Preconditions**: Expected returns and covariance matrix available, constraints are mathematically feasible  
->    **Postconditions**: Optimal portfolio weights calculated and validated, optimization results stored  
+>
+>    **Priority**: Must have
+>    **User Role**: Portfolio Manager, Quantitative Analyst
+>    **Preconditions**: Expected returns and covariance matrix available, constraints are mathematically feasible
+>    **Postconditions**: Optimal portfolio weights calculated and validated, optimization results stored
 >    **Dependencies**: None
->    
+>
+>    **Traceability:**
+>    - **Problem Statement**: PS-4 - Limited optimization strategy options
+>    - **Objective**: OBJ-2 - Expand optimization capabilities beyond mean-variance
+>    - **User Story**: US-2 - As a portfolio manager, I want alternative optimization strategies
+>    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-4 (Data Scientist)
+>    - **Impacts**: FR-2 (alternative optimization strategies), FR-6 (backtesting framework)
+>
 >    **Completion Criteria:**
 >    - [ ] Mean-variance optimization algorithm implemented and tested
 >    - [ ] Supports custom constraints (weight limits, sector limits, etc.)
 >    - [ ] Performance: Optimization of 500-asset portfolio <60 seconds
 >    - [ ] Validation: Results match theoretical expected outcomes
 >    - [ ] Error handling: Clear messages for infeasible constraint combinations
->    
+>
 >    - **FR-2**: The system must support risk parity and minimum variance optimization strategies
->    
->    **Priority**: Must have  
->    **User Role**: Quantitative Analyst, Portfolio Manager  
->    **Preconditions**: Covariance matrix is available and positive semi-definite  
->    **Postconditions**: Alternative optimization strategies available with consistent interface  
+>
+>    **Priority**: Must have
+>    **User Role**: Quantitative Analyst, Portfolio Manager
+>    **Preconditions**: Covariance matrix is available and positive semi-definite
+>    **Postconditions**: Alternative optimization strategies available with consistent interface
 >    **Dependencies**: FR-1 (mean-variance optimization foundation)
->    
+>
 >    **Traceability:**
->    - **Problem Statement**: PS-1 - Mean-variance optimization has limitations in practice
->    - **Objective**: OBJ-1 - Expand optimization capabilities beyond mean-variance
+>    - **Problem Statement**: PS-4 - Limited optimization strategy options
+>    - **Objective**: OBJ-2 - Expand optimization capabilities beyond mean-variance
 >    - **User Story**: US-2 - As a portfolio manager, I want alternative optimization strategies
+>    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-4 (Data Scientist)
 >    - **Impacts**: FR-4 (custom optimization strategies), FR-6 (backtesting framework)
->    
+>
 >    **Completion Criteria:**
 >    - [ ] Both risk parity and minimum variance algorithms implemented
 >    - [ ] User can select optimization strategy via simple parameter
 >    - [ ] Performance: Both strategies complete within same time constraints as mean-variance
 >    - [ ] Documentation: Clear explanation of when to use each strategy
 >    - [ ] Validation: Results validated against published research examples
-
-## Developer Experience (DX) Requirements
-
-*For developer-facing libraries like portopt, developer experience IS the product experience. This section defines how developers will discover, access, and successfully use the functional capabilities. Unlike traditional products where UX is separate from functional requirements, library DX requirements are core product requirements that directly impact adoption and user satisfaction.*
-
-### Expected Module Integration
-*Module organization directly impacts developer experience by determining where developers find functionality, how they import it, and whether it follows expected patterns.*
-
-- **Primary Module**: [Which existing module will house the main functionality]
-- **Supporting Modules**: [Modules that will be modified or extended]
-- **New Modules**: [Any new modules that may be needed]
-
-**Example:**
-*For a requirement like "Add support for custom factor models":*
-
-> - **Primary Module**: `portopt.factor` - Will house the new factor model interface and base classes
-> - **Supporting Modules**: 
->   - `portopt.portfolio` - Modified to accept custom factor models in analysis methods
->   - `portopt.metrics` - Extended to calculate metrics using custom factor exposures
->   - `portopt.config` - Updated to support custom factor model configuration
-> - **New Modules**: None - functionality fits within existing module structure
-
-**Purpose:**
-- Assess implementation scope and complexity early
-- Ensure new functionality follows logical code organization
-- Identify potential integration challenges with existing modules
-- Plan for API consistency and backward compatibility
-
-### API Design Considerations
-*Define how this functionality integrates with existing APIs and what design constraints or exceptions apply.*
-
-*This implementation must follow the [portopt Design Principles](../design-principles.md). Document any requirement-specific design constraints that will impact how developers interact with the functionality.*
-
-**API Design Consideration Template:**
-
-> - **[Descriptive Title]**: [Brief description of the API design constraint or consideration]
->   - **Type**: [Consistency | Exception | Integration | Usability | Backward Compatibility]
->   - **Rationale**: [Why this consideration is necessary for good DX]
->   - **Impact**: [How this affects API design and developer workflows]
->   - **Validation**: [How API design quality will be verified]
-
-**Examples:**
-
-> - **Parameter Naming Consistency**: New optimization methods must follow existing parameter naming conventions
->   - **Type**: Consistency
->   - **Rationale**: Developers expect consistent parameter names across similar functions
->   - **Impact**: Method signatures must use 'weights' not 'allocations', 'returns' not 'performance'
->   - **Validation**: API review confirms naming matches existing optimization methods
-> 
-> - **Fluent Interface Exception**: Risk calculation may return objects that support method chaining
->   - **Type**: Exception
->   - **Rationale**: Risk analysis workflows naturally involve multiple related calculations
->   - **Impact**: Return objects with methods that return self to enable chaining
->   - **Validation**: Documentation examples demonstrate natural workflow patterns
-
-### Error Handling & Developer Messaging
-*Define how the system communicates problems and guides developers toward solutions.*
-
-**Error Handling Requirements:**
-- **Error Message Clarity**: [Requirements for clear, actionable error messages]
-- **Exception Types**: [What specific exception types should be used]
-- **Recovery Guidance**: [How errors should guide developers toward solutions]
-- **Validation Feedback**: [How input validation errors are communicated]
-
-**Example:**
-
-> - Portfolio weight validation must provide specific correction guidance
-> - Custom factor model errors must suggest valid alternative configurations  
-> - Performance warnings must include optimization recommendations
-
-### Documentation Requirements
-*Define what documentation is needed for successful developer adoption.*
-
-**Required Documentation:**
-- **API Reference**: [Scope and detail of API documentation needed]
-- **Usage Examples**: [Types and complexity of examples required]
-- **Migration Guides**: [Documentation for changes affecting existing users]
-- **Troubleshooting**: [Common problems and solutions to document]
-
-**Example:**
-
-> - Complete docstrings with parameter types and example usage
-> - Jupyter notebook demonstrating end-to-end factor analysis workflow  
-> - Migration guide for users of deprecated risk calculation methods
-> - FAQ covering common portfolio data formatting issues
-
-### Learning Curve & Usability
-*Define developer onboarding and complexity expectations.*
-
-**Usability Requirements:**
-- **Discoverability**: [How developers will find this functionality]
-- **Learning Curve**: [Complexity expectations and learning path]
-- **Integration Effort**: [How easily this integrates with developer workflows]
-- **Cognitive Load**: [Mental complexity of using this functionality]
-
-**Example:**
-
-> - New users should be able to run basic factor analysis within 5 minutes of reading documentation
-> - Advanced features should be discoverable through progressive disclosure in documentation  
-> - Integration with existing Portfolio objects should require no additional imports
-> - Method names should be self-documenting for common use cases
+>
 
 ## Non-Functional Requirements
 *These specify quality attributes that the implemented system must meet. Unlike Definition of Done (which defines process and quality gates for story completion), these define measurable characteristics of the system itself.*
@@ -462,7 +596,7 @@ Define environmental limitations and compatibility requirements the system must 
 **Examples:**
 
 > - Portfolio volatility calculation must complete within 100ms for portfolios containing up to 500 assets
-> - CSV file format validation must display errors within 5 seconds of upload  
+> - CSV file format validation must display errors within 5 seconds of upload
 > - Factor exposure calculations must process 100 portfolios within 30 seconds
 
 ### Reliability Requirements
@@ -485,7 +619,7 @@ Define environmental limitations and compatibility requirements the system must 
 - **Python Version Compatibility**: [Minimum and maximum Python versions required]
 - **Hardware Requirements**: [Minimum hardware specifications needed]
 
-### Dependency Constraints  
+### Dependency Constraints
 - **Required Compatibility**: [External systems or libraries this feature must be compatible with]
 - **Prohibited Dependencies**: [Dependencies that cannot be used due to licensing, security, or policy constraints]
 - **Version Constraints**: [Specific version requirements for critical dependencies]
@@ -505,36 +639,37 @@ Define environmental limitations and compatibility requirements the system must 
 ### Quick Reference Matrix
 *This matrix provides a high-level overview of traceability relationships. Detailed traceability information is maintained in each individual item's "Traceability" section.*
 
-*Note: For developer-facing libraries, user stories typically generate multiple types of requirements. Functional Requirements define system capabilities while DX Requirements define how developers interact with those capabilities. The relationships between FR and DX requirements are flexible - not every FR needs a DX requirement, and some DX requirements span multiple FRs.*
+*Note: For developer-facing libraries, user stories typically generate functional requirements that define system capabilities. The relationships between requirements are flexible - not every user story needs multiple functional requirements, and some functional requirements may span multiple user stories.*
 
-| Problem Statement | Objective | User Story | Requirements Generated | Status |
-|-------------------|-----------|------------|----------------------|---------|
-| PS-1 | OBJ-1 | US-1 | FR-1, DX-1, DX-2 | [Not Started/In Progress/Complete] |
-| PS-1 | OBJ-1 | US-2 | FR-2, FR-3 | [Not Started/In Progress/Complete] |
-| PS-2 | OBJ-2 | US-3 | FR-4, DX-3, DX-4, DX-5 | [Not Started/In Progress/Complete] |
+| Persona | Problem Statement | Objective | User Story | Requirements Generated | Status |
+|---------|-------------------|-----------|------------|----------------------|---------|
+| P-1 | PS-1 | OBJ-1 | US-1 | FR-1, FR-3 | [Not Started/In Progress/Complete] |
+| P-1, P-2 | PS-1 | OBJ-1 | US-2 | FR-2, FR-4 | [Not Started/In Progress/Complete] |
+| P-2 | PS-2 | OBJ-2 | US-3 | FR-5, FR-6 | [Not Started/In Progress/Complete] |
 
 *Example interpretations:*
-- *US-1 generates one functional capability (FR-1) with multiple DX aspects (API design DX-1, error handling DX-2)*
-- *US-2 generates internal functionality (FR-2, FR-3) with no direct developer-facing aspects*
-- *US-3 generates one functional capability (FR-4) with comprehensive DX requirements (module integration DX-3, documentation DX-4, usability DX-5)*
+- *US-1 generates multiple functional capabilities (FR-1, FR-3) for portfolio risk analysis*
+- *US-2 generates internal functionality (FR-2, FR-4) for alternative optimization strategies*
+- *US-3 generates functional capabilities (FR-5, FR-6) for comprehensive risk analysis*
 
 ### Traceability Validation Checklist
 *Use this checklist to ensure traceability is complete and accurate:*
 
+- [ ] **Persona Foundation**: Every primary persona has at least one problem statement that directly affects them
+- [ ] **Persona Coverage**: Every problem statement is linked to at least one primary persona
 - [ ] **Forward Traceability**: Every problem statement leads to at least one objective
 - [ ] **Forward Traceability**: Every objective is supported by at least one user story
 - [ ] **Forward Traceability**: Every user story is implemented by at least one functional requirement
-- [ ] **Forward Traceability**: Every user story that involves developer-facing functionality has corresponding DX requirements
 - [ ] **Backward Traceability**: Every functional requirement traces back to a user story
-- [ ] **Backward Traceability**: Every DX requirement traces back to a user story or addresses cross-cutting DX concerns
 - [ ] **Backward Traceability**: Every user story supports a clear objective
 - [ ] **Backward Traceability**: Every objective addresses a defined problem
-- [ ] **DX Completeness**: Every functional requirement that developers directly interact with has corresponding DX considerations
-- [ ] **DX Coverage**: Cross-cutting DX requirements (error handling, naming consistency, documentation standards) are defined for the overall requirement set
+- [ ] **Backward Traceability**: Every problem statement affects at least one defined persona
 - [ ] **No Orphans**: No requirements exist without clear business justification
 - [ ] **No Gaps**: All problem statements have corresponding implementation paths
-- [ ] **Dependencies Clear**: All requirement dependencies are documented (functional and DX)
-- [ ] **Impact Analysis**: Each requirement's impacts on other requirements are identified (including cross-impacts between functional and DX requirements)
+- [ ] **Dependencies Clear**: All requirement dependencies are documented
+- [ ] **Impact Analysis**: Each requirement's impacts on other requirements are identified
+- [ ] **Persona Validation**: All personas have clear, realistic characteristics and traceable needs
+- [ ] **Anti-Persona Clarity**: Anti-personas clearly define scope boundaries and design constraints
 
 ## Dependencies and Assumptions
 
@@ -564,7 +699,7 @@ Define environmental limitations and compatibility requirements the system must 
 
 ### Universal Quality Criteria
 
-Every requirement (Problem Statement, Objective, User Story, Functional Requirement) should be:
+Every requirement (Persona, Problem Statement, Objective, User Story, Functional Requirement) should be:
 - [ ] **Clear & Unambiguous**: Uses precise language that cannot be misinterpreted
 - [ ] **Verifiable**: Can be validated through testing, inspection, or measurement
 - [ ] **Necessary**: Linked to a business need or higher-level requirement
@@ -606,47 +741,42 @@ Every requirement (Problem Statement, Objective, User Story, Functional Requirem
    - ✅ "The system must provide data in a structured, filterable format"
    - ✅ "Enable portfolio optimization with customizable risk-return objectives"
 
+6. **Persona Stereotyping**
+   - ❌ "Users are all technical experts who love complex interfaces"
+   - ✅ "Primary users have intermediate Python skills and prefer clear, well-documented APIs"
+
 ### Step-by-Step Writing Process
 
-1. **Start with the business need**: What problem are you solving?
-2. **Choose the appropriate requirement type**: Problem → Objective → User Story → Functional Requirement
-3. **Use the specific template**: Each requirement type has structured templates
-4. **Add necessary context**: Constraints, conditions, and success criteria
-5. **Review against quality criteria**: Clear, verifiable, necessary, feasible, complete, consistent
-6. **Complete traceability**: Link to related requirements (see traceability guidance)
+1. **Start with personas**: Who are we building for?
+2. **Identify the business need**: What problem are you solving?
+3. **Choose the appropriate requirement type**: Persona → Problem → Objective → User Story → Functional Requirements
+4. **Use the specific template**: Each requirement type has structured templates
+5. **Add necessary context**: Constraints, conditions, and success criteria
+6. **Review against quality criteria**: Clear, verifiable, necessary, feasible, complete, consistent
+7. **Complete traceability**: Link to related requirements (see traceability guidance)
 
 ### Traceability Best Practices
 
 - **Maintain clear relationships**: Each requirement should trace to higher-level needs
 - **Update when changes occur**: Keep traceability current as requirements evolve
-- **Use consistent IDs**: PS-1, OBJ-1, US-1, FR-1 for easy cross-referencing
-- **Validate completeness**: Use the Traceability Validation Checklist (see summary section)
-
-## Template Usage Guidelines
-
-### When to Use This Template
-- For new major features or capabilities
-- For significant modifications to existing functionality
-- For requirements that impact multiple modules or users
-
-### Requirements Hierarchy
-- **Business Requirements**: WHY (problems, user needs, business value)
-- **Functional Requirements**: WHAT (system capabilities and behavior)
-- **Developer Experience (DX) Requirements**: HOW (developers discover, access, and use capabilities)
-- **Non-Functional Requirements**: HOW WELL (quality attributes, constraints)
-
-### ID Schemes and Traceability
-- **Use consistent prefixes**: PS-1, OBJ-1, KR-1.1, US-1, FR-1, DX-1, NFR-1
-- **Integrate ID with content**: PS-1: [problem description], OBJ-1: [objective statement], US-1: [user story], FR-1: [functional requirement], DX-1: [DX requirement]
-- **Maintain hierarchical relationships**: PS-1 → OBJ-1 → US-1 → [FR-1, FR-2] + [DX-1, DX-2, DX-3] (flexible relationships)
+- **Use consistent IDs**: P-1, PS-1, OBJ-1, KR-1.1, US-1, FR-1, NFR-1
+- **Integrate ID with content**: P-1: [persona name], PS-1: [problem description], OBJ-1: [objective statement], US-1: [user story], FR-1: [functional requirement]
+- **Maintain hierarchical relationships**: P-1 → PS-1 → OBJ-1 → US-1 → [FR-1, FR-2] (flexible relationships)
 - **Include version numbers if requirements evolve**: FR-1.1, FR-1.2
 - **Consider grouping related requirements**: FR-AUTH-1, FR-RISK-1, FR-OPT-1
 - **Link dependencies clearly**: FR-2 depends on FR-1, FR-3 depends on FR-1 and FR-2
-- **Track status**: Use traceability matrix to monitor progress from problem to implementation
+- **Track status**: Use traceability matrix to monitor progress from persona to implementation
 
 ### Key Distinctions
 
 *Common points of confusion when writing requirements:*
+
+#### **Personas vs User Stories vs Functional Requirements**
+- **Personas**: Define WHO we're building for (user characteristics, needs, behaviors)
+- **User Stories**: Define WHAT users want to accomplish (user goals and business value)
+- **Functional Requirements**: Define WHAT the system must do (system capabilities and behavior)
+
+**Traceability**: Personas → User Stories → Functional Requirements
 
 #### **Objectives vs User Stories vs Acceptance Criteria**
 - **Objectives**: Strategic goals measured by Key Results across multiple user stories
@@ -655,23 +785,18 @@ Every requirement (Problem Statement, Objective, User Story, Functional Requirem
 
 **Traceability**: User Stories → Objective (measured by Key Results), not User Stories → Key Results
 
-#### **Functional vs DX Requirements Relationships**
-For developer-facing libraries, these work as flexible pairs:
-- **Not all Functional Requirements need DX Requirements** (internal processing, validation)
-- **Not all DX Requirements map to specific Functional Requirements** (API consistency, overall usability)
-- **One User Story often generates multiple requirements** (Functional + DX + Non-Functional)
-
 #### **Requirements vs Design vs Process**
 - **Requirements** (this document): WHAT the system must do and WHY
-- **Design Document** (separate): HOW the system will be implemented  
+- **Design Document** (separate): HOW the system will be implemented
 - **Development Process** (separate): HOW work should be conducted (testing, reviews, compatibility policies)
 
 ### Level of Detail Guidance
 - **Requirements Specification** (this document): Focus on WHAT and WHY
+  - User characteristics and needs
   - Business problems and user value
   - System capabilities and completion criteria
   - Quality attributes and constraints
-  
+
 - **Design Document** (separate): Focus on HOW
   - Detailed API signatures
   - Implementation algorithms
@@ -679,11 +804,11 @@ For developer-facing libraries, these work as flexible pairs:
   - Performance optimizations
 
 ### Collaboration Process
-1. **Human** creates problem statements (identifies core challenges and pain points)
-2. **Human + AI** collaborate to define objectives and key results (strategic goals and success metrics)
-3. **Human + AI** develop user stories that will achieve the OKRs and solve the problems
-4. **Human + AI** translate user stories into functional requirements using the provided templates and quality criteria
-5. **Technical PM/DX Engineer + AI** define developer experience requirements (API design, error handling, documentation, usability)
+1. **Human** creates personas (identifies key user archetypes and characteristics)
+2. **Human** creates problem statements (identifies core challenges and pain points)
+3. **Human + AI** collaborate to define objectives and key results (strategic goals and success metrics)
+4. **Human + AI** develop user stories that will achieve the OKRs and solve the problems
+5. **Human + AI** translate user stories into functional requirements using the provided templates and quality criteria
 6. **AI** can suggest technical constraints and non-functional requirements
 7. **Human + AI** complete traceability sections for each item to ensure alignment across all requirement levels
 8. **Human** approves final requirements specification
@@ -692,8 +817,8 @@ For developer-facing libraries, these work as flexible pairs:
 
 ### Traceability Management
 - **Distributed Approach**: Traceability information is maintained in each item's individual "Traceability" section, not in a separate matrix
-- **Forward Traceability**: Problem Statement → Objective → User Story → Functional Requirement → Implementation
-- **Backward Traceability**: Implementation → Functional Requirement → User Story → Objective → Problem Statement
+- **Forward Traceability**: Persona → Problem Statement → Objective → User Story → Functional Requirements → Implementation
+- **Backward Traceability**: Implementation → Functional Requirements → User Story → Objective → Problem Statement → Persona
 - **Impact Analysis**: When requirements change, use the individual traceability sections to identify all affected items
 - **Validation**: Use the Traceability Validation Checklist to ensure completeness and accuracy
 - **Maintenance**: Update traceability information when items are added, modified, or removed
@@ -703,4 +828,4 @@ For developer-facing libraries, these work as flexible pairs:
 - Update status as requirement progresses through lifecycle
 - Link to related ADRs (Architecture Decision Records)
 - Reference implementation PRs and commits
-- Update with lessons learned during implementation 
+- Update with lessons learned during implementation
