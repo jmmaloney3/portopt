@@ -17,7 +17,7 @@
 
 ## Requirements Overview
 
-This document organizes requirements into five interconnected types that work together to ensure complete coverage from business need to system requirements:
+This document organizes requirements into four interconnected types that work together to ensure complete coverage from business need to system requirements:
 
 ### **Personas** → **WHO**
 Define the key user archetypes and their characteristics that drive design decisions and user experience requirements.
@@ -26,9 +26,8 @@ Define the key user archetypes and their characteristics that drive design decis
 - **Anti-Personas**: User types explicitly not targeted or supported
 
 ### **Business Requirements** → **WHY**
-Define the fundamental problems, strategic goals, and user value that justify this development effort.
+Define the fundamental problems and user value that justify this development effort.
 - **Problem Statements**: Core challenges and pain points that need solving
-- **Objectives & Key Results**: Strategic goals with measurable success criteria
 - **User Stories**: Specific user-centered solutions that deliver business value
 
 ### **Functional Requirements** → **WHAT**
@@ -52,7 +51,6 @@ Define environmental limitations and compatibility requirements the system must 
 
 **Business Foundation:**
 - **Problem Statements** → Identify core challenges
-- **Objectives & Key Results** → Define strategic goals
 - **User Stories** → Translate into user-centered solutions
 
 **System Requirements:**
@@ -247,17 +245,16 @@ Define environmental limitations and compatibility requirements the system must 
 > - **Design Constraints**: Can focus on simplicity and ease of use, assume basic technical knowledge
 
 ## Business Requirements
-*Business requirements capture the WHY behind any development effort - the fundamental problems that need solving, the strategic goals to achieve, and the user value to deliver. This section establishes the business justification and user-centered foundation for all technical work that follows.*
+*Business requirements capture the WHY behind any development effort - the fundamental problems that need solving and the user value to deliver. This section establishes the business justification and user-centered foundation for all technical work that follows.*
 
-*Business requirements consist of three interconnected components:*
+*Business requirements consist of two interconnected components:*
 - *Problem Statements identify the core challenges*
-- *Objectives & Key Results define strategic goals with measurable outcomes*
 - *User Stories translate business needs into specific user-centered solutions*
 
-*Unlike functional or technical requirements that focus on system capabilities, business requirements focus on human needs, business value, and measurable impact. Every technical requirement should trace back to these business requirements to ensure development efforts remain aligned with actual user problems and organizational goals.*
+*Unlike functional or technical requirements that focus on system capabilities, business requirements focus on human needs and business value. Every technical requirement should trace back to these business requirements to ensure development efforts remain aligned with actual user problems and business needs.*
 
 ### Problem Statements
-*Problem statements define the core challenges and pain points that drive the need for new functionality. They serve as the foundation for all subsequent requirements by clearly articulating who is affected, what they're trying to accomplish, and why current solutions are inadequate. Well-written problem statements ensure that objectives, user stories, and technical requirements all trace back to real user needs and business value.*
+*Problem statements define the core challenges and pain points that drive the need for new functionality. They serve as the foundation for all subsequent requirements by clearly articulating who is affected, what they're trying to accomplish, and why current solutions are inadequate. Well-written problem statements ensure that user stories and technical requirements all trace back to real user needs and business value.*
 
 *For developer-facing libraries, problem statements should focus on developer workflow challenges, API limitations, or gaps in functionality. For end-user facing applications, problem statements should focus on user interface limitations, workflow inefficiencies, or gaps in user experience that prevent users from achieving their goals efficiently.*
 
@@ -274,7 +271,7 @@ Define environmental limitations and compatibility requirements the system must 
 > **Traceability:**
 > - **Primary Personas**: [P-IDs of personas most affected by this problem]
 > - **Addresses**: [Parent problem statement this stems from, if any - use PS-ID]
-> - **Addressed By**: [OBJ-IDs that tackle this problem]
+> - **Addressed By**: [US-IDs that tackle this problem]
 > - **Related Problems**: [Other PS-IDs that are related or dependent]
 
 **Example:**
@@ -289,51 +286,14 @@ Define environmental limitations and compatibility requirements the system must 
 > **Traceability:**
 > - **Primary Personas**: P-1 (Sarah Chen - Portfolio Manager)
 > - **Addresses**: None (primary problem statement)
-> - **Addressed By**: OBJ-1 (Improve portfolio risk management capabilities)
+> - **Addressed By**: US-1 (factor exposure calculation)
 > - **Related Problems**: PS-2 (Limited risk model flexibility)
 
 #### Secondary Problems (if applicable)
 [Additional problems this requirement addresses, using the same template]
 
-### Objectives & Key Results (OKRs)
-*Strategic goals and measurable outcomes for solving the identified problems. The Objective addresses the problem, while Key Results provide measurable success criteria.*
-
-#### Primary OKR
-**OKR Template:**
-
-> **OBJ-[#]**: [Ambitious, qualitative goal that addresses the main problem. Format: "Improve/Enable/Transform [capability/process] to solve [problem]"]
->
-> **Key Results:**
-> - **KR1**: [Measurable outcome with specific target and timeline]
-> - **KR2**: [Another measurable outcome with target and timeline]
-> - **KR3**: [Third measurable outcome with target and timeline]
->
-> **Traceability:**
-> - **Target Personas**: [P-IDs of personas this objective primarily serves]
-> - **Addresses Problems**: [PS-IDs that this objective tackles]
-> - **Supported By**: [US-IDs that contribute to this objective]
-> - **Related Objectives**: [Other OBJ-IDs that are related or dependent]
-
-**Example:**
-
-> **OBJ-1**: Improve portfolio risk management capabilities across multi-portfolio investment programs.
->
-> **Key Results:**
-> - **KR1**: Reduce time to identify concentration risks by 30% within 6 months
-> - **KR2**: Achieve 80% adoption by portfolio managers within 6 months of release
-> - **KR3**: Decrease risk-related portfolio losses by 15% within 1 year
->
-> **Traceability:**
-> - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-2 (Marcus Rodriguez - Risk Analyst)
-> - **Addresses Problems**: PS-1 (cross-portfolio factor analysis)
-> - **Supported By**: US-1 (factor exposure calculation), US-2 (risk visualization)
-> - **Related Objectives**: OBJ-2 (expand risk model options)
-
-#### Supporting OKRs (if applicable)
-[Additional OKRs (objectives with their own Key Results) that support or relate to the primary OKR]
-
 ### User Stories
-*Specific solutions from the user's perspective that will help achieve the OKRs and solve the identified problems.*
+*Specific solutions from the user's perspective that will solve the identified problems and deliver business value.*
 
 #### Core User Stories
 **User Story Template:**
@@ -360,12 +320,11 @@ Define environmental limitations and compatibility requirements the system must 
 >
  > **Traceability:**
 > - **Primary Persona**: [P-ID of the main persona this story serves]
-> - **Supports Objective**: [OBJ-ID that this story contributes to]
 > - **Addresses Problem**: [PS-ID that this story helps solve]
 > - **Implemented By**: [FR-IDs that deliver this story]
 > - **Related Stories**: [Other US-IDs that are related or dependent]
 
-**Example (connecting to the OKR above):**
+**Example:**
 
 > **US-1**: As a portfolio manager,
 > I want to calculate cross-sectional factor exposures for multiple portfolios,
@@ -391,7 +350,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
  > **Traceability:**
 > - **Primary Persona**: P-1 (Sarah Chen - Portfolio Manager)
-> - **Supports Objective**: OBJ-1 (Improve portfolio risk management capabilities)
 > - **Addresses Problem**: PS-1 (cross-portfolio factor analysis)
 > - **Implemented By**: FR-1 (factor exposure calculation), FR-2 (risk metrics)
 > - **Related Stories**: US-2 (risk visualization), US-3 (portfolio comparison)
@@ -416,7 +374,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 > **Traceability:**
 > - **Problem Statement**: [PS-ID] - Brief description of the problem this addresses
-> - **Objective**: [OBJ-ID] - The objective this requirement helps achieve
 > - **User Story**: [US-ID] - The user story this requirement implements
 > - **Target Personas**: [P-IDs of personas this requirement primarily serves]
 > - **Impacts**: [List of FR-IDs] - Other requirements that depend on this one
@@ -454,7 +411,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 >    **Traceability:**
 >    - **Problem Statement**: PS-1 - Portfolio managers need cross-portfolio factor analysis
->    - **Objective**: OBJ-1 - Improve portfolio risk management capabilities
 >    - **User Story**: US-1 - Factor exposure calculation for multiple portfolios
 >    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-2 (Marcus Rodriguez - Risk Analyst)
 >
@@ -478,7 +434,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 >    **Traceability:**
 >    - **Problem Statement**: PS-2 - Current risk calculations are limited to single methodology
->    - **Objective**: OBJ-2 - Provide comprehensive risk analysis capabilities
 >    - **User Story**: US-3 - As a risk analyst, I want to compare different risk models
 >    - **Target Personas**: P-2 (Marcus Rodriguez - Risk Analyst), P-4 (Data Scientist)
 >    - **Impacts**: FR-5 (risk-adjusted performance metrics), FR-8 (stress testing)
@@ -501,7 +456,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 >    **Traceability:**
 >    - **Problem Statement**: PS-1 - Cross-portfolio factor analysis needed
->    - **Objective**: OBJ-1 - Improve portfolio risk management capabilities
 >    - **User Story**: US-1 - Factor exposure calculation for multiple portfolios
 >    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-3 (Junior Analyst)
 >    - **Impacts**: FR-4 (risk decomposition reports), FR-6 (optimization recommendations)
@@ -523,7 +477,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 >    **Traceability:**
 >    - **Problem Statement**: PS-3 - Time-consuming manual reporting processes
->    - **Objective**: OBJ-1 - Improve portfolio risk management capabilities
 >    - **User Story**: US-4 - As a portfolio manager, I want automated risk reporting
 >    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-5 (Investment Committee Member)
 >    - **Impacts**: FR-7 (presentation export), FR-9 (automated reporting)
@@ -549,7 +502,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 >    **Traceability:**
 >    - **Problem Statement**: PS-4 - Limited optimization strategy options
->    - **Objective**: OBJ-2 - Expand optimization capabilities beyond mean-variance
 >    - **User Story**: US-2 - As a portfolio manager, I want alternative optimization strategies
 >    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-4 (Data Scientist)
 >    - **Impacts**: FR-2 (alternative optimization strategies), FR-6 (backtesting framework)
@@ -571,7 +523,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 >    **Traceability:**
 >    - **Problem Statement**: PS-4 - Limited optimization strategy options
->    - **Objective**: OBJ-2 - Expand optimization capabilities beyond mean-variance
 >    - **User Story**: US-2 - As a portfolio manager, I want alternative optimization strategies
 >    - **Target Personas**: P-1 (Sarah Chen - Portfolio Manager), P-4 (Data Scientist)
 >    - **Impacts**: FR-4 (custom optimization strategies), FR-6 (backtesting framework)
@@ -641,11 +592,11 @@ Define environmental limitations and compatibility requirements the system must 
 
 *Note: For developer-facing libraries, user stories typically generate functional requirements that define system capabilities. The relationships between requirements are flexible - not every user story needs multiple functional requirements, and some functional requirements may span multiple user stories.*
 
-| Persona | Problem Statement | Objective | User Story | Requirements Generated | Status |
-|---------|-------------------|-----------|------------|----------------------|---------|
-| P-1 | PS-1 | OBJ-1 | US-1 | FR-1, FR-3 | [Not Started/In Progress/Complete] |
-| P-1, P-2 | PS-1 | OBJ-1 | US-2 | FR-2, FR-4 | [Not Started/In Progress/Complete] |
-| P-2 | PS-2 | OBJ-2 | US-3 | FR-5, FR-6 | [Not Started/In Progress/Complete] |
+| Persona | Problem Statement | User Story | Requirements Generated | Status |
+|---------|-------------------|------------|----------------------|---------|
+| P-1 | PS-1 | US-1 | FR-1, FR-3 | [Not Started/In Progress/Complete] |
+| P-1, P-2 | PS-1 | US-2 | FR-2, FR-4 | [Not Started/In Progress/Complete] |
+| P-2 | PS-2 | US-3 | FR-5, FR-6 | [Not Started/In Progress/Complete] |
 
 *Example interpretations:*
 - *US-1 generates multiple functional capabilities (FR-1, FR-3) for portfolio risk analysis*
@@ -657,12 +608,10 @@ Define environmental limitations and compatibility requirements the system must 
 
 - [ ] **Persona Foundation**: Every primary persona has at least one problem statement that directly affects them
 - [ ] **Persona Coverage**: Every problem statement is linked to at least one primary persona
-- [ ] **Forward Traceability**: Every problem statement leads to at least one objective
-- [ ] **Forward Traceability**: Every objective is supported by at least one user story
+- [ ] **Forward Traceability**: Every problem statement leads to at least one user story
 - [ ] **Forward Traceability**: Every user story is implemented by at least one functional requirement
 - [ ] **Backward Traceability**: Every functional requirement traces back to a user story
-- [ ] **Backward Traceability**: Every user story supports a clear objective
-- [ ] **Backward Traceability**: Every objective addresses a defined problem
+- [ ] **Backward Traceability**: Every user story addresses a defined problem
 - [ ] **Backward Traceability**: Every problem statement affects at least one defined persona
 - [ ] **No Orphans**: No requirements exist without clear business justification
 - [ ] **No Gaps**: All problem statements have corresponding implementation paths
@@ -699,7 +648,7 @@ Define environmental limitations and compatibility requirements the system must 
 
 ### Universal Quality Criteria
 
-Every requirement (Persona, Problem Statement, Objective, User Story, Functional Requirement) should be:
+Every requirement (Persona, Problem Statement, User Story, Functional Requirement) should be:
 - [ ] **Clear & Unambiguous**: Uses precise language that cannot be misinterpreted
 - [ ] **Verifiable**: Can be validated through testing, inspection, or measurement
 - [ ] **Necessary**: Linked to a business need or higher-level requirement
@@ -749,7 +698,7 @@ Every requirement (Persona, Problem Statement, Objective, User Story, Functional
 
 1. **Start with personas**: Who are we building for?
 2. **Identify the business need**: What problem are you solving?
-3. **Choose the appropriate requirement type**: Persona → Problem → Objective → User Story → Functional Requirements
+3. **Choose the appropriate requirement type**: Persona → Problem → User Story → Functional Requirements
 4. **Use the specific template**: Each requirement type has structured templates
 5. **Add necessary context**: Constraints, conditions, and success criteria
 6. **Review against quality criteria**: Clear, verifiable, necessary, feasible, complete, consistent
@@ -759,9 +708,9 @@ Every requirement (Persona, Problem Statement, Objective, User Story, Functional
 
 - **Maintain clear relationships**: Each requirement should trace to higher-level needs
 - **Update when changes occur**: Keep traceability current as requirements evolve
-- **Use consistent IDs**: P-1, PS-1, OBJ-1, KR-1.1, US-1, FR-1, NFR-1
-- **Integrate ID with content**: P-1: [persona name], PS-1: [problem description], OBJ-1: [objective statement], US-1: [user story], FR-1: [functional requirement]
-- **Maintain hierarchical relationships**: P-1 → PS-1 → OBJ-1 → US-1 → [FR-1, FR-2] (flexible relationships)
+- **Use consistent IDs**: P-1, PS-1, US-1, FR-1, NFR-1
+- **Integrate ID with content**: P-1: [persona name], PS-1: [problem description], US-1: [user story], FR-1: [functional requirement]
+- **Maintain hierarchical relationships**: P-1 → PS-1 → US-1 → [FR-1, FR-2] (flexible relationships)
 - **Include version numbers if requirements evolve**: FR-1.1, FR-1.2
 - **Consider grouping related requirements**: FR-AUTH-1, FR-RISK-1, FR-OPT-1
 - **Link dependencies clearly**: FR-2 depends on FR-1, FR-3 depends on FR-1 and FR-2
@@ -778,12 +727,11 @@ Every requirement (Persona, Problem Statement, Objective, User Story, Functional
 
 **Traceability**: Personas → User Stories → Functional Requirements
 
-#### **Objectives vs User Stories vs Acceptance Criteria**
-- **Objectives**: Strategic goals measured by Key Results across multiple user stories
-- **User Stories**: Specific solutions that support the overall objective (not individual Key Results)
+#### **User Stories vs Acceptance Criteria**
+- **User Stories**: Specific solutions that address user needs and deliver business value
 - **Acceptance Criteria**: Define when individual user stories are functionally complete
 
-**Traceability**: User Stories → Objective (measured by Key Results), not User Stories → Key Results
+**Traceability**: User Stories → Problem Statements, Acceptance Criteria → User Stories
 
 #### **Requirements vs Design vs Process**
 - **Requirements** (this document): WHAT the system must do and WHY
@@ -806,19 +754,18 @@ Every requirement (Persona, Problem Statement, Objective, User Story, Functional
 ### Collaboration Process
 1. **Human** creates personas (identifies key user archetypes and characteristics)
 2. **Human** creates problem statements (identifies core challenges and pain points)
-3. **Human + AI** collaborate to define objectives and key results (strategic goals and success metrics)
-4. **Human + AI** develop user stories that will achieve the OKRs and solve the problems
-5. **Human + AI** translate user stories into functional requirements using the provided templates and quality criteria
-6. **AI** can suggest technical constraints and non-functional requirements
-7. **Human + AI** complete traceability sections for each item to ensure alignment across all requirement levels
-8. **Human** approves final requirements specification
-9. **Human + AI** collaborate on detailed design document
-10. **AI** implements with human review and iteration
+3. **Human + AI** collaborate to define user stories that will solve the problems and deliver business value
+4. **Human + AI** translate user stories into functional requirements using the provided templates and quality criteria
+5. **AI** can suggest technical constraints and non-functional requirements
+6. **Human + AI** complete traceability sections for each item to ensure alignment across all requirement levels
+7. **Human** approves final requirements specification
+8. **Human + AI** collaborate on detailed design document
+9. **AI** implements with human review and iteration
 
 ### Traceability Management
 - **Distributed Approach**: Traceability information is maintained in each item's individual "Traceability" section, not in a separate matrix
-- **Forward Traceability**: Persona → Problem Statement → Objective → User Story → Functional Requirements → Implementation
-- **Backward Traceability**: Implementation → Functional Requirements → User Story → Objective → Problem Statement → Persona
+- **Forward Traceability**: Persona → Problem Statement → User Story → Functional Requirements → Implementation
+- **Backward Traceability**: Implementation → Functional Requirements → User Story → Problem Statement → Persona
 - **Impact Analysis**: When requirements change, use the individual traceability sections to identify all affected items
 - **Validation**: Use the Traceability Validation Checklist to ensure completeness and accuracy
 - **Maintenance**: Update traceability information when items are added, modified, or removed
