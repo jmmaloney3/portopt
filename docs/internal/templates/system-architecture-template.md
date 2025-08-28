@@ -48,7 +48,7 @@ List and briefly describe the major system components. For each component, provi
 
 ## Component Architecture
 
-This section provides detailed information about each major system component. For each component, describe its purpose, responsibilities, interfaces, and implementation details. Focus on architectural decisions and design patterns rather than implementation specifics.
+This section provides detailed information about each major system component. For each component, describe its purpose, responsibilities, interfaces, and architectural decisions. Focus on high-level design choices and patterns rather than low-level implementation specifics.
 
 ### [Component Name]
 
@@ -64,9 +64,9 @@ This section provides detailed information about each major system component. Fo
 - **Outputs**: [What data/services this component provides]
 - **Dependencies**: [What other components this depends on]
 
-**Implementation Details**:
-- **Technology**: [Programming language, framework, etc.]
-- **Data Structures**: [Key data structures used]
+**Architectural Decisions**:
+- **Technology**: [List key technologies used by this component. See Technology Architecture section for detailed specifications and rationale.]
+- **Data Structures**: [List key data structures used by this component. See Data Architecture section for detailed specifications.]
 - **Algorithms**: [Key algorithms or processing logic]
 
 **Design Patterns**: [Any specific design patterns used in this component]
@@ -77,7 +77,10 @@ This section describes how data flows through the system, including data models,
 
 ### Data Models
 
-Describe the key data models used in the system. For each model, explain its purpose, structure, and how it fits into the overall system.
+Describe the key data models used in the system. For each model, explain its 
+purpose, structure, and how it fits into the overall system.
+
+This section serves as the single source of truth for all data models in the system. Component-level data structure references should point to this section for detailed specifications.
 
 #### [Data Model Name]
 - **Purpose**: [What this data model represents]
@@ -133,7 +136,10 @@ This section describes the technology choices and infrastructure decisions. Focu
 
 ### Technology Stack
 
-Describe the core technologies used in the system and the rationale for these choices.
+Describe the core technologies used in the system and the rationale for these 
+choices.
+
+This section serves as the single source of truth for all technology decisions in the system. Component-level technology references should point to this section for detailed specifications and rationale.
 
 - **Programming Language**: [Primary language(s) used and rationale]
 - **Framework**: [Main framework(s) used and rationale]
@@ -231,29 +237,3 @@ This section tracks major architectural changes over time. Include the rationale
 - [How these changes affected the system]
 
 ---
-
-## Document Maintenance
-
-This section describes how this document is maintained and updated.
-
-### Update Process
-
-This document is updated as part of the development process when new features require architectural changes. Updates follow this process:
-
-1. **Architecture Lead** identifies needed changes during system architecture review
-2. **Technical stakeholders** review proposed changes
-3. **Architecture Lead** updates document with approved changes
-4. **Version and date** are updated to reflect changes
-
-### Review Schedule
-
-- **Quarterly Review**: Full architecture review every quarter
-- **Feature-Based Updates**: Updates as needed when new features are added
-- **Emergency Updates**: Immediate updates for critical architectural issues
-
-### Document Ownership
-
-- **Owner**: Architecture Lead
-- **Decision Authority**: Architecture Lead
-- **Reviewers**: Technical Lead, Development Team
-- **Stakeholders**: Product Manager, Development Team 
