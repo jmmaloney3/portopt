@@ -6,35 +6,51 @@
 This document contains a comprehensive prompt for AI agents to conduct structured system architecture update interviews. To use it:
 
 **Quick Start (Recommended):**
-If you are using Cursor (or any AI tool that supports file references), use the following prompt to start the architecture update process. Replace `[requirements document reference]` with your approved requirements document. Allow 30-45 minutes for the complete interview and architecture update process.
+If you are using Cursor (or any AI tool that supports file references), use the following prompt to start the architecture update process. Allow 30-45 minutes for the complete interview and architecture update process.
 
 ```
 Please follow the system architecture update process outlined in @system-architecture-update-prompt.md 
-to interview me about how a new feature should be integrated into the existing system architecture and update the living system architecture document.
+to interview me about system architecture creation or updates.
 
 My requirements document: @[requirements-document-name].md
 Current system architecture: @system-architecture.md
+Existing codebase location: [describe your codebase location/structure]
 
 Please begin the structured system architecture update interview process.
 ```
 
+**Input Options:**
+- **Requirements document**: Set to `None` if you don't have new features to add
+- **System architecture**: Set to `None` if you don't have an existing architecture document
+- **Codebase location**: Set to `None` if you don't have an existing codebase
+
+**Examples:**
+- **Scenario A** (update existing + new features): Provide all three inputs
+- **Scenario B** (create from codebase only): Set requirements and architecture to `None`
+- **Scenario C** (create from scratch + new features): Set architecture and codebase to `None`
+
+**Have both existing codebase AND new features?** Use the two-step approach:
+1. **First session**: Set requirements and architecture to `None` (Scenario B)
+2. **Second session**: Provide all three inputs (Scenario A)
+
 **Process Overview:**
 1. **Reference this document** to your AI agent (use `@system-architecture-update-prompt.md` in Cursor)
-2. **Provide your requirements document** - the approved requirements that need architectural integration (if applicable)
-3. **Provide current system architecture** - the living system architecture document (if it exists)
+2. **Provide available documents** - requirements document and/or system architecture document (if they exist)
+3. **Provide codebase information** - location and structure of existing codebase (if it exists)
 4. **Participate in structured interview** - the AI will first assess your scenario, then guide you through the appropriate workflow:
    - **Scenario Assessment** (determining your specific architecture scenario)
    - **Current Architecture Analysis** (understanding existing system structure, if applicable)
-   - **Feature Integration Analysis** (analyzing how new feature fits, if applicable)
+   - **Feature Integration Analysis** (analyzing how new features fit, if applicable)
    - **Architectural Change Design** (designing necessary changes)
    - **Architecture Update Validation** (ensuring changes are sound)
 5. **Review architecture document** - complete architecture document (new or updated)
 
 **Tips for Success:**
-- Come prepared with knowledge of existing system capabilities and architecture
-- Think about which existing components can be reused or extended
-- Consider the impact of new features on existing system performance and maintainability
-- Have examples of similar architectural changes or system extensions ready
+- **For existing systems**: Come prepared with knowledge of existing system capabilities and architecture
+- **For existing codebases**: Think about which existing components can be reused or extended
+- **For new features**: Consider the impact of new features on system performance and maintainability
+- **For all scenarios**: Have examples of similar architectural patterns or system extensions ready
+- **For greenfield development**: Consider industry best practices and architectural patterns for your domain
 
 ---
 
@@ -91,15 +107,17 @@ Begin by determining the specific architecture scenario:
 **Scenario Determination:**
 Based on the above, determine which scenario applies:
 - **Scenario A**: Update existing architecture + new features (existing doc + new features)
-- **Scenario B**: Create architecture from existing codebase + new features (re-engineering + new features) - **RECOMMENDED**: Split into two steps
-- **Scenario C**: Create architecture from existing codebase only (pure re-engineering)
-- **Scenario D**: Create architecture from scratch + new features (greenfield development)
+- **Scenario B**: Create architecture from existing codebase only (pure re-engineering)
+- **Scenario C**: Create architecture from scratch + new features (greenfield development)
+
+**Important Note:** If you have both an existing codebase AND new features to add, use the two-step approach:
+1. **First session**: Use Scenario B to create architecture from existing codebase
+2. **Second session**: Use Scenario A to update that architecture with new features
 
 **Workflow Selection:**
 - For Scenario A: Proceed with full update workflow (Phases 1-4)
-- For Scenario B: Recommend splitting into two steps (first Scenario C, then Scenario A)
-- For Scenario C: Skip Phase 2, proceed with Phases 1, 3-4
-- For Scenario D: Skip Phases 1-2, proceed with Phases 3-4
+- For Scenario B: Skip Phase 2, proceed with Phases 1, 3-4
+- For Scenario C: Skip Phases 1-2, proceed with Phases 3-4
 
 ### Phase 1: Current Architecture Analysis
 Start by understanding the existing system architecture (skip this phase if no existing architecture or codebase):
@@ -283,6 +301,12 @@ Before finalizing the document update, verify:
 
 ## Getting Started
 
-Begin the interview by asking: "I need to understand your specific architecture scenario to provide the most appropriate guidance. Let me start by understanding your current situation - do you already have a system architecture document for this project, and do you have an existing codebase?"
+Begin the interview by verifying the provided information: "Thank you for providing the architecture scenario information. Let me verify what I understand about your current situation:
+
+- Requirements document: [repeat what was provided or 'None']
+- System architecture document: [repeat what was provided or 'None'] 
+- Existing codebase: [repeat what was provided or 'None']
+
+Is this correct? Once confirmed, I'll proceed with the appropriate workflow."
 
 Then systematically work through the scenario assessment (Phase 0) to determine the appropriate workflow, followed by the relevant phases for your specific scenario. Adapt your questions based on the Architecture Lead's responses while ensuring you gather information for all relevant architectural aspects. Remember that this is a collaborative architecture process - engage the Architecture Lead as a partner in creating or updating architecture that maintains system coherence while accommodating new functionality. 
