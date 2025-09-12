@@ -305,6 +305,32 @@ Each increment must meet these system integration standards to ensure coherent s
 - **Available Options**: List available options when input is invalid
 - **Data Information**: Include information about the problematic data
 
+## Monitoring & Observability Standards
+
+### Logging Standards
+- **Log Levels**: Use standard levels (DEBUG, INFO, WARNING, ERROR) consistently
+- **Structured Logging**: Use structured logging formats (JSON) for machine parsing
+- **Performance Logging**: Log timing and metrics for critical operations
+- **Error Context**: Include sufficient context in error logs for debugging
+
+### Health Monitoring Standards
+- **Health Checks**: Implement basic health endpoints for all services
+- **Dependency Monitoring**: Monitor external dependency health and availability
+- **Performance Monitoring**: Track key performance metrics and set up alerts
+- **Resource Monitoring**: Monitor memory, CPU, and disk usage patterns
+
+### Observability Best Practices
+- **Distributed Tracing**: Use correlation IDs for request tracing across components
+- **Metrics Collection**: Collect business and technical metrics consistently
+- **Alerting**: Set up appropriate alerts for critical failures and performance degradation
+- **Dashboard Standards**: Create consistent dashboards for monitoring system health
+- **Error Correlation**: Link monitoring data with error handling patterns (see Error Handling & Reliability section)
+
+### Integration with Error Handling
+- **Error Logging**: Ensure error conditions are properly logged with appropriate context
+- **Health Check Failures**: Health checks should align with error handling strategies
+- **Performance Degradation**: Treat performance issues as error conditions requiring monitoring
+
 ## Configuration & Compatibility
 
 ### Configuration Management

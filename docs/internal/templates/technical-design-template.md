@@ -3,8 +3,11 @@
 ## Document Information
 
 - **Design ID**: TD-YYYY-NNN (e.g., TD-2025-001)
-- **Title**: [Descriptive title of the technical design]
+- **Title**: [Increment Name] Technical Design
 - **Requirements Document**: [Link to associated requirements document, e.g., REQ-2025-001]
+- **Feature Decomposition**: [Link to feature decomposition document, e.g., FD-2025-001]
+- **System Architecture**: [Link to system architecture document, e.g., SA-001]
+- **Increment Scope**: [Increment number and name from decomposition]
 - **Author**: [Author name]
 - **Date Created**: [YYYY-MM-DD]
 - **Last Updated**: [YYYY-MM-DD]
@@ -14,85 +17,79 @@
 
 ## Executive Summary
 
-[2-3 sentence summary of the technical approach and key design decisions]
+[2-3 sentence summary of the technical approach for this specific increment and key design decisions]
 
-## Design Overview
+## Design Context
 
-This document defines HOW the system will be implemented to fulfill the requirements specified in [Requirements Document]. It provides the technical blueprint for development, including architecture decisions, API designs, implementation strategies, and risk mitigation approaches.
+This document defines HOW this specific increment will be implemented to fulfill the requirements and architectural decisions established in the [Requirements Document], [System Architecture], and [Feature Decomposition]. It provides the technical blueprint for implementing this increment, including detailed API designs, implementation strategies, and technical decisions needed before development begins.
 
-### Design Principles Alignment
+**Important**: This technical design document focuses on a single increment from the feature decomposition. It does not address system-wide architecture decisions (covered in the System Architecture document) or feature-level planning (covered in the Feature Decomposition document). This document is specifically for implementation-level design decisions needed before development begins.
 
-*This design must follow the [Design Principles & Standards](../design-principles-and-standards.md). Document how this design aligns with or requires exceptions to established principles.*
+**Design Principles**: This design must follow the [Design Principles & Standards](../design-principles-and-standards.md). When making design decisions, document principle applications and exceptions in context where relevant. Focus on explaining the reasoning behind design decisions rather than creating separate compliance sections.
 
-**Principle Alignment:**
-- **[Principle Name]**: [How this design aligns or requires exception]
-- **[Principle Name]**: [How this design aligns or requires exception]
+## High-Level Design
 
-## Requirements Traceability
+### Design Overview
+*Brief summary of the overall approach and key design decisions*
 
-### Requirements Summary
-*Brief summary of what requirements this design implements*
+### Component Design
+*Introduction to the key components and their roles in this design*
 
-| Requirement ID | Requirement Summary | Design Sections |
-|----------------|-------------------|-----------------|
-| [REQ-ID] | [Brief description] | [Section references] |
-| [REQ-ID] | [Brief description] | [Section references] |
+**[module_name] (NEW | EXISTING)**
+- **Purpose**: [Role in this design]
+- **Classes**:
+  - **[ClassName] (NEW | EXISTING)**: [Purpose and role in this design]
+    - **Key Algorithms**: [Identify important algorithms - details described later]
+    - **For EXISTING classes**: [What changes will be made, new functionality added, backward compatibility considerations]
+- **Functions**:
+  - **[function_name] (NEW | EXISTING)**: [Purpose and role in this design]
+    - **Key Algorithms**: [Identify important algorithms - details described later]
+    - **For EXISTING functions**: [What changes will be made, new functionality added, backward compatibility considerations]
+- **Dependencies**: [What this module depends on]
+- **Integration Points**: [How it connects to other components]
 
-## Architecture & Module Design
+*[Repeat this structure for each module that plays a role in the design]*
 
-### System Architecture Overview
-*High-level architecture showing how new components fit into existing system*
+### Control & Data Flow Design
+*How components collaborate to deliver the required capabilities*
 
-```
-[Include architecture diagram or description]
-```
+**Flow 1: [Flow Name]**
+- **Overview**: [What this flow accomplishes]
+- **Components**: [List of components involved - the "cast of characters"]
+- **Behavior**: [Choose the format that best describes how components interact and data flows]
 
-### Module Structure
+> **Option 1 - Narrative Format** (best for straightforward, linear flows):
+> [Step-by-step narrative combining interactions and data flow, like:]
+> - Call download transactions API
+> - Download API loops over list of accounts and calls download transactions method on each account object
+> - Account object makes API call to brokerage and downloads transactions
+> - Account object stores new transactions in database
+>
+> **Option 2 - Interaction + Data Flow Format** (best for complex systems with distinct interaction and data flow concerns):
+> **Interactions:**
+> - [Component A] calls [method] on [Component B]
+> - [Component B] triggers [event] to [Component C]
+> 
+> **Data Flow:**
+> - [Data source] → [Processing step] → [Output/Storage]
+> - [Data transformation] → [Next processing step]
+>
+> **Option 3 - Sequence Format** (best for complex multi-step processes):
+> 1. [Initial action/trigger]
+> 2. [Component interaction and data flow]
+> 3. [Next component interaction and data flow]
+> 4. [Final outcome/storage]
 
-#### New Modules
-*Modules that will be created as part of this implementation*
+*[Repeat this structure for each feature/capability]*
 
-**[module_name].py**
-- **Purpose**: [Primary responsibility of this module]
-- **Key Classes**: [List main classes]
-- **Key Functions**: [List main functions]
-- **Dependencies**: [Internal and external dependencies]
-- **Integration Points**: [How it connects to existing modules]
+## Detailed Design
 
-#### Modified Modules
-*Existing modules that will be extended or modified*
+### Public Classes
 
-**[existing_module].py**
-- **Modifications**: [What changes will be made]
-- **New Functionality**: [What capabilities will be added]
-- **Backward Compatibility**: [How existing functionality is preserved]
-- **Migration Considerations**: [Any breaking changes or migration needed]
+#### [ClassName] (NEW | MODIFIED)
 
-#### Module Interaction Design
-*How modules communicate and depend on each other*
+**For NEW Classes:**
 
-```python
-# Example interaction patterns
-```
-
-### Data Flow Architecture
-*How data moves through the system*
-
-**Input Data Flow:**
-1. [Data source] → [Processing step] → [Output/Storage]
-2. [Data source] → [Processing step] → [Output/Storage]
-
-**Key Data Transformations:**
-- **[Transformation Name]**: [Input format] → [Output format]
-- **[Transformation Name]**: [Input format] → [Output format]
-
-## API Design Specification
-
-### Public API Interface
-
-#### Class Definitions
-
-**[ClassName]**
 ```python
 class ClassName:
     """Brief description of class purpose.
@@ -130,9 +127,40 @@ class ClassName:
         pass
 ```
 
-#### Function Definitions
+**For MODIFIED Classes:**
 
-**[function_name]**
+**[ClassName] - Modifications**
+- **New Methods**: [List new methods with brief descriptions]
+- **Modified Methods**: [List existing methods being changed and what changes]
+- **Backward Compatibility**: [How existing functionality is preserved]
+- **Migration Considerations**: [Any breaking changes or migration needed]
+
+```python
+# Example of new method being added to existing class
+def new_method(self, param: Type) -> ReturnType:
+    """New method following existing ClassName patterns."""
+    pass
+
+# Example of existing method being modified
+def existing_method(self, param: Type, new_param: Type = default) -> ReturnType:
+    """Enhanced existing method with new functionality.
+    
+    Args:
+        param: [Existing parameter description]
+        new_param: [New parameter description]
+        
+    Returns:
+        [Updated return description]
+    """
+    pass
+```
+
+### Public Functions
+
+#### [Function Name] (NEW | MODIFIED)
+
+**For NEW Functions:**
+
 ```python
 def function_name(param1: Type1, 
                   param2: Type2,
@@ -163,54 +191,33 @@ def function_name(param1: Type1,
     pass
 ```
 
-### Integration Points
+**For MODIFIED Functions:**
 
-#### Extending Existing Classes
-*How new functionality integrates with existing Portfolio, etc.*
+**[function_name] - Modifications**
+- **Changes**: [What changes will be made to the function]
+- **New Parameters**: [List new parameters being added]
+- **Modified Behavior**: [How the function's behavior is changing]
+- **Backward Compatibility**: [How existing functionality is preserved]
 
-**Portfolio Class Extensions:**
 ```python
-class Portfolio:
-    # Existing functionality...
+# Example of existing function being modified
+def existing_function(param1: Type1, 
+                     param2: Type2,
+                     new_param: Type3 = default_value,
+                     options: Optional[Dict] = None) -> ReturnType:
+    """Enhanced existing function with new functionality.
     
-    def new_method(self, param: Type) -> ReturnType:
-        """New method following existing Portfolio patterns."""
-        pass
-```
-
-#### Mixin Pattern Implementation
-*If using mixin pattern like existing MetricsMixin, RebalanceMixin*
-
-```python
-class NewFunctionalityMixin:
-    """Mixin providing [functionality] following portopt mixin patterns."""
+    Args:
+        param1: [Existing parameter description]
+        param2: [Existing parameter description]
+        new_param: [New parameter description]
+        options: [Updated options description]
+        
+    Returns:
+        [Updated return description]
+    """
     pass
 ```
-
-### API Consistency Requirements
-*How this API maintains consistency with existing portopt APIs*
-
-- **Parameter Naming**: [How parameter names follow existing conventions]
-- **Return Formats**: [How return formats match existing patterns]
-- **Error Handling**: [How errors follow existing error handling patterns]
-- **Documentation**: [How documentation follows existing docstring patterns]
-
-## Implementation Strategy
-
-### Development Phases
-*Break implementation into logical phases*
-
-**Phase 1: [Phase Name] (Priority: Must Have)**
-- **Scope**: [What will be implemented in this phase]
-- **Deliverables**: [Specific deliverables]
-- **Dependencies**: [What must be completed first]
-- **Risks**: [Key risks for this phase]
-
-**Phase 2: [Phase Name] (Priority: Should Have)**
-- **Scope**: [What will be implemented in this phase]
-- **Deliverables**: [Specific deliverables]
-- **Dependencies**: [What must be completed first]
-- **Risks**: [Key risks for this phase]
 
 ### Key Algorithms & Implementation Approaches
 
@@ -232,255 +239,96 @@ def algorithm_implementation(inputs):
 #### [Another Algorithm/Approach]
 [Similar structure as above]
 
-### External Dependencies & Integration
-
-#### New Dependencies
-*New external libraries or frameworks required*
-
-| Dependency | Version | Purpose | License | Risk Assessment |
-|------------|---------|---------|---------|-----------------|
-| [library] | [version] | [purpose] | [license] | [compatibility/maintenance risk] |
-
-#### Existing Dependencies
-*How this leverages existing portopt dependencies*
-
-- **[existing_library]**: [How it will be used in this implementation]
-- **[existing_library]**: [How it will be used in this implementation]
-
 ### Data Storage & Persistence
-*How data will be stored, cached, or persisted*
 
-- **In-Memory**: [What data is kept in memory and why]
-- **File-Based**: [What data is stored in files and format]
-- **Caching Strategy**: [What is cached and cache invalidation approach]
+#### Data Model Implementation
+* **Entities Implemented**: [Which entities from the system architecture are implemented in this increment]
+* **Attributes Implemented**: [Which attributes of those entities are implemented]
+* **Relationships Implemented**: [Which relationships are implemented and how]
 
-## Testing Strategy
+#### Database Schema
+* **New Tables**: [New database tables created by this increment]
+* **Modified Tables**: [Existing tables modified by this increment]
+* **Indexes**: [Database indexes needed for performance]
+* **Constraints**: [Database constraints and validation rules]
 
-### Unit Testing Approach
-*How individual components will be tested*
+#### Data Migration
+* **Schema Changes**: [Any database schema changes required]
+* **Data Migration**: [Any existing data that needs to be migrated or transformed]
+* **Backward Compatibility**: [How existing data remains accessible]
 
-**Test Structure:**
-- **Test Organization**: [How tests will be organized by module/functionality]
-- **Test Data**: [Approach to test data management and fixtures]
-- **Mocking Strategy**: [What external dependencies will be mocked]
+### External Dependencies
 
-**Key Testing Challenges:**
-- **[Challenge Name]**: [Description and approach to address]
-- **[Challenge Name]**: [Description and approach to address]
+#### [library_name]
+* **Status**: (NEW | EXISTING)
+* **Purpose**: [How it will be used in this implementation]
+* **Version**: [version]
+* **License**: [license]
+* **Risk Assessment**: [compatibility/maintenance risk]
 
-**Coverage Targets:**
-- **Minimum Coverage**: 90% line coverage
-- **Critical Paths**: 100% coverage for [specific critical functionality]
+## Testing Guidance
+*Critical testing concerns identified during design that require special attention*
 
-### Integration Testing Approach
-*How module interactions will be tested*
+### Key Testing Challenges
+*Complex algorithms, edge cases, or business logic that could fail in subtle ways*
 
-**Integration Scenarios:**
-1. **[Scenario Name]**: [What integration will be tested and how]
-2. **[Scenario Name]**: [What integration will be tested and how]
+- **[Challenge Name]**: [Description of why this is tricky and how to test it]
+- **[Challenge Name]**: [Description of why this is tricky and how to test it]
 
-**End-to-End Workflows:**
-- **[Workflow Name]**: [Complete workflow from input to output]
-- **[Workflow Name]**: [Complete workflow from input to output]
+### Critical Integration Points
+*New integration points, data flow between components, or external dependencies that could behave unexpectedly*
 
-### Manual Testing Strategy
-*What will require manual testing and validation*
+- **[Integration Point]**: [What could go wrong and how to validate it works]
+- **[Integration Point]**: [What could go wrong and how to validate it works]
 
-**Manual Test Cases:**
-- **[Test Case Category]**: [What will be tested manually and why]
-- **[Test Case Category]**: [What will be tested manually and why]
+### Security & Data Integrity Concerns
+*Input validation, data corruption scenarios, authorization/authentication edge cases*
 
-**Validation Criteria:**
-- **[Criteria]**: [How success will be measured]
-- **[Criteria]**: [How success will be measured]
+- **[Concern]**: [Specific security risk and testing approach]
+- **[Concern]**: [Specific security risk and testing approach]
 
-### Performance Testing
-*How performance requirements will be validated*
+### Error Handling & Recovery Testing
+*Failure modes, recovery scenarios, and graceful degradation paths that must be validated*
 
-**Performance Benchmarks:**
-- **[Metric]**: [Target performance and how it will be measured]
-- **[Metric]**: [Target performance and how it will be measured]
+- **[Failure Mode]**: [What could fail and how to test recovery]
+- **[Failure Mode]**: [What could fail and how to test recovery]
 
-**Load Testing:**
-- **Typical Load**: [Expected normal usage patterns]
-- **Stress Testing**: [Maximum expected load scenarios]
+### Performance Validation
+*Bottlenecks, memory usage patterns, and scalability limits that need performance testing*
 
-## Risk Assessment & Mitigation
+- **[Performance Aspect]**: [What needs performance testing and why]
+- **[Performance Aspect]**: [What needs performance testing and why]
 
-### Technical Risks
+## Design Validation Concerns
+*Aspects of the design that should be proven out before full implementation*
 
-#### High Risk Items
-**Risk**: [Description of technical risk]
-- **Impact**: [What happens if this risk materializes]
-- **Probability**: [High/Medium/Low likelihood]
-- **Mitigation Strategy**: [How to prevent or address this risk]
-- **Contingency Plan**: [What to do if mitigation fails]
+### Algorithm & Performance Validation
+*Concerns about whether proposed algorithms or performance approaches will work as designed*
 
-#### Medium Risk Items
-**Risk**: [Description of technical risk]
-- **Impact**: [What happens if this risk materializes]
-- **Probability**: [High/Medium/Low likelihood]
-- **Mitigation Strategy**: [How to prevent or address this risk]
+- **[Concern]**: [Description of the concern and what needs to be proven]
+  - **Validation Approach**: [Proof-of-concept, benchmarking, or early implementation]
+  - **Success Criteria**: [How to know the concern is resolved]
 
-### Performance Risks
+### Integration & Compatibility Validation
+*Concerns about how the design will integrate with existing systems or external dependencies*
 
-#### Scalability Concerns
-**Risk**: [Performance degradation with scale]
-- **Mitigation**: [Approach to maintain performance]
-- **Monitoring**: [How to detect performance issues]
+- **[Concern]**: [Description of integration concern and what needs to be proven]
+  - **Validation Approach**: [Integration testing, compatibility testing, or prototype]
+  - **Success Criteria**: [How to know the integration will work]
 
-#### Memory Usage
-**Risk**: [Excessive memory consumption]
-- **Mitigation**: [Memory management strategy]
-- **Monitoring**: [How to track memory usage]
+### Scalability & Resource Usage Validation
+*Concerns about whether the design will scale to expected usage or resource constraints*
 
-### Security Risks
+- **[Concern]**: [Description of scalability concern and what needs to be proven]
+  - **Validation Approach**: [Load testing, resource profiling, or capacity planning]
+  - **Success Criteria**: [Performance targets or resource limits to validate]
 
-#### Data Security
-**Risk**: [Exposure of sensitive financial data]
-- **Mitigation**: [Security measures to implement]
-- **Validation**: [How to verify security measures]
+### Data & Security Validation
+*Concerns about data handling, security, or compliance aspects of the design*
 
-#### Input Validation
-**Risk**: [Malicious or malformed input]
-- **Mitigation**: [Input validation and sanitization approach]
-- **Testing**: [Security testing strategy]
-
-### Integration Risks
-
-#### Dependency Risks
-**Risk**: [Issues with external dependencies]
-- **Mitigation**: [Version pinning, fallback strategies]
-- **Monitoring**: [How to detect dependency issues]
-
-#### Backward Compatibility
-**Risk**: [Breaking existing functionality]
-- **Mitigation**: [Compatibility testing and deprecation strategy]
-- **Rollback Plan**: [How to revert if compatibility issues arise]
-
-### Operational Risks
-
-#### Deployment Complexity
-**Risk**: [Complex deployment process]
-- **Mitigation**: [Deployment automation and testing]
-- **Rollback**: [Deployment rollback procedures]
-
-#### Monitoring & Debugging
-**Risk**: [Difficulty troubleshooting issues in production]
-- **Mitigation**: [Logging, monitoring, and debugging capabilities]
-- **Support**: [Support procedures for troubleshooting]
-
-## Error Handling Strategy
-
-### Error Classification
-*How different types of errors will be handled*
-
-**Input Validation Errors:**
-- **Error Types**: [Types of input validation errors expected]
-- **Handling Approach**: [How these errors will be caught and communicated]
-- **User Experience**: [What users will see and how to resolve]
-
-**System Errors:**
-- **Error Types**: [Types of system/runtime errors expected]
-- **Handling Approach**: [How these errors will be caught and logged]
-- **Recovery Strategy**: [How system will recover or fail gracefully]
-
-**External Dependency Errors:**
-- **Error Types**: [Types of external service/dependency failures]
-- **Handling Approach**: [How these errors will be detected and handled]
-- **Fallback Strategy**: [What happens when external dependencies fail]
-
-### Error Communication
-*How errors will be communicated to users and developers*
-
-**Error Message Standards:**
-- **User-Facing Messages**: [Clear, actionable messages for end users]
-- **Developer Messages**: [Detailed technical information for debugging]
-- **Logging Strategy**: [What gets logged where for troubleshooting]
-
-**Error Recovery Guidance:**
-- **Self-Service**: [How users can resolve common errors themselves]
-- **Escalation**: [When to escalate errors for developer investigation]
-
-## Monitoring & Observability
-
-### Logging Strategy
-*What events and data will be logged*
-
-**Log Levels:**
-- **DEBUG**: [What debug information will be captured]
-- **INFO**: [What informational events will be logged]
-- **WARNING**: [What warning conditions will be logged]
-- **ERROR**: [What error conditions will be logged]
-
-**Performance Logging:**
-- **Metrics**: [What performance metrics will be logged]
-- **Timing**: [What operations will be timed and logged]
-
-### Health Monitoring
-*How system health will be monitored*
-
-**Health Checks:**
-- **Basic Health**: [Simple health indicators]
-- **Dependency Health**: [How to monitor external dependency health]
-- **Performance Health**: [How to monitor performance degradation]
-
-## Documentation Plan
-
-### Developer Documentation
-*What documentation will be created for developers*
-
-**API Documentation:**
-- **Docstrings**: [Comprehensive docstrings for all public APIs]
-- **Examples**: [Code examples for common usage patterns]
-- **Integration Guides**: [How to integrate with existing portopt functionality]
-
-**Architecture Documentation:**
-- **Design Decisions**: [Documentation of key design decisions and rationale]
-- **Integration Patterns**: [How this fits with existing portopt patterns]
-
-### User Documentation
-*What documentation will be created for end users*
-
-**User Guides:**
-- **Getting Started**: [Basic usage tutorials]
-- **Advanced Usage**: [Complex scenarios and advanced features]
-- **Troubleshooting**: [Common issues and solutions]
-
-**Examples & Tutorials:**
-- **Jupyter Notebooks**: [Interactive examples and tutorials]
-- **Use Case Examples**: [Real-world usage scenarios]
-
-## Implementation Timeline
-
-### Milestone Schedule
-*Key milestones and deadlines*
-
-| Milestone | Description | Target Date | Dependencies | Deliverables |
-|-----------|-------------|-------------|--------------|--------------|
-| M1 | [Milestone name] | [Date] | [Dependencies] | [Deliverables] |
-| M2 | [Milestone name] | [Date] | [Dependencies] | [Deliverables] |
-
-### Critical Path Items
-*Items that could delay the overall timeline*
-
-- **[Critical Item]**: [Why it's critical and mitigation strategy]
-- **[Critical Item]**: [Why it's critical and mitigation strategy]
-
-## Success Criteria
-
-### Technical Success Metrics
-*How technical success will be measured*
-
-- **Performance**: [Specific performance targets met]
-- **Quality**: [Code quality and test coverage targets]
-- **Compatibility**: [Backward compatibility maintained]
-
-### Business Success Metrics
-*How business value will be measured*
-
-- **[Business Metric]**: [How it will be measured and target]
-- **[Business Metric]**: [How it will be measured and target]
+- **[Concern]**: [Description of data/security concern and what needs to be proven]
+  - **Validation Approach**: [Security review, data flow analysis, or compliance check]
+  - **Success Criteria**: [Security requirements or compliance standards to meet]
 
 ## Appendices
 
@@ -493,92 +341,73 @@ def algorithm_implementation(inputs):
 - **Cons**: [Disadvantages of this approach]
 - **Why Not Chosen**: [Reason for rejecting this alternative]
 
-### B. Detailed API Specifications
-*Complete API specifications that are too detailed for main document*
-
-### C. Database Schema / Data Structures
-*Detailed data structure definitions*
-
-### D. External Interface Specifications
-*Detailed specifications for external integrations*
-
 ---
 
 ## Design Validation Checklist
 
-Use this checklist to ensure the design is complete and ready for implementation:
+Use this checklist to ensure the increment design is complete and ready for implementation:
 
 **Requirements Coverage:**
-- [ ] All functional requirements addressed in design
-- [ ] All non-functional requirements addressed in design
-- [ ] All technical constraints accounted for in design
-- [ ] Design traceability to requirements is clear and complete
+- [ ] All increment requirements addressed in design
+- [ ] All increment non-functional requirements addressed in design
+- [ ] All increment technical constraints accounted for in design
+- [ ] Design traceability to increment requirements is clear and complete
 
-**Architecture Quality:**
-- [ ] Design follows portopt design principles
-- [ ] Integration with existing modules is well-defined
-- [ ] Module responsibilities are clear and well-separated
-- [ ] Data flow is logical and efficient
+**Design Principles & Standards Compliance:**
+- [ ] **Standards Compliance**: Design follows principles and standards defined in the design-principles-and-standards.md document
+- [ ] **Exceptions Documented**: Any deviations from standards are explicitly documented with clear justification
 
 **Implementation Readiness:**
-- [ ] Implementation phases are clearly defined
-- [ ] Key algorithms and approaches are specified
-- [ ] External dependencies are identified and assessed
-- [ ] API specifications are complete and consistent
+- [ ] **High-Level Design - Components**: All components are identified with clear purposes and responsibilities
+- [ ] **High-Level Design - Flows**: All control and data flows are described with clear interactions
+- [ ] **Detailed Design - Classes**: All public classes are specified with complete interfaces
+- [ ] **Detailed Design - Functions**: All public functions are specified with complete signatures
+- [ ] **Detailed Design - Algorithms**: Key algorithms and implementation approaches are specified
+- [ ] **Detailed Design - Data**: Data models, storage, and persistence are fully defined
+- [ ] **External Dependencies**: All dependencies are identified and assessed
 
-**Risk Management:**
-- [ ] Technical risks identified and mitigation strategies defined
-- [ ] Performance risks assessed with monitoring strategies
-- [ ] Security risks addressed with appropriate safeguards
-- [ ] Operational risks considered with rollback plans
-
-**Quality Assurance:**
-- [ ] Testing strategy addresses all critical functionality
-- [ ] Error handling approach is comprehensive
-- [ ] Monitoring and observability strategy is defined
-- [ ] Documentation plan ensures proper knowledge transfer
-
-**Project Management:**
-- [ ] Timeline is realistic and achievable
-- [ ] Dependencies and critical path items identified
-- [ ] Success criteria are measurable and aligned with requirements
-- [ ] Resource requirements are clearly understood
+**Design Validation & Testing:**
+- [ ] Design validation concerns are identified with validation approaches
+- [ ] Testing guidance covers all critical functionality and edge cases
+- [ ] Integration testing scenarios are defined for new components
+- [ ] Performance validation requirements are specified
+- [ ] Security and data integrity concerns are addressed in testing
 
 ---
 
 ## Template Usage Guidelines
 
 ### When to Use This Template
-- For implementing new major features or capabilities
-- For significant modifications to existing functionality  
-- For implementations that impact multiple modules or introduce new dependencies
-- When architecture decisions need to be documented and reviewed
+- For designing the technical implementation of a specific increment from feature decomposition
+- For significant modifications to existing functionality within an increment scope
+- For implementations that impact multiple modules within an increment
+- When technical design decisions need to be documented and reviewed before implementation
 
 ### Design Document Scope
 **This Design Document Should Include:**
-- HOW the system will be implemented (architecture, APIs, algorithms)
-- Technical decisions and their rationale
-- Implementation strategy and phasing
-- Risk assessment and mitigation strategies
-- Detailed testing and validation approaches
+- HOW this specific increment will be implemented (APIs, algorithms, implementation details)
+- Technical decisions and their rationale for this increment
+- Design validation concerns and validation approaches for this increment
+- Testing guidance for critical functionality and edge cases for this increment
 
 **This Design Document Should NOT Include:**
 - WHAT the system should do (that's in Requirements)
 - WHY the system is needed (that's in Requirements)
+- System-wide architecture decisions (that's in System Architecture)
+- Feature decomposition planning (that's in Feature Decomposition)
 - Specific code implementations (save for actual implementation)
 - Process or workflow definitions (that's in Development Process)
 
 ### Collaboration Process
-1. **Technical Lead** creates initial design document using this template
+1. **Technical Lead** creates initial increment design document using this template
 2. **Development Team** reviews technical approach, APIs, and implementation strategy
 3. **Architect** reviews architecture decisions and integration approach
 4. **Security Team** reviews security and risk assessments (if applicable)
-5. **Product Owner** reviews scope, timeline, and success criteria alignment with requirements
-6. **Technical Lead** incorporates feedback and finalizes design
-7. **Team** uses design document to guide implementation
+5. **Product Owner** reviews technical design completeness and readiness for implementation
+6. **Technical Lead** incorporates feedback and finalizes increment design
+7. **Team** uses increment design document to guide implementation
 
 ### Document Maintenance
-- Update design document when significant implementation discoveries require design changes
-- Link to related ADRs (Architecture Decision Records) for specific technical decisions
-- Reference implementation pull requests and commits
-- Update with lessons learned during implementation for future reference 
+- **Design Changes**: Update increment design document when significant implementation discoveries require design changes
+- **Approval Process**: Follow the [Decision-Making & Conflict Resolution](../process/development-process.md#decision-making--conflict-resolution) process when design changes affect previously approved documents
+- **Archive Completed Designs**: Archive completed increment designs for future increment planning reference 
