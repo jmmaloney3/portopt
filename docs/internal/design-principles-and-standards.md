@@ -6,7 +6,7 @@
 - **Author**: john and claude-4-sonnet
 - **Date Created**: 2025-07-19
 - **Last Updated**: 2025-09-12
-- **Version**: 1.1
+- **Version**: 1.2
 - **Status**: Living Document
 - **Scope**: Entire portopt library
 
