@@ -23,7 +23,7 @@
 
 This document defines HOW this specific increment will be implemented to fulfill the requirements and architectural decisions established in the [Requirements Document], [System Architecture], and [Feature Decomposition]. It provides the technical blueprint for implementing this increment, including detailed API designs, implementation strategies, and technical decisions needed before development begins.
 
-**Important**: This technical design document focuses on a single increment from the feature decomposition. It does not address system-wide architecture decisions (covered in the System Architecture document) or feature-level planning (covered in the Feature Decomposition document). This document is specifically for implementation-level design decisions needed before development begins.
+**Important**: This technical design document focuses on a single increment from the feature decomposition. It does not address system-wide architecture decisions (covered in the System Architecture document) or feature-level planning (covered in the Feature Decomposition document). This document is specifically for design-level decisions needed before development begins.
 
 **Design Principles**: This design must follow the [Design Principles & Standards](../design-principles-and-standards.md). When making design decisions, document principle applications and exceptions in context where relevant. Focus on explaining the reasoning behind design decisions rather than creating separate compliance sections.
 
@@ -33,30 +33,30 @@ This document defines HOW this specific increment will be implemented to fulfill
 *Brief summary of the overall approach and key design decisions*
 
 ### Component Design
-*Introduction to the key components and their roles in this design*
+*Introduction to the key components and their roles in this increment design*
 
 **[module_name] (NEW | EXISTING)**
-- **Purpose**: [Role in this design]
+- **Purpose**: [Role in this increment's design]
 - **Classes**:
-  - **[ClassName] (NEW | EXISTING)**: [Purpose and role in this design]
+  - **[ClassName] (NEW | EXISTING)**: [Purpose and role in this increment's design]
     - **Key Algorithms**: [Identify important algorithms - details described later]
     - **For EXISTING classes**: [What changes will be made, new functionality added, backward compatibility considerations]
 - **Functions**:
-  - **[function_name] (NEW | EXISTING)**: [Purpose and role in this design]
+  - **[function_name] (NEW | EXISTING)**: [Purpose and role in this increment's design]
     - **Key Algorithms**: [Identify important algorithms - details described later]
     - **For EXISTING functions**: [What changes will be made, new functionality added, backward compatibility considerations]
-- **Dependencies**: [What this module depends on]
-- **Integration Points**: [How it connects to other components]
+- **Dependencies**: [What this module depends on within the existing system]
+- **Integration Points**: [How it connects to other components in this increment and existing system]
 
 *[Repeat this structure for each module that plays a role in the design]*
 
 ### Control & Data Flow Design
-*How components collaborate to deliver the required capabilities*
+*How this increment's components collaborate with each other and other existing components to deliver the required capabilities*
 
 **Flow 1: [Flow Name]**
-- **Overview**: [What this flow accomplishes]
-- **Components**: [List of components involved - the "cast of characters"]
-- **Behavior**: [Choose the format that best describes how components interact and data flows]
+- **Overview**: [What this flow accomplishes within this increment]
+- **Components**: [List of components involved in this increment - the "cast of characters"]
+- **Behavior**: [Choose the format that best describes how this increment's components interact and data flows]
 
 > **Option 1 - Narrative Format** (best for straightforward, linear flows):
 > [Step-by-step narrative combining interactions and data flow, like:]
@@ -242,9 +242,9 @@ def algorithm_implementation(inputs):
 ### Data Storage & Persistence
 
 #### Data Model Implementation
-* **Entities Implemented**: [Which entities from the system architecture are implemented in this increment]
-* **Attributes Implemented**: [Which attributes of those entities are implemented]
-* **Relationships Implemented**: [Which relationships are implemented and how]
+* **Entities Implemented**: [Which entities from the system architecture will this increment implement or extend]
+* **Attributes Implemented**: [Which attributes of those entities will this increment implement]
+* **Relationships Implemented**: [Which relationships will this increment implement and how]
 
 #### Database Schema
 * **New Tables**: [New database tables created by this increment]
@@ -300,7 +300,7 @@ def algorithm_implementation(inputs):
 - **[Performance Aspect]**: [What needs performance testing and why]
 
 ## Design Validation Concerns
-*Aspects of the design that should be proven out before full implementation*
+*Aspects of the design that should be proven out before full development*
 
 ### Algorithm & Performance Validation
 *Concerns about whether proposed algorithms or performance approaches will work as designed*
@@ -341,11 +341,22 @@ def algorithm_implementation(inputs):
 - **Cons**: [Disadvantages of this approach]
 - **Why Not Chosen**: [Reason for rejecting this alternative]
 
+### B. Architectural Issues Identified
+*System-wide architectural concerns discovered during increment design that require system architecture updates*
+
+**Issue 1: [Issue Name]**
+- **Description**: [What architectural issue was identified]
+- **Impact**: [How this affects the system architecture]
+- **Recommendation**: [What system architecture updates are needed]
+- **Increment Workaround**: [How this increment will work within current architecture constraints]
+
+*Note: These architectural issues should be escalated to the Architecture Lead for system architecture document updates.*
+
 ---
 
 ## Design Validation Checklist
 
-Use this checklist to ensure the increment design is complete and ready for implementation:
+Use this checklist to ensure the increment design is complete and ready for development:
 
 **Requirements Coverage:**
 - [ ] All increment requirements addressed in design
@@ -357,7 +368,7 @@ Use this checklist to ensure the increment design is complete and ready for impl
 - [ ] **Standards Compliance**: Design follows principles and standards defined in the design-principles-and-standards.md document
 - [ ] **Exceptions Documented**: Any deviations from standards are explicitly documented with clear justification
 
-**Implementation Readiness:**
+**Design Readiness:**
 - [ ] **High-Level Design - Components**: All components are identified with clear purposes and responsibilities
 - [ ] **High-Level Design - Flows**: All control and data flows are described with clear interactions
 - [ ] **Detailed Design - Classes**: All public classes are specified with complete interfaces
@@ -381,7 +392,7 @@ Use this checklist to ensure the increment design is complete and ready for impl
 - For designing the technical implementation of a specific increment from feature decomposition
 - For significant modifications to existing functionality within an increment scope
 - For implementations that impact multiple modules within an increment
-- When technical design decisions need to be documented and reviewed before implementation
+- When technical design decisions need to be documented and reviewed before development
 
 ### Design Document Scope
 **This Design Document Should Include:**
