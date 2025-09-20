@@ -684,17 +684,16 @@ So that I can make data-driven allocation adjustments based on objective perform
 
 *Note: For developer-facing libraries, user stories typically generate functional requirements that define system capabilities. The relationships between requirements are flexible - not every user story needs multiple functional requirements, and some functional requirements may span multiple user stories.*
 
-| Problem Statement | Objective | User Story | Requirements Generated | Status |
-|-------------------|-----------|------------|----------------------|---------|
-| PS-1 | OBJ-1 | US-1 | FR-1, FR-2, FR-8 | Not Started |
-| PS-1 | OBJ-1 | US-2 | FR-3, FR-2 | Not Started |
-| PS-1 | OBJ-1 | US-3 | FR-4 | Not Started |
-| PS-2 | OBJ-2 | US-4 | FR-5, FR-6 | Not Started |
-| PS-2 | OBJ-2 | US-5 | FR-7, FR-5 | Not Started |
-| PS-3 | OBJ-3 | US-6 | FR-10, FR-9 | Not Started |
-| PS-3 | OBJ-3 | US-7 | FR-9, FR-10 | Not Started |
-
-| [To be defined] | PS-1 | US-8 | FR-1, FR-4, FR-5, FR-11 | Not Started |
+| Problem Statement | User Story | Requirements Generated | Status |
+|-------------------|------------|----------------------|---------|
+| PS-1 | US-1 | FR-1, FR-2, FR-8 | Not Started |
+| PS-1 | US-2 | FR-3, FR-2 | Not Started |
+| PS-1 | US-3 | FR-4 | Not Started |
+| PS-2 | US-4 | FR-5, FR-6 | Not Started |
+| PS-2 | US-5 | FR-7, FR-5 | Not Started |
+| PS-3 | US-6 | FR-10, FR-9 | Not Started |
+| PS-3 | US-7 | FR-9, FR-10 | Not Started |
+| PS-1 | US-8 | FR-1, FR-4, FR-5 | Not Started |
 
 *Example interpretations:*
 - *US-1 generates multiple functional capabilities (FR-1, FR-2, FR-8) for portfolio performance analysis*
