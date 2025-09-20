@@ -17,22 +17,147 @@ This requirement addresses the critical "flying blind" problem where portfolio m
 
 ## Requirements Overview
 
-This document organizes requirements into five interconnected types that work together to ensure complete coverage from business need to system requirements:
+This document organizes requirements into four interconnected types that work together to ensure complete coverage from business need to system requirements:
+
+### **Personas** → **WHO**
+Define the key user archetypes and their characteristics that drive design decisions and user experience requirements.
+- **Primary Personas**: Main user types whose needs must be satisfied for success
+- **Secondary Personas**: Supporting user types with specific needs or constraints
+- **Anti-Personas**: User types explicitly not targeted or supported
 
 ### **Business Requirements** → **WHY**
-Define the fundamental problems, strategic goals, and user value that justify this development effort.
+Define the fundamental problems and user value that justify this development effort.
+- **Problem Statements**: Core challenges and pain points that need solving
+- **User Stories**: Specific user-centered solutions that deliver business value
 
 ### **Functional Requirements** → **WHAT**
-Define the core capabilities and behaviors the system must provide for performance calculation, transaction integration, and attribution analysis.
-
-### **Developer Experience (DX) Requirements** → **HOW** 
-Define how developers discover, access, and successfully use the performance analysis capabilities following existing portopt patterns.
+Define the core capabilities and behaviors the system must provide, independent of how users access them.
+- System capabilities, business logic, data processing, and computational features
+- Focus on what the system does, not how developers interact with it
 
 ### **Non-Functional Requirements** → **HOW WELL**
-Define performance, reliability, and resource constraints the system must meet.
+Define quality attributes and performance characteristics the system must exhibit.
+- Performance, reliability, security requirements that apply to system behavior
+- Measurable quality standards independent of specific functionality
 
 ### **Technical Constraints** → **WITHIN WHAT LIMITS**
-Define platform requirements, dependency constraints, and compatibility requirements.
+Define environmental limitations and compatibility requirements the system must operate within.
+- Platform support, dependency constraints, compatibility requirements
+- External factors that constrain implementation choices
+
+### **Requirements Flow**
+**User Foundation:**
+- **Personas** → Define who we're building for
+
+**Business Foundation:**
+- **Problem Statements** → Identify core challenges
+- **User Stories** → Translate into user-centered solutions
+
+**System Requirements:**
+- **Functional Requirements** → Define system capabilities (WHAT)
+- **Non-Functional Requirements** → Define quality attributes (HOW WELL)
+
+**Constraints:** All technical requirements operate within **Technical Constraints** (platform, compatibility, dependencies)
+
+*Note: For developer-facing libraries, Functional requirements define the system capabilities that developers will use. For end-user facing applications, Functional requirements define the system capabilities that support user interactions. All trace back to the same User Stories and address the core system capabilities needed to deliver value.*
+
+## Personas
+
+*Personas are detailed, semi-fictional representations of key user archetypes that help ensure requirements remain user-centered and realistic. They provide context for understanding user needs, behaviors, goals, and constraints. Well-defined personas help validate that business requirements, user stories, and technical requirements all address real user needs and create meaningful value. For developer-facing libraries, personas should focus on different types of developers, analysts, and technical users.*
+
+### Primary Personas
+
+> **P-1**: [Hands-on, Non-Institutional Investor] - [Brief role description]
+>
+> **Demographics & Background:**
+> - **Role**: [Job title and primary responsibilities]
+> - **Experience Level**: [Beginner/Intermediate/Expert in relevant domains]
+> - **Technical Skills**: [Programming languages, tools, frameworks they use]
+> - **Work Environment**: [Typical work setting, tools, constraints]
+> - **Goals**: [What they want to achieve in their role]
+>
+> **Behaviors & Workflows:**
+> - **Primary Tasks**: [Most common activities they perform]
+> - **Decision Making**: [How they approach problems and make choices]
+> - **Information Sources**: [Where they get help, documentation, examples]
+> - **Pain Points**: [Current frustrations and challenges]
+> - **Success Metrics**: [How they measure success in their work]
+>
+> **Technical Context:**
+> - **Current Tools**: [What they use now for similar tasks]
+> - **Integration Needs**: [How this fits into their existing workflow]
+> - **Performance Expectations**: [Speed, reliability, accuracy requirements]
+> - **Learning Preferences**: [How they prefer to learn new tools]
+>
+> **Traceability:**
+> - **Primary Problems**: [PS-IDs that directly affect this persona]
+> - **Key User Stories**: [US-IDs that primarily serve this persona]
+> - **Critical Requirements**: [FR-IDs that are essential for this persona]
+> - **Related Personas**: [Other persona IDs that interact with or depend on this one]
+
+> **P-2**: [Wealth Manager] - [Brief role description]
+>
+> **Demographics & Background:**
+> - **Role**: [Job title and primary responsibilities]
+> - **Experience Level**: [Beginner/Intermediate/Expert in relevant domains]
+> - **Technical Skills**: [Programming languages, tools, frameworks they use]
+> - **Work Environment**: [Typical work setting, tools, constraints]
+> - **Goals**: [What they want to achieve in their role]
+>
+> **Behaviors & Workflows:**
+> - **Primary Tasks**: [Most common activities they perform]
+> - **Decision Making**: [How they approach problems and make choices]
+> - **Information Sources**: [Where they get help, documentation, examples]
+> - **Pain Points**: [Current frustrations and challenges]
+> - **Success Metrics**: [How they measure success in their work]
+>
+> **Technical Context:**
+> - **Current Tools**: [What they use now for similar tasks]
+> - **Integration Needs**: [How this fits into their existing workflow]
+> - **Performance Expectations**: [Speed, reliability, accuracy requirements]
+> - **Learning Preferences**: [How they prefer to learn new tools]
+>
+> **Traceability:**
+> - **Primary Problems**: [PS-IDs that directly affect this persona]
+> - **Key User Stories**: [US-IDs that primarily serve this persona]
+> - **Critical Requirements**: [FR-IDs that are essential for this persona]
+> - **Related Personas**: [Other persona IDs that interact with or depend on this one]
+
+> **P-3**: [Data Scientist/Investment Analyst] - [Brief role description]
+>
+> **Demographics & Background:**
+> - **Role**: [Job title and primary responsibilities]
+> - **Experience Level**: [Beginner/Intermediate/Expert in relevant domains]
+> - **Technical Skills**: [Programming languages, tools, frameworks they use]
+> - **Work Environment**: [Typical work setting, tools, constraints]
+> - **Goals**: [What they want to achieve in their role]
+>
+> **Behaviors & Workflows:**
+> - **Primary Tasks**: [Most common activities they perform]
+> - **Decision Making**: [How they approach problems and make choices]
+> - **Information Sources**: [Where they get help, documentation, examples]
+> - **Pain Points**: [Current frustrations and challenges]
+> - **Success Metrics**: [How they measure success in their work]
+>
+> **Technical Context:**
+> - **Current Tools**: [What they use now for similar tasks]
+> - **Integration Needs**: [How this fits into their existing workflow]
+> - **Performance Expectations**: [Speed, reliability, accuracy requirements]
+> - **Learning Preferences**: [How they prefer to learn new tools]
+>
+> **Traceability:**
+> - **Primary Problems**: [PS-IDs that directly affect this persona]
+> - **Key User Stories**: [US-IDs that primarily serve this persona]
+> - **Critical Requirements**: [FR-IDs that are essential for this persona]
+> - **Related Personas**: [Other persona IDs that interact with or depend on this one]
+
+### Secondary Personas
+
+*[To be defined during interview process]*
+
+### Anti-Personas
+
+*[To be defined during interview process]*
 
 ## Business Requirements
 
@@ -51,8 +176,9 @@ Define platform requirements, dependency constraints, and compatibility requirem
 - **Impact**: Suboptimal investment decisions, inability to evaluate strategy effectiveness, missed opportunities for portfolio improvement, uncertainty about retirement readiness
 
 **Traceability:**
+- **Primary Personas**: [To be defined during interview process]
 - **Addresses**: None (primary problem statement)
-- **Addressed By**: OBJ-1 (Enable data-driven portfolio performance analysis)
+- **Addressed By**: US-1, US-2, US-3, US-4, US-5, US-6, US-7, US-8 (performance analysis user stories)
 - **Related Problems**: PS-2 (Limited factor attribution capabilities), PS-3 (No benchmark comparison capabilities)
 
 #### Secondary Problems
@@ -66,8 +192,9 @@ Define platform requirements, dependency constraints, and compatibility requirem
 - **Impact**: Cannot identify which factor allocations are contributing positively or negatively to returns, and cannot identify concentration risk or unintended factor exposure through specific holdings
 
 **Traceability:**
+- **Primary Personas**: [To be defined during interview process]
 - **Addresses**: PS-1 (lack of objective performance metrics)
-- **Addressed By**: OBJ-2 (Provide comprehensive factor attribution analysis)
+- **Addressed By**: US-4, US-5 (factor attribution user stories)
 - **Related Problems**: PS-1 (primary problem), PS-3 (benchmark comparison)
 
 **PS-3**: No capability to compare actual portfolio performance against alternative strategies
@@ -79,51 +206,10 @@ Define platform requirements, dependency constraints, and compatibility requirem
 - **Impact**: Cannot determine if current investment strategy outperforms standard benchmarks or alternative approaches
 
 **Traceability:**
+- **Primary Personas**: [To be defined during interview process]
 - **Addresses**: PS-1 (lack of objective performance metrics)
-- **Addressed By**: OBJ-1 (data-driven analysis), OBJ-3 (strategy comparison capabilities)
+- **Addressed By**: US-6, US-7 (benchmark comparison user stories)
 - **Related Problems**: PS-1 (primary problem), PS-2 (factor attribution)
-
-### Objectives & Key Results (OKRs)
-
-#### Primary OKR
-
-**OBJ-1**: Enable data-driven portfolio performance analysis to replace subjective assessment with objective metrics
-
-**Key Results:**
-- **KR1**: Reduce decision-making uncertainty by providing objective performance metrics within 30 seconds for any time period
-- **KR2**: Enable quarterly rebalancing decisions based on quantitative performance data rather than subjective assessment
-- **KR3**: Achieve comprehensive performance visibility across portfolio, account, ticker, and factor dimensions
-
-**Traceability:**
-- **Addresses Problems**: PS-1 (lack of objective performance metrics)
-- **Supported By**: US-1 (time-weighted returns), US-2 (money-weighted returns), US-3 (risk metrics), US-4 (factor attribution)
-- **Related Objectives**: OBJ-2 (factor attribution), OBJ-3 (strategy comparison)
-
-#### Supporting OKRs
-
-**OBJ-2**: Provide comprehensive factor attribution analysis for portfolio performance evaluation
-
-**Key Results:**
-- **KR1**: Enable factor-level performance attribution across 4-level factor hierarchy with 25 leaf factors
-- **KR2**: Support bidirectional attribution analysis (factors→tickers and tickers→factors)  
-- **KR3**: Provide time-based attribution analysis for any custom time period
-
-**Traceability:**
-- **Addresses Problems**: PS-2 (limited factor attribution)
-- **Supported By**: US-4 (factor attribution), US-5 (factor contribution analysis)
-- **Related Objectives**: OBJ-1 (data-driven analysis), OBJ-3 (strategy comparison)
-
-**OBJ-3**: Enable comparison of actual portfolio performance against alternative investment strategies
-
-**Key Results:**
-- **KR1**: Support comparison against standard benchmark portfolios (60/40, 80/20, S&P 500)
-- **KR2**: Enable custom alternative portfolio definition and backtesting
-- **KR3**: Provide standardized performance comparison metrics using bt/ffn framework formats
-
-**Traceability:**
-- **Addresses Problems**: PS-3 (no benchmark comparison)
-- **Supported By**: US-6 (benchmark comparison), US-7 (alternative strategy analysis)
-- **Related Objectives**: OBJ-1 (data-driven analysis), OBJ-2 (factor attribution)
 
 ### User Stories
 
@@ -145,7 +231,7 @@ So that I can evaluate investment performance isolated from cash flow timing.
 - [ ] Provides clear warnings when data is incomplete for requested time period
 
 **Traceability:**
-- **Supports Objective**: OBJ-1 (Enable data-driven portfolio performance analysis)
+- **Primary Persona**: [To be defined during interview process]
 - **Addresses Problem**: PS-1 (lack of objective performance metrics)
 - **Implemented By**: FR-1 (TWR calculation engine), FR-2 (time period handling)
 - **Related Stories**: US-2 (money-weighted returns), US-3 (risk metrics)
@@ -164,7 +250,7 @@ So that I can understand the actual return experience on my invested dollars.
 - [ ] Handles complex cash flow patterns (irregular contributions, withdrawals)
 
 **Traceability:**
-- **Supports Objective**: OBJ-1 (Enable data-driven portfolio performance analysis)
+- **Primary Persona**: [To be defined during interview process]
 - **Addresses Problem**: PS-1 (lack of objective performance metrics)
 - **Implemented By**: FR-3 (MWR calculation engine), FR-2 (time period handling)
 - **Related Stories**: US-1 (time-weighted returns), US-3 (risk metrics)
@@ -182,7 +268,7 @@ So that I can evaluate risk-adjusted performance and drawdown characteristics.
 - [ ] Risk metrics calculated over same time periods as return metrics
 
 **Traceability:**
-- **Supports Objective**: OBJ-1 (Enable data-driven portfolio performance analysis)
+- **Primary Persona**: [To be defined during interview process]
 - **Addresses Problem**: PS-1 (lack of objective performance metrics)
 - **Implemented By**: FR-4 (risk metrics calculation engine)
 - **Related Stories**: US-1 (TWR), US-2 (MWR), US-4 (factor attribution)
@@ -200,7 +286,7 @@ So that I can understand which factors contributed positively or negatively to r
 - [ ] Results formatted as "Factor X contributed +2.3% to total returns"
 
 **Traceability:**
-- **Supports Objective**: OBJ-2 (Provide comprehensive factor attribution analysis)
+- **Primary Persona**: [To be defined during interview process]
 - **Addresses Problem**: PS-2 (limited factor attribution capabilities)
 - **Implemented By**: FR-5 (factor attribution engine), FR-6 (factor weight handling)
 - **Related Stories**: US-5 (factor contribution), US-1 (TWR), US-3 (risk metrics)
@@ -219,7 +305,7 @@ So that I can understand factor concentration and make informed rebalancing deci
 - [ ] Results help identify diversification opportunities
 
 **Traceability:**
-- **Supports Objective**: OBJ-2 (Provide comprehensive factor attribution analysis)
+- **Primary Persona**: [To be defined during interview process]
 - **Addresses Problem**: PS-2 (limited factor attribution capabilities)
 - **Implemented By**: FR-5 (factor attribution engine), FR-7 (factor concentration analysis)
 - **Related Stories**: US-4 (factor attribution), US-6 (benchmark comparison)
@@ -236,7 +322,7 @@ So that I can evaluate whether my investment approach is outperforming standard 
 - [ ] Results use standardized bt/ffn framework formats for consistency
 
 **Traceability:**
-- **Supports Objective**: OBJ-3 (Enable comparison against alternative strategies)
+- **Primary Persona**: [To be defined during interview process]
 - **Addresses Problem**: PS-3 (no benchmark comparison capabilities)
 - **Implemented By**: FR-8 (benchmark comparison engine), FR-9 (alternative portfolio calculation)
 - **Related Stories**: US-7 (alternative strategies), US-1 (TWR), US-3 (risk metrics)
@@ -253,10 +339,27 @@ So that I can identify potentially better allocation approaches.
 - [ ] Integrates with existing bt framework for sophisticated backtesting
 
 **Traceability:**
-- **Supports Objective**: OBJ-3 (Enable comparison against alternative strategies)
+- **Primary Persona**: [To be defined during interview process]
 - **Addresses Problem**: PS-3 (no benchmark comparison capabilities)
 - **Implemented By**: FR-9 (alternative portfolio calculation), FR-10 (backtesting integration)
 - **Related Stories**: US-6 (benchmark comparison), US-1 (TWR), US-2 (MWR)
+
+**US-8**: As a portfolio manager,
+I want to use performance analysis data to make quarterly rebalancing decisions,
+So that I can make data-driven allocation adjustments based on objective performance metrics rather than subjective assessment.
+
+**Acceptance Criteria:**
+- [ ] Can access performance metrics (returns, risk, factor attribution) for the current quarter and previous quarters
+- [ ] Can compare current portfolio performance against target allocations and benchmarks
+- [ ] Can identify underperforming or overperforming asset classes and factors
+- [ ] Results provide clear guidance on which allocations should be adjusted and by how much
+- [ ] Integrates with existing portopt rebalancing workflow and optimization capabilities
+
+**Traceability:**
+- **Primary Persona**: [To be defined during interview process]
+- **Addresses Problem**: PS-1 (lack of objective performance metrics for decision-making)
+- **Implemented By**: FR-1 (TWR calculation), FR-4 (risk metrics), FR-5 (factor attribution), FR-11 (API integration)
+- **Related Stories**: US-1 (TWR), US-3 (risk metrics), US-4 (factor attribution)
 
 ## Functional Requirements
 
@@ -286,8 +389,8 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
-- **Objective**: OBJ-1 - Enable data-driven portfolio performance analysis
 - **User Story**: US-1 - Calculate time-weighted returns for any time period
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: FR-4 (risk metrics), FR-5 (factor attribution), FR-8 (benchmark comparison)
 
 **FR-2**: The system must support flexible time period specification for all performance calculations
@@ -307,8 +410,8 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
-- **Objective**: OBJ-1 - Enable data-driven portfolio performance analysis
 - **User Story**: US-1 - Calculate TWR for any time period
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: FR-3 (MWR calculation), FR-4 (risk metrics), FR-5 (factor attribution)
 
 **FR-3**: The system must calculate money-weighted returns (MWR) using Internal Rate of Return methodology
@@ -330,8 +433,8 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
-- **Objective**: OBJ-1 - Enable data-driven portfolio performance analysis
 - **User Story**: US-2 - Calculate money-weighted returns for actual dollar experience
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: FR-8 (benchmark comparison), FR-9 (alternative portfolio calculation)
 
 **FR-4**: The system must calculate risk metrics (volatility, Sharpe ratio, maximum drawdown) for performance evaluation
@@ -355,8 +458,8 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
-- **Objective**: OBJ-1 - Enable data-driven portfolio performance analysis
 - **User Story**: US-3 - Calculate risk metrics for risk-adjusted performance evaluation
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: FR-8 (benchmark comparison), FR-9 (alternative portfolio calculation)
 
 ### Factor Attribution & Analysis
@@ -380,8 +483,8 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-2 - Current portfolio analysis lacks comprehensive factor analysis capabilities
-- **Objective**: OBJ-2 - Provide comprehensive factor attribution analysis
 - **User Story**: US-4 - Analyze factor attribution for portfolio performance, US-5 - Identify holdings driving factor exposure
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: FR-7 (factor concentration), FR-8 (benchmark comparison)
 
 **FR-6**: The system must handle factor weights consistently with existing portopt factor handling logic
@@ -401,8 +504,8 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-2 - Current portfolio analysis lacks comprehensive factor analysis capabilities
-- **Objective**: OBJ-2 - Provide comprehensive factor attribution analysis
 - **User Story**: US-4 - Analyze factor attribution for portfolio performance
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: FR-5 (factor attribution), FR-7 (factor concentration analysis)
 
 **FR-7**: The system must identify factor concentration risks, unintended exposures, and factor overlap patterns
@@ -423,8 +526,8 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-2 - Current portfolio analysis lacks comprehensive factor analysis capabilities
-- **Objective**: OBJ-2 - Provide comprehensive factor attribution analysis
 - **User Story**: US-5 - Identify holdings driving factor exposure
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: None (leaf requirement)
 
 ### Transaction Data Integration
@@ -446,8 +549,8 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
-- **Objective**: OBJ-1 - Enable data-driven portfolio performance analysis
 - **User Story**: US-1 - Calculate time-weighted returns (requires transaction data)
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: FR-1 (TWR calculation), FR-3 (MWR calculation), FR-9 (alternative portfolio calculation)
 
 ### Benchmark & Alternative Portfolio Analysis
@@ -469,8 +572,8 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-3 - No capability to compare against alternative strategies
-- **Objective**: OBJ-3 - Enable comparison against alternative investment strategies
 - **User Story**: US-7 - Backtest alternative investment strategies
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: FR-10 (benchmark comparison engine)
 
 **FR-10**: The system must provide benchmark comparison capabilities
@@ -490,92 +593,10 @@ So that I can identify potentially better allocation approaches.
 
 **Traceability:**
 - **Problem Statement**: PS-3 - No benchmark comparison capabilities
-- **Objective**: OBJ-3 - Enable comparison against alternative investment strategies
 - **User Story**: US-6 - Compare actual portfolio performance against benchmarks
+- **Target Personas**: [To be defined during interview process]
 - **Impacts**: None (leaf requirement)
 
-## Developer Experience (DX) Requirements
-
-*For developer-facing libraries like portopt, developer experience IS the product experience. This section defines how developers will discover, access, and successfully use the performance analysis capabilities.*
-
-### Expected Module Integration
-
-**Primary Module**: New `performance.py` module will house the main performance analysis functionality
-**Supporting Modules**: 
-- `portfolio.py` - Extended to support transaction data loading and performance method access
-- `metrics.py` - Performance calculations will follow similar patterns and reuse factor handling logic
-- `holdings.py` - Transaction loading will extend existing CSV parsing patterns
-
-**New Modules**: 
-- `performance.py` - Main performance analysis engine with PerformanceMixin
-- `transactions.py` - Transaction data loading and processing (following holdings.py pattern)
-
-### API Design Considerations
-
-*This implementation must follow the [portopt Design Principles](../design-principles.md). Document any requirement-specific design constraints that will impact how developers interact with the functionality.*
-
-**Parameter Naming Consistency**: Performance methods must follow existing portopt parameter conventions
-- **Type**: Consistency
-- **Rationale**: Developers expect consistent parameter names across similar functions
-- **Impact**: Method signatures must use established patterns from metrics.py (dimensions, filters, metrics parameters)
-- **Validation**: API review confirms naming matches existing portfolio analysis methods
-
-**Return Format Standardization**: Performance results should use bt/ffn framework formats where applicable
-- **Type**: Integration
-- **Rationale**: Leverages established financial analysis infrastructure and enables interoperability
-- **Impact**: Return objects should be compatible with bt.Result and ffn.GroupStats patterns
-- **Validation**: Results can be consumed by existing bt/ffn analysis and visualization tools
-
-**Transaction Data Integration**: Transaction loading should follow holdings.py patterns
-- **Type**: Consistency
-- **Rationale**: Developers familiar with holdings loading expect similar transaction loading patterns
-- **Impact**: Portfolio class constructor extended with transactions_path parameter, TransactionsMixin follows RebalanceMixin pattern
-- **Validation**: Transaction loading API matches holdings loading API patterns and documentation
-
-### Error Handling & Developer Messaging
-
-**Missing Data Strategy Parameters**: Clear parameter options for handling incomplete data
-- **Error Message Clarity**: Method parameters should clearly document available missing data strategies
-- **Exception Types**: Use ValueError for invalid missing data strategy options, provide clear list of valid options
-- **Recovery Guidance**: Error messages should suggest appropriate missing data strategies based on data availability
-- **Validation Feedback**: Warnings should clearly indicate what data is missing and impact on calculations
-
-**Time Period Validation**: Clear guidance for invalid or unavailable time periods
-- **Error Message Clarity**: Specific error messages indicating why a time period is invalid or unavailable
-- **Exception Types**: Use ValueError for invalid time periods, provide suggested alternatives
-- **Recovery Guidance**: Error messages should suggest valid time periods based on available transaction and price data
-- **Validation Feedback**: Clear warnings when requested time period exceeds available data
-
-### Documentation Requirements
-
-**API Reference**: Complete docstrings following NumPy/SciPy conventions
-- **Method Documentation**: All public methods must have comprehensive docstrings with parameters, returns, examples
-- **Financial Concepts**: Brief explanations of TWR vs MWR, when to use each, interpretation of results
-- **Performance Considerations**: Document expected response times and data scale limitations
-
-**Usage Examples**: Jupyter notebook demonstrating end-to-end performance analysis workflow
-- **Basic Usage**: Simple examples for calculating portfolio returns and risk metrics
-- **Advanced Usage**: Factor attribution analysis, benchmark comparison, alternative strategy evaluation
-- **Integration Examples**: How to use results with existing portopt optimization and analysis workflows
-
-**Migration Guides**: Documentation for integrating performance analysis with existing portfolios
-- **Transaction Data Setup**: How to prepare and load transaction data from different brokerages
-- **Factor Integration**: How performance analysis works with existing factor weight configurations
-- **Troubleshooting**: Common data issues and solutions for performance calculation problems
-
-### Learning Curve & Usability
-
-**Financial Terminology**: Use standard financial terms (TWR, MWR, Sharpe, attribution) in method names and documentation
-- **Discoverability**: Methods should be discoverable through logical naming that matches industry terminology
-- **Learning Curve**: Assume basic financial knowledge; provide brief explanations in docstrings for complex concepts
-- **Integration Effort**: Should integrate naturally with existing Portfolio class usage patterns
-- **Cognitive Load**: Method complexity should match complexity of underlying financial concepts
-
-**API Integration**: Performance analysis should feel like natural extension of existing portopt capabilities
-- **Method Discovery**: Performance methods accessible through Portfolio class following metrics.py pattern
-- **Parameter Consistency**: Similar aggregation and filtering patterns as existing getMetrics() method
-- **Result Interpretation**: Results should be clearly formatted and include metadata about calculation methods used
-- **Progressive Disclosure**: Simple use cases should be simple, advanced features should be discoverable
 
 ## Non-Functional Requirements
 
@@ -583,10 +604,11 @@ So that I can identify potentially better allocation approaches.
 
 ### Performance Requirements
 
-**Response Time**: Performance calculations must complete within acceptable time limits for interactive use
-- **Basic Calculations**: Portfolio-level TWR, volatility, and Sharpe ratio for YTD period must complete within 10 seconds (target) or 30 seconds (acceptable)
+**Response Time**: Performance calculations must complete within acceptable time limits for interactive use and decision-making
+- **Basic Calculations**: Portfolio-level TWR, volatility, and Sharpe ratio for YTD period must complete within 10 seconds (target) or 30 seconds (acceptable) to support timely investment decisions
 - **Complex Analysis**: Factor attribution across 4-level hierarchy for custom time periods must complete within 60 seconds for typical portfolio (50 tickers, 10 accounts, 25 factors)
 - **Alternative Portfolio Analysis**: Backtesting alternative strategies should perform comparably to bt framework benchmarks
+- **Decision Support**: Performance metrics must be available quickly enough to reduce decision-making uncertainty and enable data-driven portfolio management
 
 **Memory Usage**: System must operate within resource constraints of development environment
 - **Memory Limit**: Total memory usage must not exceed 8GB (50% of MacBook Air 16GB RAM)
@@ -658,6 +680,9 @@ So that I can identify potentially better allocation approaches.
 ## Traceability Summary
 
 ### Quick Reference Matrix
+*This matrix provides a high-level overview of traceability relationships. Detailed traceability information is maintained in each individual item's "Traceability" section.*
+
+*Note: For developer-facing libraries, user stories typically generate functional requirements that define system capabilities. The relationships between requirements are flexible - not every user story needs multiple functional requirements, and some functional requirements may span multiple user stories.*
 
 | Problem Statement | Objective | User Story | Requirements Generated | Status |
 |-------------------|-----------|------------|----------------------|---------|
@@ -668,6 +693,13 @@ So that I can identify potentially better allocation approaches.
 | PS-2 | OBJ-2 | US-5 | FR-7, FR-5 | Not Started |
 | PS-3 | OBJ-3 | US-6 | FR-10, FR-9 | Not Started |
 | PS-3 | OBJ-3 | US-7 | FR-9, FR-10 | Not Started |
+
+| [To be defined] | PS-1 | US-8 | FR-1, FR-4, FR-5, FR-11 | Not Started |
+
+*Example interpretations:*
+- *US-1 generates multiple functional capabilities (FR-1, FR-2, FR-8) for portfolio performance analysis*
+- *US-2 generates internal functionality (FR-3, FR-2) for money-weighted return calculations*
+- *US-3 generates functional capabilities (FR-4) for risk metrics calculation*
 
 ### Implementation Priority
 
@@ -704,6 +736,42 @@ So that I can identify potentially better allocation approaches.
 - Future requirement for dynamic factor weight handling over time
 - Future requirement for database storage of transactions and performance calculations
 - Future requirement for more sophisticated factor analysis (factor loadings vs percentage allocations)
+
+### Traceability Validation Checklist
+*Use this checklist to ensure traceability is complete and accurate:*
+
+- [ ] **Persona Foundation**: Every primary persona has at least one problem statement that directly affects them
+- [ ] **Persona Coverage**: Every problem statement is linked to at least one primary persona
+- [ ] **Forward Traceability**: Every problem statement leads to at least one user story
+- [ ] **Forward Traceability**: Every user story is implemented by at least one functional requirement
+- [ ] **Backward Traceability**: Every functional requirement traces back to a user story
+- [ ] **Backward Traceability**: Every user story addresses a defined problem
+- [ ] **Backward Traceability**: Every problem statement affects at least one defined persona
+- [ ] **No Orphans**: No requirements exist without clear business justification
+- [ ] **No Gaps**: All problem statements have corresponding implementation paths
+- [ ] **Dependencies Clear**: All requirement dependencies are documented
+- [ ] **Impact Analysis**: Each requirement's impacts on other requirements are identified
+- [ ] **Persona Validation**: All personas have clear, realistic characteristics and traceable needs
+- [ ] **Anti-Persona Clarity**: Anti-personas clearly define scope boundaries and design constraints
+
+## Appendices
+
+### A. Glossary
+- **TWR (Time-Weighted Return)**: A measure of investment performance that eliminates the impact of cash flows
+- **MWR (Money-Weighted Return)**: A measure of investment performance that accounts for the timing and size of cash flows
+- **Factor Attribution**: Analysis of how different factors contribute to portfolio performance
+- **Factor Concentration**: The degree to which portfolio exposure to specific factors is concentrated in particular holdings
+- **bt/ffn Framework**: Backtesting and financial analysis frameworks used for standardized performance calculations
+
+### B. References
+- [portopt Design Principles](../design-principles.md)
+- [requirements template](../templates/requirements-template.md)
+- bt framework documentation
+- ffn framework documentation
+- CFA Institute performance measurement standards
+
+### C. Examples
+*[To be populated during implementation with concrete examples of the expected functionality]*
 
 ---
 
