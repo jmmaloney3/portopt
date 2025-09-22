@@ -7,6 +7,7 @@
 - **Author**: [Author name]
 - **Date Created**: [YYYY-MM-DD]
 - **Last Updated**: [YYYY-MM-DD]
+- **Version**: [vMAJOR.MINOR.PATCH] (e.g., v1.0.0)
 - **Status**: [Draft | Review | Approved | Implemented | Deprecated]
 - **Priority**: [Critical | High | Medium | Low]
 - **Target Release**: [Version number or milestone]
@@ -14,6 +15,8 @@
 ## Executive Summary
 
 [2-3 sentence summary of what this requirement addresses and why it matters]
+
+*Formatting note: In this file, templates and examples are presented using blockquotes (>) to visually distinguish template content. When authoring actual requirements documents, DO NOT use blockquotes for content. Render personas, problem statements, user stories, functional requirements, non-functional requirements, and constraints as regular headings and body text.*
 
 ## Requirements Overview
 
@@ -46,6 +49,11 @@ Define environmental limitations and compatibility requirements the system must 
 - External factors that constrain implementation choices
 
 ### **Requirements Flow**
+Adopt a simplified hierarchical traceability model that reduces redundancy while preserving clarity:
+- Personas → Problem Statements → User Stories → Functional Requirements
+- Keep only immediate parent-child links; derive longer chains when needed
+- Retain targeted cross-links only where they add unique value (e.g., FR "Impacts" for FR-to-FR dependencies)
+
 **User Foundation:**
 - **Personas** → Define who we're building for
 
@@ -92,10 +100,8 @@ Define environmental limitations and compatibility requirements the system must 
 > - **Learning Preferences**: [How they prefer to learn new tools]
 >
 > **Traceability:**
-> - **Primary Problems**: [PS-IDs that directly affect this persona]
-> - **Key User Stories**: [US-IDs that primarily serve this persona]
-> - **Critical Requirements**: [FR-IDs that are essential for this persona]
-> - **Related Personas**: [Other persona IDs that interact with or depend on this one]
+ > - **Primary Problems**: [PS-IDs that directly affect this persona]
+ > - **Related Personas**: [Other persona IDs that interact with or depend on this one] (optional)
 
 **Example for Developer-Facing Library:**
 
@@ -123,8 +129,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 > **Traceability:**
 > - **Primary Problems**: PS-1 (cross-portfolio factor analysis), PS-3 (time-consuming manual processes)
-> - **Key User Stories**: US-1 (factor exposure calculation), US-4 (risk reporting)
-> - **Critical Requirements**: FR-1 (risk calculation), FR-3 (cross-portfolio analysis)
 > - **Related Personas**: P-2 (Risk Analyst), P-3 (Junior Analyst)
 
 **Example for End-User Facing Application:**
@@ -177,9 +181,8 @@ Define environmental limitations and compatibility requirements the system must 
 > - **Integration Points**: [How they interact with primary personas or the system]
 >
 > **Traceability:**
-> - **Related Problems**: [PS-IDs that affect this persona]
-> - **Supporting User Stories**: [US-IDs that serve this persona]
-> - **Specific Requirements**: [FR-IDs that address this persona's needs]
+ > - **Related Problems**: [PS-IDs that affect this persona]
+ > - **Related Personas**: [Other persona IDs that interact with or depend on this one] (optional)
 
 **Example:**
 
@@ -199,8 +202,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 > **Traceability:**
 > - **Related Problems**: PS-2 (limited risk model flexibility), PS-4 (regulatory reporting complexity)
-> - **Supporting User Stories**: US-3 (risk model comparison), US-5 (regulatory reporting)
-> - **Specific Requirements**: FR-2 (multiple risk models), FR-4 (risk decomposition)
 
 ### Anti-Personas
 *Anti-personas represent user types that are explicitly not targeted or supported by the solution. Defining these helps clarify scope and prevent scope creep.*
@@ -270,7 +271,7 @@ Define environmental limitations and compatibility requirements the system must 
 >
 > **Traceability:**
 > - **Primary Personas**: [P-IDs of personas most affected by this problem]
-> - **Addresses**: [Parent problem statement this stems from, if any - use PS-ID]
+> - **Addresses**: [Optional - parent problem PS-ID if a true hierarchy exists]
 > - **Addressed By**: [US-IDs that tackle this problem]
 > - **Related Problems**: [Other PS-IDs that are related or dependent]
 
@@ -285,7 +286,6 @@ Define environmental limitations and compatibility requirements the system must 
 >
 > **Traceability:**
 > - **Primary Personas**: P-1 (Sarah Chen - Portfolio Manager)
-> - **Addresses**: None (primary problem statement)
 > - **Addressed By**: US-1 (factor exposure calculation)
 > - **Related Problems**: PS-2 (Limited risk model flexibility)
 
@@ -319,10 +319,9 @@ Define environmental limitations and compatibility requirements the system must 
 >       Then [different expected outcome]
 >
  > **Traceability:**
-> - **Primary Persona**: [P-ID of the main persona this story serves]
-> - **Addresses Problem**: [PS-ID that this story helps solve]
-> - **Implemented By**: [FR-IDs that deliver this story]
-> - **Related Stories**: [Other US-IDs that are related or dependent]
+ > - **Addresses Problem**: [PS-ID that this story helps solve]
+ > - **Implemented By**: [FR-IDs that deliver this story]
+ > - **Related Stories**: [Other US-IDs that are related or dependent]
 
 **Example:**
 
@@ -349,10 +348,9 @@ Define environmental limitations and compatibility requirements the system must 
 >       Then the results use the custom model and highlight concentration risks
 >
  > **Traceability:**
-> - **Primary Persona**: P-1 (Sarah Chen - Portfolio Manager)
-> - **Addresses Problem**: PS-1 (cross-portfolio factor analysis)
-> - **Implemented By**: FR-1 (factor exposure calculation), FR-2 (risk metrics)
-> - **Related Stories**: US-2 (risk visualization), US-3 (portfolio comparison)
+ > - **Addresses Problem**: PS-1 (cross-portfolio factor analysis)
+ > - **Implemented By**: FR-1 (factor exposure calculation), FR-2 (risk metrics)
+ > - **Related Stories**: US-2 (risk visualization), US-3 (portfolio comparison)
 
 #### Supporting User Stories
 [Additional user stories that support the core functionality]
@@ -373,9 +371,7 @@ Define environmental limitations and compatibility requirements the system must 
 > **Dependencies**: [Other requirements this depends on, or "None"]
 >
 > **Traceability:**
-> - **Problem Statement**: [PS-ID] - Brief description of the problem this addresses
 > - **User Story**: [US-ID] - The user story this requirement implements
-> - **Target Personas**: [P-IDs of personas this requirement primarily serves]
 > - **Impacts**: [List of FR-IDs] - Other requirements that depend on this one
 
 **Completion Criteria:**
@@ -604,21 +600,27 @@ Define environmental limitations and compatibility requirements the system must 
 - *US-3 generates functional capabilities (FR-5, FR-6) for comprehensive risk analysis*
 
 ### Traceability Validation Checklist
-*Use this checklist to ensure traceability is complete and accurate:*
+*Use this checklist to ensure traceability is complete and accurate while avoiding redundant links.*
 
-- [ ] **Persona Foundation**: Every primary persona has at least one problem statement that directly affects them
-- [ ] **Persona Coverage**: Every problem statement is linked to at least one primary persona
-- [ ] **Forward Traceability**: Every problem statement leads to at least one user story
-- [ ] **Forward Traceability**: Every user story is implemented by at least one functional requirement
-- [ ] **Backward Traceability**: Every functional requirement traces back to a user story
-- [ ] **Backward Traceability**: Every user story addresses a defined problem
-- [ ] **Backward Traceability**: Every problem statement affects at least one defined persona
-- [ ] **No Orphans**: No requirements exist without clear business justification
-- [ ] **No Gaps**: All problem statements have corresponding implementation paths
-- [ ] **Dependencies Clear**: All requirement dependencies are documented
-- [ ] **Impact Analysis**: Each requirement's impacts on other requirements are identified
-- [ ] **Persona Validation**: All personas have clear, realistic characteristics and traceable needs
-- [ ] **Anti-Persona Clarity**: Anti-personas clearly define scope boundaries and design constraints
+Required forward links:
+- [ ] Persona → Problem Statement(s) (Primary Problems)
+- [ ] Problem Statement → User Story(ies) (Addressed By)
+- [ ] User Story → Functional Requirement(s) (Implemented By)
+
+Required backward links:
+- [ ] Functional Requirement → User Story (User Story)
+- [ ] User Story → Problem Statement (Addresses Problem)
+- [ ] Problem Statement → Persona(s) (Primary Personas)
+
+Optional/contextual links:
+- [ ] Problem Statement → Parent Problem (Addresses) when a true hierarchy exists
+- [ ] Functional Requirement → FR (Impacts) for FR-to-FR dependencies
+- [ ] Persona → Related Personas for collaboration/hand-offs (does not affect required chain)
+
+General rules:
+- [ ] No orphans: Every FR traces to a US; every US traces to a PS; every PS links to at least one Persona
+- [ ] Immediate links only in bodies; derive longer chains when needed
+- [ ] Cross-links are targeted and add unique value
 
 ## Dependencies and Assumptions
 
@@ -693,6 +695,10 @@ Every requirement (Persona, Problem Statement, User Story, Functional Requiremen
 6. **Persona Stereotyping**
    - ❌ "Users are all technical experts who love complex interfaces"
    - ✅ "Primary users have intermediate Python skills and prefer clear, well-documented APIs"
+
+7. **Using Blockquotes in Real Documents**
+   - ❌ Authoring personas, problem statements, user stories, or functional requirements using blockquotes (>)
+   - ✅ Use blockquotes only in this template to denote templates/examples; in actual requirements documents, use regular headings and body text
 
 ### Step-by-Step Writing Process
 

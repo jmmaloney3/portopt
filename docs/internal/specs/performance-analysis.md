@@ -6,10 +6,11 @@
 - **Title**: Portfolio Performance Analysis & Attribution System
 - **Author**: Portfolio Requirements Interview Process
 - **Date Created**: 2025-07-25
-- **Last Updated**: 2025-09-21
+- **Last Updated**: 2025-09-22
+- **Version**: v1.2
 - **Status**: Approved
 - **Priority**: Critical
-- **Target Release**: v0.2.1
+- **Target Release**: TBD
 
 ## Executive Summary
 
@@ -46,6 +47,11 @@ Define environmental limitations and compatibility requirements the system must 
 - External factors that constrain implementation choices
 
 ### **Requirements Flow**
+Adopt a simplified hierarchical traceability model that reduces redundancy while preserving clarity:
+- Personas → Problem Statements → User Stories → Functional Requirements
+- Keep only immediate parent-child links; derive longer chains when needed
+- Retain targeted cross-links only where they add unique value (e.g., FR "Impacts" for FR-to-FR dependencies)
+
 **User Foundation:**
 - **Personas** → Define who we're building for
 
@@ -67,134 +73,130 @@ Define environmental limitations and compatibility requirements the system must 
 
 ### Primary Personas
 
-> **P-1**: Technical Individual Investor - Self-directed investor with programming skills managing personal portfolio
->
-> **Demographics & Background:**
-> - **Role**: Individual investor managing personal retirement and investment accounts across multiple institutions
-> - **Experience Level**: Beginner to intermediate quantitative finance knowledge, with access to experts for guidance; intermediate to advanced Python programming skills
-> - **Technical Skills**: Python (pandas, numpy, matplotlib, bt), Jupyter notebooks, command-line tools, *nix systems, JSON/YAML/CSV file formats
-> - **Work Environment**: Personal development environment (MacBook Air), uses Jupyter notebooks for analysis, command-line for automation
-> - **Goals**: Optimize personal portfolio performance, make data-driven investment decisions, automate routine analysis tasks
->
-> **Behaviors & Workflows:**
-> - **Primary Tasks**: Monthly/quarterly portfolio analysis, performance evaluation, rebalancing decisions, factor exposure monitoring
-> - **Decision Making**: Data-driven approach, values transparency in calculations, needs to understand methodology and assumptions
-> - **Information Sources**: Financial research, academic papers, quantitative finance experts, personal analysis using quantitative tools
-> - **Pain Points**: No historical performance tracking, can't compare against alternatives, relies on memory/spreadsheets for performance analysis, no factor analysis to support risk and return attribution to factors
-> - **Success Metrics**: Portfolio performance vs benchmarks, risk-adjusted returns, factor allocation effectiveness, automation of routine tasks
->
-> **Technical Context:**
-> - **Current Tools**: Brokerage websites, Excel/Google Sheets spreadsheets, Python libraries (pandas, bt), manual calculations, portopt library for current state analysis
-> - **Integration Needs**: Works with CSV data from multiple brokerages, needs to export results for further analysis or reporting
-> - **Performance Expectations**: Most operations complete in a few seconds; complex operations (e.g., long-term backtests) complete within 30 seconds for typical portfolio (50 tickers, 10 accounts)
-> - **Learning Preferences**: Prefers working examples, clear documentation, gradual complexity progression, values understanding of underlying methodology
->
-> **Traceability:**
-> - **Primary Problems**: PS-1 (lack of objective performance metrics), PS-2 (limited factor attribution), PS-3 (no benchmark comparison)
-> - **Key User Stories**: US-1 (TWR calculation), US-3 (risk metrics), US-4 (factor attribution), US-8 (quarterly rebalancing decisions)
-> - **Critical Requirements**: FR-1 (TWR calculation), FR-4 (risk metrics), FR-5 (factor attribution), FR-8 (transaction data integration)
-> - **Related Personas**: P-2 (Application Developer - may build tools for P-1)
+**P-1**: Technical Individual Investor - Self-directed investor with programming skills managing personal portfolio
 
-> **P-2**: Backend Developer - Developer building financial services and data processing applications using portopt
->
-> **Demographics & Background:**
-> - **Role**: Backend developer or data engineer building financial applications, APIs, or data processing systems
-> - **Experience Level**: Expert in Python development, basic to intermediate quantitative finance knowledge (sufficient to understand requirements from product managers with quantitative finance expertise)
-> - **Technical Skills**: Python (pandas, numpy, FastAPI/Flask), SQL, data processing libraries, API development, testing frameworks
-> - **Work Environment**: Development team with product managers providing quantitative finance requirements, uses version control, testing, CI/CD
-> - **Goals**: Build robust financial data processing systems, create reliable APIs for portfolio analysis, implement complex financial calculations efficiently
->
-> **Behaviors & Workflows:**
-> - **Primary Tasks**: API development, data pipeline implementation, financial calculation integration, performance optimization, testing and deployment
-> - **Decision Making**: Architecture-focused, values maintainable and testable code, needs clear APIs with good documentation, prioritizes performance and reliability
-> - **Information Sources**: API documentation, product manager requirements, software engineering best practices, financial data provider documentation
-> - **Pain Points**: Complex financial calculation requirements, data quality and consistency issues, API design for financial use cases, performance optimization
-> - **Success Metrics**: API performance, code maintainability, feature completeness, system reliability, integration success
->
-> **Technical Context:**
-> - **Current Tools**: Python development stack, financial data providers, databases, API frameworks, testing tools, deployment platforms
-> - **Integration Needs**: Clean, well-documented APIs for portfolio analysis, consistent data formats, extensible architecture, comprehensive error handling
-> - **Performance Expectations**: Sub-second response times for API calls, efficient memory usage, scalable data processing, reliable error handling
-> - **Learning Preferences**: Comprehensive API documentation, code examples, clear architectural patterns, detailed error messages and debugging information
->
-> **Traceability:**
-> - **Primary Problems**: PS-1 (need robust performance analysis APIs), PS-2 (require flexible factor analysis capabilities), PS-3 (need benchmark comparison APIs)
-> - **Key User Stories**: US-1 (TWR calculation APIs), US-4 (factor attribution APIs), US-6 (benchmark comparison APIs), US-7 (backtesting APIs)
-> - **Critical Requirements**: FR-1 (TWR calculation), FR-5 (factor attribution), FR-9 (alternative portfolio calculation), FR-10 (benchmark comparison)
-> - **Related Personas**: P-1 (Technical Individual Investor - may use applications built by P-2), P-3 (Sophisticated Individual Investor - end users of applications)
+**Demographics & Background:**
+- **Role**: Individual investor managing personal retirement and investment accounts across multiple institutions
+- **Experience Level**: Beginner to intermediate quantitative finance knowledge, with access to experts for guidance; intermediate to advanced Python programming skills
+- **Technical Skills**: Python (pandas, numpy, matplotlib, bt), Jupyter notebooks, command-line tools, *nix systems, JSON/YAML/CSV file formats
+- **Work Environment**: Personal development environment (MacBook Air), uses Jupyter notebooks for analysis, command-line for automation
+- **Goals**: Optimize personal portfolio performance, make data-driven investment decisions, automate routine analysis tasks
 
-> **P-3**: Sophisticated Individual Investor - Non-technical investor with intermediate financial knowledge who will use future web applications
->
-> **Demographics & Background:**
-> - **Role**: Individual investor with significant assets, intermediate to advanced understanding of portfolio theory and factor investing, no programming skills
-> - **Experience Level**: Intermediate to advanced investment knowledge, basic to intermediate quantitative finance concepts (web application democratizes access to advanced tools)
-> - **Technical Skills**: Basic computer skills, comfortable with web applications, Excel/Google Sheets, financial analysis tools
-> - **Work Environment**: Personal computer, uses web browsers and financial software, may work with financial advisors
-> - **Goals**: Optimize portfolio performance using sophisticated quantitative tools, make data-driven investment decisions, understand factor attribution and risk
->
-> **Behaviors & Workflows:**
-> - **Primary Tasks**: Portfolio analysis and optimization, performance evaluation, factor exposure monitoring, rebalancing decisions, benchmark comparisons
-> - **Decision Making**: Data-driven approach, values transparency in calculations, needs to understand methodology but not implementation details
-> - **Information Sources**: Financial research, academic papers, financial advisors, quantitative finance experts, web-based financial tools and tutorials
-> - **Pain Points**: Limited access to sophisticated portfolio analysis tools, difficulty comparing performance against alternatives, lack of factor attribution analysis
-> - **Success Metrics**: Portfolio performance vs benchmarks, risk-adjusted returns, factor allocation effectiveness, achievement of financial goals
->
-> **Technical Context:**
-> - **Current Tools**: Brokerage websites, Excel/Google Sheets, financial advisor tools, basic portfolio analysis software, web-based investment platforms
-> - **Integration Needs**: Web-based interface, export capabilities for further analysis, integration with existing brokerage accounts, clear visualizations
-> - **Performance Expectations**: Immediate response for most operations; delays only acceptable for operations understood to require significant computation
-> - **Learning Preferences**: Guided tutorials, clear explanations of financial concepts, visual examples, step-by-step workflows, educational content that builds quantitative finance knowledge
->
-> **Traceability:**
-> - **Primary Problems**: PS-1 (lack of objective performance metrics), PS-2 (limited factor attribution), PS-3 (no benchmark comparison)
-> - **Key User Stories**: US-1 (TWR calculation), US-3 (risk metrics), US-4 (factor attribution), US-6 (benchmark comparison), US-8 (quarterly rebalancing decisions)
-> - **Critical Requirements**: FR-1 (TWR calculation), FR-4 (risk metrics), FR-5 (factor attribution), FR-10 (benchmark comparison)
-> - **Related Personas**: P-1 (Technical Individual Investor - may provide guidance), P-2 (Backend Developer - builds applications for P-3)
+**Behaviors & Workflows:**
+- **Primary Tasks**: Monthly/quarterly portfolio analysis, performance evaluation, rebalancing decisions, factor exposure monitoring
+- **Decision Making**: Data-driven approach, values transparency in calculations, needs to understand methodology and assumptions
+- **Information Sources**: Financial research, academic papers, quantitative finance experts, personal analysis using quantitative tools
+- **Pain Points**: No historical performance tracking, can't compare against alternatives, relies on memory/spreadsheets for performance analysis, no factor analysis to support risk and return attribution to factors
+- **Success Metrics**: Portfolio performance vs benchmarks, risk-adjusted returns, factor allocation effectiveness, automation of routine tasks
+
+**Technical Context:**
+- **Current Tools**: Brokerage websites, Excel/Google Sheets spreadsheets, Python libraries (pandas, bt), manual calculations, portopt library for current state analysis
+- **Integration Needs**: Works with CSV data from multiple brokerages, needs to export results for further analysis or reporting
+- **Performance Expectations**: Most operations complete in a few seconds; complex operations (e.g., long-term backtests) complete within 30 seconds for typical portfolio (50 tickers, 10 accounts)
+- **Learning Preferences**: Prefers working examples, clear documentation, gradual complexity progression, values understanding of underlying methodology
+
+**Traceability:**
+- **Primary Problems**: PS-1 (lack of objective performance metrics), PS-2 (limited factor attribution), PS-3 (no benchmark comparison)
+- **Related Personas**: P-2 (Application Developer - may build tools for P-1)
+
+**P-2**: Backend Developer - Developer building financial services and data processing applications using portopt
+
+**Demographics & Background:**
+- **Role**: Backend developer or data engineer building financial applications, APIs, or data processing systems
+- **Experience Level**: Expert in Python development, basic to intermediate quantitative finance knowledge (sufficient to understand requirements from product managers with quantitative finance expertise)
+- **Technical Skills**: Python (pandas, numpy, FastAPI/Flask), SQL, data processing libraries, API development, testing frameworks
+- **Work Environment**: Development team with product managers providing quantitative finance requirements, uses version control, testing, CI/CD
+- **Goals**: Build robust financial data processing systems, create reliable APIs for portfolio analysis, implement complex financial calculations efficiently
+
+**Behaviors & Workflows:**
+- **Primary Tasks**: API development, data pipeline implementation, financial calculation integration, performance optimization, testing and deployment
+- **Decision Making**: Architecture-focused, values maintainable and testable code, needs clear APIs with good documentation, prioritizes performance and reliability
+- **Information Sources**: API documentation, product manager requirements, software engineering best practices, financial data provider documentation
+- **Pain Points**: Complex financial calculation requirements, data quality and consistency issues, API design for financial use cases, performance optimization
+- **Success Metrics**: API performance, code maintainability, feature completeness, system reliability, integration success
+
+**Technical Context:**
+- **Current Tools**: Python development stack, financial data providers, databases, API frameworks, testing tools, deployment platforms
+- **Integration Needs**: Clean, well-documented APIs for portfolio analysis, consistent data formats, extensible architecture, comprehensive error handling
+- **Performance Expectations**: Sub-second response times for API calls, efficient memory usage, scalable data processing, reliable error handling
+- **Learning Preferences**: Comprehensive API documentation, code examples, clear architectural patterns, detailed error messages and debugging information
+
+**Traceability:**
+- **Primary Problems**: PS-1 (need robust performance analysis APIs), PS-2 (require flexible factor analysis capabilities), PS-3 (need benchmark comparison APIs)
+- **Related Personas**: P-1 (Technical Individual Investor - may use applications built by P-2), P-3 
+(Sophisticated Individual Investor - end users of applications)
+
+**P-3**: Sophisticated Individual Investor - Non-technical investor with intermediate financial knowledge who will use future web applications
+
+**Demographics & Background:**
+- **Role**: Individual investor with significant assets, intermediate to advanced understanding of portfolio theory and factor investing, no programming skills
+- **Experience Level**: Intermediate to advanced investment knowledge, basic to intermediate quantitative finance concepts (web application democratizes access to advanced tools)
+- **Technical Skills**: Basic computer skills, comfortable with web applications, Excel/Google Sheets, financial analysis tools
+- **Work Environment**: Personal computer, uses web browsers and financial software, may work with financial advisors
+- **Goals**: Optimize portfolio performance using sophisticated quantitative tools, make data-driven investment decisions, understand factor attribution and risk
+
+**Behaviors & Workflows:**
+- **Primary Tasks**: Portfolio analysis and optimization, performance evaluation, factor exposure monitoring, rebalancing decisions, benchmark comparisons
+- **Decision Making**: Data-driven approach, values transparency in calculations, needs to understand methodology but not implementation details
+- **Information Sources**: Financial research, academic papers, financial advisors, quantitative finance experts, web-based financial tools and tutorials
+- **Pain Points**: Limited access to sophisticated portfolio analysis tools, difficulty comparing performance against alternatives, lack of factor attribution analysis
+- **Success Metrics**: Portfolio performance vs benchmarks, risk-adjusted returns, factor allocation effectiveness, achievement of financial goals
+
+**Technical Context:**
+- **Current Tools**: Brokerage websites, Excel/Google Sheets, financial advisor tools, basic portfolio analysis software, web-based investment platforms
+- **Integration Needs**: Web-based interface, export capabilities for further analysis, integration with existing brokerage accounts, clear visualizations
+- **Performance Expectations**: Immediate response for most operations; delays only acceptable for operations understood to require significant computation
+- **Learning Preferences**: Guided tutorials, clear explanations of financial concepts, visual examples, step-by-step workflows, educational content that builds quantitative finance knowledge
+
+**Traceability:**
+- **Primary Problems**: PS-1 (lack of objective performance metrics), PS-2 (limited factor attribution), PS-3 (no benchmark comparison)
+- **Related Personas**: P-1 (Technical Individual Investor - may provide guidance), P-2 (Backend 
+Developer - builds applications for P-3)
 
 ### Secondary Personas
 
-> **P-4**: Financial Advisor/Wealth Manager - Professional who uses portopt-based tools to serve clients
->
-> **Demographics & Background:**
-> - **Role**: Financial advisor or wealth manager serving individual clients with sophisticated portfolio needs
-> - **Experience Level**: Expert in investment management, intermediate to advanced quantitative finance knowledge, basic to intermediate technical skills
-> - **Technical Skills**: Comfortable with financial software, may have basic programming skills, uses portfolio management tools
-> - **Work Environment**: Financial services firm or independent practice, works with multiple clients, regulatory compliance requirements
-> - **Goals**: Provide sophisticated portfolio analysis to clients, differentiate services through advanced quantitative tools, scale client management efficiently
->
-> **Specific Needs & Constraints:**
-> - **Unique Requirements**: Multi-client portfolio management, regulatory compliance, client reporting, professional-grade analysis tools
-> - **Constraints**: Must work within regulatory frameworks, needs audit trails, requires detailed documentation for client communications
-> - **Integration Points**: Uses applications built by P-2 (Backend Developer), serves clients similar to P-3 (Sophisticated Individual Investor)
->
-> **Traceability:**
-> - **Related Problems**: PS-1 (need performance analysis for client portfolios), PS-2 (require factor attribution for client reporting), PS-3 (need benchmark comparisons for client presentations)
-> - **Supporting User Stories**: US-6 (benchmark comparison), US-8 (quarterly rebalancing decisions)
-> - **Specific Requirements**: FR-10 (benchmark comparison), enhanced reporting capabilities
+**P-4**: Financial Advisor/Wealth Manager - Professional who uses portopt-based tools to serve clients
+
+**Demographics & Background:**
+- **Role**: Financial advisor or wealth manager serving individual clients with sophisticated portfolio needs
+- **Experience Level**: Expert in investment management, intermediate to advanced quantitative finance knowledge, basic to intermediate technical skills
+- **Technical Skills**: Comfortable with financial software, may have basic programming skills, uses portfolio management tools
+- **Work Environment**: Financial services firm or independent practice, works with multiple clients, regulatory compliance requirements
+- **Goals**: Provide sophisticated portfolio analysis to clients, differentiate services through advanced quantitative tools, scale client management efficiently
+
+**Specific Needs & Constraints:**
+- **Unique Requirements**: Multi-client portfolio management, regulatory compliance, client reporting, professional-grade analysis tools
+- **Constraints**: Must work within regulatory frameworks, needs audit trails, requires detailed documentation for client communications
+- **Integration Points**: Uses applications built by P-2 (Backend Developer), serves clients similar to P-3 (Sophisticated Individual Investor)
+
+**Traceability:**
+- **Related Problems**: PS-1 (need performance analysis for client portfolios), PS-2 (require factor attribution for client reporting), PS-3 (need benchmark comparisons for client presentations)
+- **Supporting User Stories**: US-6 (benchmark comparison), US-8 (quarterly rebalancing decisions)
+- **Specific Requirements**: FR-10 (benchmark comparison), enhanced reporting capabilities
 
 ### Anti-Personas
 
-> **AP-1**: Basic Individual Investors - Not targeted due to financial sophistication requirements
->
-> **Why Not Targeted:**
-> - **Scope Mismatch**: Library and future web application are designed for investors who understand quantitative finance concepts (factor investing, risk attribution, etc.); basic investors need fundamental investment education and different analytical approaches
-> - **Alternative Solutions**: Should use retail-focused investment platforms, robo-advisors, or traditional financial advisors for basic portfolio management
-> - **Impact on Design**: Allows focus on sophisticated quantitative analysis without needing to provide basic investment education
->
-> **Traceability:**
-> - **Scope Boundaries**: No basic investment education, no simplified factor models, no fundamental portfolio theory explanations
-> - **Design Constraints**: Can assume intermediate to advanced financial knowledge, focus on sophisticated analysis capabilities
+**AP-1**: Basic Individual Investors - Not targeted due to financial sophistication requirements
 
-> **AP-2**: Enterprise IT Administrators - Not targeted due to deployment and integration requirements
->
-> **Why Not Targeted:**
-> - **Scope Mismatch**: Library and web application are designed for individual use and small-scale applications; enterprise users need advanced integration, deployment, and administrative features
-> - **Alternative Solutions**: Should use enterprise-grade portfolio management platforms with IT administration features, multi-tenant architectures, and enterprise integrations
-> - **Impact on Design**: Allows focus on individual investor needs without enterprise deployment complexity
->
-> **Traceability:**
-> - **Scope Boundaries**: No enterprise deployment options, no multi-tenant architecture, no enterprise integrations (SSO, LDAP, etc.)
-> - **Design Constraints**: Can focus on individual portfolio management, assume standard web application security requirements
+**Why Not Targeted:**
+- **Scope Mismatch**: Library and future web application are designed for investors who understand quantitative finance concepts (factor investing, risk attribution, etc.); basic investors need fundamental investment education and different analytical approaches
+- **Alternative Solutions**: Should use retail-focused investment platforms, robo-advisors, or traditional financial advisors for basic portfolio management
+- **Impact on Design**: Allows focus on sophisticated quantitative analysis without needing to provide basic investment education
+
+**Traceability:**
+- **Scope Boundaries**: No basic investment education, no simplified factor models, no fundamental portfolio theory explanations
+- **Design Constraints**: Can assume intermediate to advanced financial knowledge, focus on sophisticated analysis capabilities
+
+**AP-2**: Enterprise IT Administrators - Not targeted due to deployment and integration requirements
+
+**Why Not Targeted:**
+- **Scope Mismatch**: Library and web application are designed for individual use and small-scale applications; enterprise users need advanced integration, deployment, and administrative features
+- **Alternative Solutions**: Should use enterprise-grade portfolio management platforms with IT administration features, multi-tenant architectures, and enterprise integrations
+- **Impact on Design**: Allows focus on individual investor needs without enterprise deployment complexity
+
+**Traceability:**
+- **Scope Boundaries**: No enterprise deployment options, no multi-tenant architecture, no enterprise integrations (SSO, LDAP, etc.)
+- **Design Constraints**: Can focus on individual portfolio management, assume standard web application security requirements
 
 ## Business Requirements
 
@@ -268,7 +270,6 @@ So that I can evaluate investment performance isolated from cash flow timing.
 - [ ] Provides clear warnings when data is incomplete for requested time period
 
 **Traceability:**
-- **Primary Persona**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Addresses Problem**: PS-1 (lack of objective performance metrics)
 - **Implemented By**: FR-1 (TWR calculation engine), FR-2 (time period handling)
 - **Related Stories**: US-2 (money-weighted returns), US-3 (risk metrics)
@@ -287,7 +288,6 @@ So that I can understand the actual return experience on my invested dollars.
 - [ ] Handles complex cash flow patterns (irregular contributions, withdrawals)
 
 **Traceability:**
-- **Primary Persona**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Addresses Problem**: PS-1 (lack of objective performance metrics)
 - **Implemented By**: FR-3 (MWR calculation engine), FR-2 (time period handling)
 - **Related Stories**: US-1 (time-weighted returns), US-3 (risk metrics)
@@ -305,7 +305,6 @@ So that I can evaluate risk-adjusted performance and drawdown characteristics.
 - [ ] Risk metrics calculated over same time periods as return metrics
 
 **Traceability:**
-- **Primary Persona**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Addresses Problem**: PS-1 (lack of objective performance metrics)
 - **Implemented By**: FR-4 (risk metrics calculation engine)
 - **Related Stories**: US-1 (TWR), US-2 (MWR), US-4 (factor attribution)
@@ -323,7 +322,6 @@ So that I can understand which factors contributed positively or negatively to r
 - [ ] Results formatted as "Factor X contributed +2.3% to total returns"
 
 **Traceability:**
-- **Primary Persona**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Addresses Problem**: PS-2 (limited factor attribution capabilities)
 - **Implemented By**: FR-5 (factor attribution engine), FR-6 (factor weight handling)
 - **Related Stories**: US-5 (factor contribution), US-1 (TWR), US-3 (risk metrics)
@@ -342,7 +340,6 @@ So that I can understand factor concentration and make informed rebalancing deci
 - [ ] Results help identify diversification opportunities
 
 **Traceability:**
-- **Primary Persona**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Addresses Problem**: PS-2 (limited factor attribution capabilities)
 - **Implemented By**: FR-5 (factor attribution engine), FR-7 (factor concentration analysis)
 - **Related Stories**: US-4 (factor attribution), US-6 (benchmark comparison)
@@ -359,7 +356,6 @@ So that I can evaluate whether my investment approach is outperforming standard 
 - [ ] Results use standardized bt/ffn framework formats for consistency
 
 **Traceability:**
-- **Primary Persona**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Addresses Problem**: PS-3 (no benchmark comparison capabilities)
 - **Implemented By**: FR-10 (benchmark comparison engine), FR-9 (alternative portfolio calculation)
 - **Related Stories**: US-7 (alternative strategies), US-1 (TWR), US-3 (risk metrics)
@@ -376,7 +372,6 @@ So that I can identify potentially better allocation approaches.
 - [ ] Integrates with existing bt framework for sophisticated backtesting
 
 **Traceability:**
-- **Primary Persona**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Addresses Problem**: PS-3 (no benchmark comparison capabilities)
 - **Implemented By**: FR-9 (alternative portfolio calculation), FR-10 (benchmark comparison)
 - **Related Stories**: US-6 (benchmark comparison), US-1 (TWR), US-2 (MWR)
@@ -393,7 +388,6 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] Integrates with existing portopt rebalancing workflow and optimization capabilities
 
 **Traceability:**
-- **Primary Persona**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Addresses Problem**: PS-1 (lack of objective performance metrics for decision-making)
 - **Implemented By**: FR-1 (TWR calculation), FR-4 (risk metrics), FR-5 (factor attribution)
 - **Related Stories**: US-1 (TWR), US-3 (risk metrics), US-4 (factor attribution)
@@ -425,9 +419,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] Documentation: Clear explanation of TWR methodology and when to use it
 
 **Traceability:**
-- **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
 - **User Story**: US-1 - Calculate time-weighted returns for any time period
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: FR-4 (risk metrics), FR-5 (factor attribution), FR-10 (benchmark comparison)
 
 **FR-2**: The system must support flexible time period specification for all performance calculations
@@ -446,9 +438,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] Incompatible parameter combinations (time_period + start_date) raise appropriate errors
 
 **Traceability:**
-- **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
 - **User Story**: US-1 - Calculate TWR for any time period
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: FR-3 (MWR calculation), FR-4 (risk metrics), FR-5 (factor attribution)
 
 **FR-3**: The system must calculate money-weighted returns (MWR) using Internal Rate of Return methodology
@@ -469,9 +459,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] Documentation: Clear explanation of MWR vs TWR and when to use each
 
 **Traceability:**
-- **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
 - **User Story**: US-2 - Calculate money-weighted returns for actual dollar experience
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: FR-10 (benchmark comparison), FR-9 (alternative portfolio calculation)
 
 **FR-4**: The system must calculate risk metrics (volatility, Sharpe ratio, maximum drawdown) for performance evaluation
@@ -494,9 +482,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] Performance: Risk calculations complete within performance targets for return calculations
 
 **Traceability:**
-- **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
 - **User Story**: US-3 - Calculate risk metrics for risk-adjusted performance evaluation
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: FR-10 (benchmark comparison), FR-9 (alternative portfolio calculation)
 
 ### Factor Attribution & Analysis
@@ -519,9 +505,7 @@ So that I can make data-driven allocation adjustments based on objective perform
   - [ ] Entire portfolio, one or more accounts, one or more tickers, one or more factors
 
 **Traceability:**
-- **Problem Statement**: PS-2 - Current portfolio analysis lacks comprehensive factor analysis capabilities
 - **User Story**: US-4 - Analyze factor attribution for portfolio performance, US-5 - Identify holdings driving factor exposure
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: FR-7 (factor concentration), FR-10 (benchmark comparison)
 
 **FR-6**: The system must handle factor weights consistently with existing portopt factor handling logic
@@ -540,9 +524,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] Documentation: References existing factor weight handling documentation
 
 **Traceability:**
-- **Problem Statement**: PS-2 - Current portfolio analysis lacks comprehensive factor analysis capabilities
 - **User Story**: US-4 - Analyze factor attribution for portfolio performance
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: FR-5 (factor attribution), FR-7 (factor concentration analysis)
 
 **FR-7**: The system must identify factor concentration risks, unintended exposures, and factor overlap patterns
@@ -562,9 +544,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] **Actionable Results**: Provides specific recommendations for addressing concentration risks and improving diversification
 
 **Traceability:**
-- **Problem Statement**: PS-2 - Current portfolio analysis lacks comprehensive factor analysis capabilities
 - **User Story**: US-5 - Identify holdings driving factor exposure
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: None (leaf requirement)
 
 ### Transaction Data Integration
@@ -585,9 +565,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] Validates transaction data against current holdings with warn-and-continue on reconciliation failures
 
 **Traceability:**
-- **Problem Statement**: PS-1 - Portfolio managers lack objective performance metrics
 - **User Story**: US-1 - Calculate time-weighted returns (requires transaction data)
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: FR-1 (TWR calculation), FR-3 (MWR calculation), FR-9 (alternative portfolio calculation)
 
 ### Benchmark & Alternative Portfolio Analysis
@@ -608,9 +586,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] Performance: Alternative portfolio calculations complete within reasonable time for backtesting scenarios
 
 **Traceability:**
-- **Problem Statement**: PS-3 - No capability to compare against alternative strategies
 - **User Story**: US-7 - Backtest alternative investment strategies
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: FR-10 (benchmark comparison engine)
 
 **FR-10**: The system must provide benchmark comparison capabilities
@@ -629,9 +605,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - [ ] Integration: Uses standardized performance calculation methodology for fair comparison
 
 **Traceability:**
-- **Problem Statement**: PS-3 - No benchmark comparison capabilities
 - **User Story**: US-6 - Compare actual portfolio performance against benchmarks
-- **Target Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
 - **Impacts**: None (leaf requirement)
 
 
@@ -774,21 +748,27 @@ So that I can make data-driven allocation adjustments based on objective perform
 - Future requirement for more sophisticated factor analysis (factor loadings vs percentage allocations)
 
 ### Traceability Validation Checklist
-*Use this checklist to ensure traceability is complete and accurate:*
+*Use this checklist to ensure traceability is complete and accurate while avoiding redundant links.*
 
-- [x] **Persona Foundation**: Every primary persona has at least one problem statement that directly affects them
-- [x] **Persona Coverage**: Every problem statement is linked to at least one primary persona
-- [x] **Forward Traceability**: Every problem statement leads to at least one user story
-- [x] **Forward Traceability**: Every user story is implemented by at least one functional requirement
-- [x] **Backward Traceability**: Every functional requirement traces back to a user story
-- [x] **Backward Traceability**: Every user story addresses a defined problem
-- [x] **Backward Traceability**: Every problem statement affects at least one defined persona
-- [x] **No Orphans**: No requirements exist without clear business justification
-- [x] **No Gaps**: All problem statements have corresponding implementation paths
-- [x] **Dependencies Clear**: All requirement dependencies are documented
-- [x] **Impact Analysis**: Each requirement's impacts on other requirements are identified
-- [x] **Persona Validation**: All personas have clear, realistic characteristics and traceable needs
-- [x] **Anti-Persona Clarity**: Anti-personas clearly define scope boundaries and design constraints
+Required forward links:
+- [x] Persona → Problem Statement(s) (Primary Problems)
+- [x] Problem Statement → User Story(ies) (Addressed By)
+- [x] User Story → Functional Requirement(s) (Implemented By)
+
+Required backward links:
+- [x] Functional Requirement → User Story (User Story)
+- [x] User Story → Problem Statement (Addresses Problem)
+- [x] Problem Statement → Persona(s) (Primary Personas)
+
+Optional/contextual links:
+- [x] Problem Statement → Parent Problem (Addresses) when a true hierarchy exists
+- [x] Functional Requirement → FR (Impacts) for FR-to-FR dependencies
+- [x] Persona → Related Personas for collaboration/hand-offs (does not affect required chain)
+
+General rules:
+- [x] No orphans: Every FR traces to a US; every US traces to a PS; every PS links to at least one Persona
+- [x] Immediate links only in bodies; derive longer chains when needed
+- [x] Cross-links are targeted and add unique value
 
 ## Appendices
 
@@ -800,7 +780,7 @@ So that I can make data-driven allocation adjustments based on objective perform
 - **bt/ffn Framework**: Backtesting and financial analysis frameworks used for standardized performance calculations
 
 ### B. References
-- [portopt Design Principles](../design-principles.md)
+- [Design Principles](../design-principles-and-standards.md)
 - [requirements template](../templates/requirements-template.md)
 - bt framework documentation
 - ffn framework documentation
