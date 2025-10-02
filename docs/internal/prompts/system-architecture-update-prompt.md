@@ -8,6 +8,14 @@ This document contains a comprehensive prompt for AI agents to conduct collabora
 **Quick Start (Recommended):**
 If you are using Cursor (or any AI tool that supports file references), use the following prompt to start the architecture update process. Allow 30-45 minutes for the complete collaborative design session and architecture update process.
 
+**How to Use Quick Start Prompt:**
+Note: Use these steps to add the Quick Start Prompt Text to the chat window, instead of a reference to the text in the file:
+1. **Ask your AI agent** for the exact text content: "Please provide the exact text content from lines 19-26 of the @system-architecture-update-prompt.md file so I can copy and modify it"
+2. **Copy the text** your AI agent provides
+3. **Paste it into your chat** and customize the bracketed sections
+4. **Send the message** to begin the collaborative design process
+
+**Quick Start Prompt Text:**
 ```
 Please follow the system architecture update process outlined in @system-architecture-update-prompt.md 
 to collaborate with me on system architecture creation or updates.
