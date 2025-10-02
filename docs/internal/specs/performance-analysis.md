@@ -21,9 +21,9 @@ This requirement addresses the critical "flying blind" problem where portfolio m
 This document organizes requirements into four interconnected types that work together to ensure complete coverage from business need to system requirements:
 
 ### **Personas** → **WHO**
-Define the key user archetypes and their characteristics that drive design decisions and user experience requirements.
-- **Primary Personas**: Main user types whose needs must be satisfied for success
-- **Secondary Personas**: Supporting user types with specific needs or constraints
+Define the key user archetypes and their characteristics that provide context for understanding user needs and drive design decisions.
+- **Primary Personas**: User types whose specific needs are directly addressed by this project's requirements
+- **Secondary Personas**: User types whose needs influence design decisions but are not directly addressed by this project
 - **Anti-Personas**: User types explicitly not targeted or supported
 
 ### **Business Requirements** → **WHY**
@@ -69,9 +69,10 @@ Adopt a simplified hierarchical traceability model that reduces redundancy while
 
 ## Personas
 
-*Personas are detailed, semi-fictional representations of key user archetypes that help ensure requirements remain user-centered and realistic. They provide context for understanding user needs, behaviors, goals, and constraints. Well-defined personas help validate that business requirements, user stories, and technical requirements all address real user needs and create meaningful value. For developer-facing libraries, personas should focus on different types of developers, analysts, and technical users.*
+*Personas are detailed, semi-fictional representations of key user archetypes that help ensure requirements remain user-centered and realistic. They provide context for understanding user needs, behaviors, goals, and constraints. While it is unlikely that all the needs of a persona are covered by the requirements contained in this document, well-defined personas ensure that the requirements contained in this document address real user needs and create meaningful value. For developer-facing libraries, personas should focus on different types of developers, analysts, and technical users.*
 
 ### Primary Personas
+*Primary personas represent the main user types that the requirements in this document are intended to directly support. These users' goals and workflows drive the core functionality and design decisions. While not all of a primary persona's needs may be addressed by this project, the documented requirements are specifically designed to directly serve these users.*
 
 **P-1**: Technical Individual Investor - Self-directed investor with programming skills managing personal portfolio
 
@@ -126,6 +127,9 @@ Adopt a simplified hierarchical traceability model that reduces redundancy while
 - **Related Personas**: P-1 (Technical Individual Investor - may use applications built by P-2), P-3 
 (Sophisticated Individual Investor - end users of applications)
 
+### Secondary Personas
+*Secondary personas represent important user types whose needs are not directly addressed by this project's requirements, but whose requirements influence design decisions. The documented requirements may serve as prerequisites for future capabilities that will support secondary personas, or may provide foundational capabilities that can be combined with future features, workarounds, or external functionality to eventually meet secondary persona needs.*
+
 **P-3**: Sophisticated Individual Investor - Non-technical investor with intermediate financial knowledge who will use future web applications
 
 **Demographics & Background:**
@@ -149,11 +153,8 @@ Adopt a simplified hierarchical traceability model that reduces redundancy while
 - **Learning Preferences**: Guided tutorials, clear explanations of financial concepts, visual examples, step-by-step workflows, educational content that builds quantitative finance knowledge
 
 **Traceability:**
-- **Primary Problems**: PS-1 (lack of objective performance metrics), PS-2 (limited factor attribution), PS-3 (no benchmark comparison)
-- **Related Personas**: P-1 (Technical Individual Investor - may provide guidance), P-2 (Backend 
-Developer - builds applications for P-3)
-
-### Secondary Personas
+- **Related Problems**: PS-1 (lack of objective performance metrics), PS-2 (limited factor attribution), PS-3 (no benchmark comparison)
+- **Related Personas**: P-1 (Technical Individual Investor - may provide guidance), P-2 (Backend Developer - builds applications for P-3)
 
 **P-4**: Financial Advisor/Wealth Manager - Professional who uses portopt-based tools to serve clients
 
@@ -215,7 +216,7 @@ Developer - builds applications for P-3)
 - **Impact**: Suboptimal investment decisions, inability to evaluate strategy effectiveness, missed opportunities for portfolio improvement, uncertainty about retirement readiness
 
 **Traceability:**
-- **Primary Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
+- **Primary Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer)
 - **Addresses**: None (primary problem statement)
 - **Addressed By**: US-1, US-2, US-3, US-4, US-5, US-6, US-7, US-8 (performance analysis user stories)
 - **Related Problems**: PS-2 (Limited factor attribution capabilities), PS-3 (No benchmark comparison capabilities)
@@ -231,7 +232,7 @@ Developer - builds applications for P-3)
 - **Impact**: Cannot identify which factor allocations are contributing positively or negatively to returns, and cannot identify concentration risk or unintended factor exposure through specific holdings
 
 **Traceability:**
-- **Primary Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
+- **Primary Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer)
 - **Addresses**: PS-1 (lack of objective performance metrics)
 - **Addressed By**: US-4, US-5 (factor attribution user stories)
 - **Related Problems**: PS-1 (primary problem), PS-3 (benchmark comparison)
@@ -245,7 +246,7 @@ Developer - builds applications for P-3)
 - **Impact**: Cannot determine if current investment strategy outperforms standard benchmarks or alternative approaches
 
 **Traceability:**
-- **Primary Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer), P-3 (Sophisticated Individual Investor)
+- **Primary Personas**: P-1 (Technical Individual Investor), P-2 (Backend Developer)
 - **Addresses**: PS-1 (lack of objective performance metrics)
 - **Addressed By**: US-6, US-7 (benchmark comparison user stories)
 - **Related Problems**: PS-1 (primary problem), PS-2 (factor attribution)
@@ -697,14 +698,14 @@ So that I can make data-driven allocation adjustments based on objective perform
 
 | Problem Statement | User Story | Requirements Generated | Primary Personas | Status |
 |-------------------|------------|----------------------|-------------------|---------|
-| PS-1 | US-1 | FR-1, FR-2, FR-8 | P-1, P-2, P-3 | Not Started |
-| PS-1 | US-2 | FR-3, FR-2 | P-1, P-2, P-3 | Not Started |
-| PS-1 | US-3 | FR-4 | P-1, P-2, P-3 | Not Started |
-| PS-2 | US-4 | FR-5, FR-6 | P-1, P-2, P-3 | Not Started |
-| PS-2 | US-5 | FR-7, FR-5 | P-1, P-2, P-3 | Not Started |
-| PS-3 | US-6 | FR-10, FR-9 | P-1, P-2, P-3 | Not Started |
-| PS-3 | US-7 | FR-9, FR-10 | P-1, P-2, P-3 | Not Started |
-| PS-1 | US-8 | FR-1, FR-4, FR-5 | P-1, P-2, P-3 | Not Started |
+| PS-1 | US-1 | FR-1, FR-2, FR-8 | P-1, P-2 | Not Started |
+| PS-1 | US-2 | FR-3, FR-2 | P-1, P-2 | Not Started |
+| PS-1 | US-3 | FR-4 | P-1, P-2 | Not Started |
+| PS-2 | US-4 | FR-5, FR-6 | P-1, P-2 | Not Started |
+| PS-2 | US-5 | FR-7, FR-5 | P-1, P-2 | Not Started |
+| PS-3 | US-6 | FR-10, FR-9 | P-1, P-2 | Not Started |
+| PS-3 | US-7 | FR-9, FR-10 | P-1, P-2 | Not Started |
+| PS-1 | US-8 | FR-1, FR-4, FR-5 | P-1, P-2 | Not Started |
 
 *Example interpretations:*
 - *US-1 generates multiple functional capabilities (FR-1, FR-2, FR-8) for portfolio performance analysis*

@@ -23,9 +23,9 @@
 This document organizes requirements into four interconnected types that work together to ensure complete coverage from business need to system requirements:
 
 ### **Personas** → **WHO**
-Define the key user archetypes and their characteristics that drive design decisions and user experience requirements.
-- **Primary Personas**: Main user types whose needs must be satisfied for success
-- **Secondary Personas**: Supporting user types with specific needs or constraints
+Define the key user archetypes and their characteristics that provide context for understanding user needs and drive design decisions.
+- **Primary Personas**: User types whose specific needs are directly addressed by this project's requirements
+- **Secondary Personas**: User types whose needs influence design decisions but are not directly addressed by this project
 - **Anti-Personas**: User types explicitly not targeted or supported
 
 ### **Business Requirements** → **WHY**
@@ -73,7 +73,7 @@ Adopt a simplified hierarchical traceability model that reduces redundancy while
 *Personas are detailed, semi-fictional representations of key user archetypes that help ensure requirements remain user-centered and realistic. They provide context for understanding user needs, behaviors, goals, and constraints. Well-defined personas help validate that business requirements, user stories, and technical requirements all address real user needs and create meaningful value. For developer-facing libraries, personas should focus on different types of developers, analysts, and technical users. For end-user facing applications, personas should represent the target end users who will interact with the user interface.*
 
 ### Primary Personas
-*Primary personas represent the main user types whose needs must be satisfied for the project to be successful. These are the users whose goals and workflows drive the core functionality and user experience decisions.*
+*Primary personas represent the main user types that the requirements in this document are intended to directly support. These users' goals and workflows drive the core functionality and design decisions. While not all of a primary persona's needs may be addressed by this project, the documented requirements are specifically designed to directly serve these users.*
 
 **Primary Persona Template:**
 
@@ -162,7 +162,7 @@ Adopt a simplified hierarchical traceability model that reduces redundancy while
 > - **Related Personas**: P-2 (Store Manager), P-3 (Accountant)
 
 ### Secondary Personas
-*Secondary personas represent important user types with specific needs or constraints that should be considered but are not the primary drivers of the solution.*
+*Secondary personas represent important user types whose needs are not directly addressed by this project's requirements, but whose requirements influence design decisions. The documented requirements may serve as prerequisites for future capabilities that will support secondary personas, or may provide foundational capabilities that can be combined with future features, workarounds, or external functionality to eventually meet secondary persona needs.*
 
 **Secondary Persona Template:**
 
