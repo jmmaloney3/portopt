@@ -231,7 +231,7 @@ def get_converters(config: dict) -> dict:
         ticker = ticker.split()[0]
 
         # Check if it's an option contract (e.g., -SPY250321P580)
-        option_pattern = r'^-?([A-Z]{1,5}\d{6}[CP]\d+)$'
+        option_pattern = r'^-?([A-Z]{1,5}\d{6}[CP]\d+(?:\.\d+)?)$'
         option_match = re.match(option_pattern, ticker)
         if option_match:
             # Return the option ticker without the leading hyphen

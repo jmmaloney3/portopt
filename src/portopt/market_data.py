@@ -40,11 +40,34 @@ def is_security_ticker(ticker: str, verbose: bool = False) -> bool:
         True if the ticker matches the security pattern, False otherwise.
     """
     ticker_str = str(ticker).upper()
+    # Options are considered securities as well; do not exclude them here.
     security_pattern = re.compile(r'^[A-Z]{1,5}([A-Z0-9.-]*)?$')
     result = bool(security_pattern.match(ticker_str))
     if verbose and not result:
         print(f"Ticker {ticker} does not match the security ticker pattern.")
     return result
+
+def is_underlying_ticker(ticker: str, verbose: bool = False) -> bool:
+    """
+    Check if the given ticker symbol is a non-option security ticker.
+
+    Underlying tickers include stocks, ETFs, mutual funds, etc., but explicitly
+    exclude option contracts. This is useful when downstream logic should apply
+    only to the underlying (non-derivative) instruments.
+
+    Args:
+        ticker: Ticker symbol as a string.
+        verbose: If True, prints diagnostic messages when the ticker does not match.
+
+    Returns:
+        True if the ticker is a security and not an option; False otherwise.
+    """
+    ticker_str = str(ticker).upper()
+    if is_option_ticker(ticker_str):
+        if verbose:
+            print(f"Ticker {ticker} is an option ticker (not an underlying).")
+        return False
+    return is_security_ticker(ticker_str, verbose=verbose)
 
 def is_option_ticker(ticker: str, verbose: bool = False) -> bool:
     """
@@ -62,7 +85,7 @@ def is_option_ticker(ticker: str, verbose: bool = False) -> bool:
         True if the ticker matches the option pattern, False otherwise.
     """
     ticker_str = str(ticker).upper()
-    option_pattern = re.compile(r'^[A-Z]{1,5}\d{6}[CP]\d+$')
+    option_pattern = re.compile(r'^[A-Z]{1,5}\d{6}[CP]\d+(?:\.\d+)?$')
     result = bool(option_pattern.match(ticker_str))
     if verbose and not result:
         print(f"Ticker {ticker} does not match the option ticker pattern.")
@@ -117,7 +140,7 @@ def parse_option_symbol(option_symbol: str) -> dict:
     Raises:
         ValueError: If the option symbol format is invalid
     """
-    match = re.match(r'^([A-Z]{1,5})(\d{2})(\d{2})(\d{2})([CP])(\d+)$', str(option_symbol).upper())
+    match = re.match(r'^([A-Z]{1,5})(\d{2})(\d{2})(\d{2})([CP])(\d+(?:\.\d+)?)$', str(option_symbol).upper())
     if not match:
         raise ValueError(f"Invalid option symbol format: {option_symbol}")
 
