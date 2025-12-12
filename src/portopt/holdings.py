@@ -360,7 +360,7 @@ def load_holdings(file_path: str,
     header = None
     data_rows = []
 
-    with open(file_path, 'r', newline='') as f:
+    with open(file_path, 'r', encoding='utf-8-sig', newline='') as f:
         reader = csv.reader(f)
         for row in reader:
             if not row:  # Skip empty rows
@@ -374,8 +374,13 @@ def load_holdings(file_path: str,
                 continue
 
             # Only include rows that match header field count
-            if len(row) == header_field_count:
+            # Allow rows with one extra empty field (trailing comma in CSV)
+            row_field_count = len(row)
+            if row_field_count == header_field_count:
                 data_rows.append(row)
+            elif row_field_count == header_field_count + 1 and (not row[-1] or not row[-1].strip()):
+                # Row has one extra empty field (trailing comma), strip it
+                data_rows.append(row[:header_field_count])
             else:
                 # Stop at first row with different field count (footer)
                 break
