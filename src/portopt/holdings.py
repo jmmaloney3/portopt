@@ -213,8 +213,11 @@ def get_converters(config: dict) -> dict:
     def clean_numeric(x):
         if not x or x == '--':
             return None
-        # Remove quotes, dollar signs, and commas
-        return float(str(x).replace('"', '').replace('$', '').replace(',', ''))
+        # Convert to string and remove quotes, dollar signs, and commas
+        cleaned = str(x).replace('"', '').replace('$', '').replace(',', '')
+        # Remove percentage values in parentheses (e.g., " (6.83%)")
+        cleaned = re.sub(r'\s*\([^)]*\)', '', cleaned)
+        return float(cleaned)
 
     def clean_string(x):
         return x.strip() if x and x.strip() else 'N/A'
